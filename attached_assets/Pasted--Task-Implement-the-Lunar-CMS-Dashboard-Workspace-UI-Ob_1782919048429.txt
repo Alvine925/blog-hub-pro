@@ -1,0 +1,938 @@
+# Task: Implement the Lunar CMS Dashboard & Workspace UI
+
+## Objective
+
+Implement a modern, premium SaaS dashboard inspired by the provided design mockups.
+
+The UI should feel like a blend of:
+
+* Linear
+* Vercel
+* Supabase
+* Stripe Dashboard
+* Notion
+* GitHub
+
+The experience should be minimal, extremely clean, responsive, and fast.
+
+This implementation should prioritize component reusability, scalability, and maintainability.
+
+The project should use the existing design system wherever possible while introducing new reusable components as needed.
+
+---
+
+# General Design Language
+
+The application should communicate:
+
+* Professional
+* Premium
+* Fast
+* Modern
+* Developer Friendly
+
+Avoid clutter.
+
+Avoid excessive colors.
+
+Use whitespace generously.
+
+Rounded corners.
+
+Subtle shadows.
+
+Soft borders.
+
+Excellent spacing.
+
+Smooth animations.
+
+---
+
+# Primary Color
+
+Use **Red** as the primary brand color.
+
+Suggested palette:
+
+Primary
+
+* #DC2626
+
+Hover
+
+* #B91C1C
+
+Light Background
+
+* #FEF2F2
+
+Border
+
+* #FECACA
+
+Success
+
+Green
+
+Warning
+
+Orange
+
+Info
+
+Blue
+
+Neutral
+
+Gray
+
+---
+
+# Layout Structure
+
+The application has two completely different dashboard levels.
+
+---
+
+# Level 1
+
+Global Dashboard
+
+Purpose:
+
+Manage all workspaces.
+
+This dashboard exists before entering any workspace.
+
+Navigation:
+
+Dashboard
+
+Workspaces
+
+Templates
+
+Marketplace (future)
+
+Documentation
+
+Billing
+
+Settings
+
+Support
+
+Roadmap
+
+Profile
+
+Notifications
+
+---
+
+Dashboard Content
+
+Top Welcome Section
+
+Display:
+
+Welcome back
+
+Current user
+
+Quick actions
+
+Recent notifications
+
+---
+
+Statistics Cards
+
+Show:
+
+Total Workspaces
+
+Projects
+
+Content Items
+
+API Requests
+
+Storage Used
+
+---
+
+Workspaces Section
+
+Display workspaces as modern cards.
+
+Each card includes:
+
+Workspace Icon
+
+Workspace Name
+
+Description
+
+Project Count
+
+Last Updated
+
+Members
+
+Status
+
+Clicking a workspace opens the Workspace Dashboard.
+
+---
+
+Recent Activity
+
+Timeline component.
+
+Examples:
+
+Created workspace
+
+Published content
+
+Uploaded media
+
+Generated API key
+
+Invited member
+
+---
+
+Usage Overview
+
+Charts.
+
+API usage.
+
+Storage.
+
+Bandwidth.
+
+Content growth.
+
+---
+
+Quick Actions
+
+Buttons
+
+Create Workspace
+
+Import Project
+
+Documentation
+
+Upgrade Plan
+
+---
+
+# Workspace Dashboard
+
+This is the heart of the application.
+
+Every workspace is independent.
+
+Top Header
+
+Contains:
+
+Workspace Switcher
+
+Global Search
+
+Notifications
+
+Documentation
+
+Profile Menu
+
+Create Button
+
+---
+
+Sidebar Navigation
+
+Overview
+
+Content
+
+Collections
+
+Media Library
+
+Categories
+
+Tags
+
+Forms (future)
+
+Menus (future)
+
+Comments
+
+API Explorer
+
+Webhooks
+
+Users
+
+Roles
+
+Analytics
+
+AI Assistant
+
+Settings
+
+---
+
+Settings Submenu
+
+General
+
+Domains
+
+API Keys
+
+Environment Variables
+
+SEO Defaults
+
+Roles
+
+Billing
+
+Integrations
+
+Danger Zone
+
+---
+
+Overview Page
+
+Statistics Cards
+
+Collections
+
+Content Items
+
+API Requests
+
+Media Storage
+
+Uptime
+
+Published Items
+
+Drafts
+
+---
+
+Charts
+
+Content Growth
+
+API Usage
+
+Storage Growth
+
+Traffic (future)
+
+---
+
+Content Status
+
+Beautiful donut chart.
+
+Published
+
+Draft
+
+Scheduled
+
+Archived
+
+---
+
+Top Collections
+
+Display:
+
+Blogs
+
+Pages
+
+Products
+
+Documentation
+
+FAQs
+
+Events
+
+Media
+
+Each shows:
+
+Item count
+
+Growth
+
+Quick action
+
+---
+
+Recent Content Table
+
+Columns
+
+Title
+
+Collection
+
+Status
+
+Updated
+
+Author
+
+Actions
+
+Support:
+
+Sorting
+
+Pagination
+
+Search
+
+Bulk actions
+
+---
+
+Recent Activity
+
+Timeline.
+
+Examples:
+
+Published article
+
+Deleted media
+
+Created collection
+
+Generated AI article
+
+Uploaded image
+
+---
+
+Quick Actions
+
+Large action cards.
+
+Create Blog
+
+Create Page
+
+Upload Media
+
+Create Collection
+
+Generate AI Content
+
+Create API Key
+
+---
+
+Content Module
+
+Content
+
+↓
+
+Collections
+
+↓
+
+Items
+
+Each collection has:
+
+List View
+
+Grid View
+
+Filtering
+
+Searching
+
+Bulk editing
+
+Publishing
+
+Archiving
+
+Deleting
+
+Duplicating
+
+---
+
+Blog Editor
+
+Professional editor.
+
+Left
+
+Main editor.
+
+Right
+
+Publishing panel.
+
+Layout:
+
+Title
+
+Slug
+
+Content
+
+Categories
+
+Tags
+
+Cover Image
+
+SEO
+
+Publish Settings
+
+Preview
+
+Save Draft
+
+Publish
+
+The layout should resemble professional publishing platforms like Ghost or Medium.
+
+---
+
+Media Library
+
+Modern gallery.
+
+Features:
+
+Upload
+
+Drag & Drop
+
+Folders
+
+Preview
+
+Delete
+
+Copy URL
+
+Filter
+
+Search
+
+---
+
+Collections
+
+Display as cards.
+
+Each card:
+
+Icon
+
+Name
+
+Item Count
+
+Description
+
+Created Date
+
+Quick Actions
+
+---
+
+Analytics
+
+Dashboard includes:
+
+API Requests
+
+Views
+
+Storage
+
+Bandwidth
+
+Popular Content
+
+Most Viewed
+
+Top Authors
+
+Content Growth
+
+---
+
+Users
+
+Table layout.
+
+Avatar
+
+Name
+
+Email
+
+Role
+
+Status
+
+Last Active
+
+Actions
+
+Invite User button.
+
+---
+
+API Explorer
+
+Beautiful developer page.
+
+Display:
+
+Endpoints
+
+Authentication
+
+Headers
+
+Example Requests
+
+Example Responses
+
+Code Snippets
+
+Copy buttons
+
+Supported Languages:
+
+JavaScript
+
+TypeScript
+
+Python
+
+PHP
+
+Go
+
+Java
+
+---
+
+AI Assistant
+
+Dedicated page.
+
+Capabilities:
+
+Generate Article
+
+Rewrite
+
+Translate
+
+Summarize
+
+Generate SEO
+
+Generate FAQs
+
+Generate Metadata
+
+Generate Categories
+
+Generate Tags
+
+Generate Image Prompt
+
+---
+
+Search
+
+Global search.
+
+Should search:
+
+Collections
+
+Content
+
+Media
+
+Users
+
+Settings
+
+Commands
+
+Use keyboard shortcut:
+
+Ctrl + K
+
+or
+
+⌘ + K
+
+Command palette style.
+
+---
+
+Notifications
+
+Modern notification center.
+
+Unread badge.
+
+Grouped by date.
+
+Support:
+
+Read
+
+Mark all read
+
+Delete
+
+---
+
+Profile Menu
+
+Avatar
+
+Account
+
+Workspace
+
+Billing
+
+Keyboard Shortcuts
+
+Settings
+
+Logout
+
+---
+
+Responsive Design
+
+Desktop
+
+Full sidebar.
+
+Tablet
+
+Collapsible sidebar.
+
+Mobile
+
+Drawer navigation.
+
+Every page must remain fully functional.
+
+---
+
+Component Library
+
+Create reusable components.
+
+Examples:
+
+Stat Card
+
+Metric Card
+
+Data Table
+
+Timeline
+
+Chart Card
+
+Section Header
+
+Search Bar
+
+Workspace Card
+
+Collection Card
+
+Media Card
+
+User Card
+
+Quick Action Card
+
+Empty State
+
+Loading Skeleton
+
+Confirmation Dialog
+
+Status Badge
+
+---
+
+Animations
+
+Subtle only.
+
+Hover elevation.
+
+Card fade.
+
+Sidebar transitions.
+
+Dropdown animation.
+
+Modal animation.
+
+Loading skeletons.
+
+Avoid excessive motion.
+
+---
+
+Accessibility
+
+Keyboard navigation.
+
+Visible focus states.
+
+ARIA labels.
+
+High contrast.
+
+Screen reader friendly.
+
+---
+
+Performance
+
+Lazy load heavy components.
+
+Paginate large tables.
+
+Virtualize long lists if necessary.
+
+Optimize image loading.
+
+Avoid unnecessary re-renders.
+
+---
+
+Code Quality
+
+Use reusable components.
+
+Separate business logic from UI.
+
+Follow existing folder structure.
+
+Keep components modular.
+
+Avoid duplicate code.
+
+Type everything with TypeScript.
+
+---
+
+Implementation Order
+
+Phase 1
+
+Global Dashboard
+
+Sidebar
+
+Header
+
+Statistics
+
+Workspace Cards
+
+Recent Activity
+
+Charts
+
+---
+
+Phase 2
+
+Workspace Dashboard
+
+Sidebar
+
+Overview
+
+Statistics
+
+Quick Actions
+
+Recent Content
+
+Analytics
+
+---
+
+Phase 3
+
+Collections
+
+Media
+
+Blogs
+
+Users
+
+Settings
+
+---
+
+Phase 4
+
+AI Assistant
+
+API Explorer
+
+Analytics
+
+Notifications
+
+Search
+
+---
+
+Final Goal
+
+The completed interface should feel like a premium SaaS product rather than a typical admin dashboard. Users should immediately understand the separation between the Global Dashboard (where they manage workspaces) and the Workspace Dashboard (where they manage content). The UI should be highly polished, responsive, scalable, and built entirely with reusable components so future modules can be added without redesigning the application.
