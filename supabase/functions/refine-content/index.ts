@@ -39,6 +39,7 @@ Deno.serve(async (req) => {
     const body = await req.json().catch(() => ({}));
     const content: string = typeof body.content === "string" ? body.content : "";
     const title: string = typeof body.title === "string" ? body.title : "";
+    const action: string = body.action === "metadata" ? "metadata" : "refine";
     const mode: RefineMode =
       body.mode && body.mode in INSTRUCTIONS ? body.mode : "improve";
 
@@ -49,7 +50,12 @@ Deno.serve(async (req) => {
       });
     }
 
-    const systemPrompt = `You are an expert blog editor. ${INSTRUCTIONS[mode]}
+    const systemPrompt =
+      action === "metadata"
+        ? `You are an expert blog editor. Based on the article, generate SEO-friendly metadata.
+Return ONLY a valid JSON object (no markdown fences, no commentary) with exactly these keys:
+{"title": string (max 60 chars, compelling), "excerpt": string (1-2 sentences, max 160 chars summarizing the article), "tags": string[] (3-6 short lowercase topic tags)}.`
+        : `You are an expert blog editor. ${INSTRUCTIONS[mode]}
 Return ONLY the refined article body as clean semantic HTML (use <h2>, <h3>, <p>, <ul>, <ol>, <li>, <blockquote>, <strong>, <em>, <a>). Do not wrap it in markdown code fences. Do not include <html>, <head> or <body> tags. Do not add commentary.`;
 
     const userPrompt = `${title ? `Title: ${title}\n\n` : ""}Article HTML:\n${content}`;
@@ -93,15 +99,39 @@ Return ONLY the refined article body as clean semantic HTML (use <h2>, <h3>, <p>
     }
 
     const data = await res.json();
-    let refined: string = data?.choices?.[0]?.message?.content ?? "";
-    refined = refined
-      .replace(/^```(?:html)?\s*/i, "")
+    let raw: string = data?.choices?.[0]?.message?.content ?? "";
+    raw = raw
+      .replace(/^```(?:html|json)?\s*/i, "")
       .replace(/\s*```$/i, "")
       .trim();
 
-    return new Response(JSON.stringify({ refined }), {
+    if (action === "metadata") {
+      let meta: { title?: string; excerpt?: string; tags?: string[] } = {};
+      try {
+        const match = raw.match(/\{[\s\S]*\}/);
+        meta = JSON.parse(match ? match[0] : raw);
+      } catch {
+        return new Response(
+          JSON.stringify({ error: "Could not parse AI metadata." }),
+          { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+      return new Response(
+        JSON.stringify({
+          title: typeof meta.title === "string" ? meta.title : "",
+          excerpt: typeof meta.excerpt === "string" ? meta.excerpt : "",
+          tags: Array.isArray(meta.tags)
+            ? meta.tags.filter((t) => typeof t === "string")
+            : [],
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
+    return new Response(JSON.stringify({ refined: raw }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
+
   } catch (err) {
     return new Response(
       JSON.stringify({ error: err instanceof Error ? err.message : "Unknown error" }),
