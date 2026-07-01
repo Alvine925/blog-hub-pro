@@ -318,6 +318,11 @@ export const uploadCoverImage = createServerFn({ method: "POST" })
       .upload(path, buffer, { contentType: data.contentType, upsert: false });
     if (uploadError) throw new Error(uploadError.message);
 
-    const { data: pub } = supabase.storage.from(BLOG_BUCKET).getPublicUrl(path);
-    return { url: pub.publicUrl };
+    // Private bucket -> long-lived signed URL (10 years).
+    const { data: signed, error: signError } = await supabase.storage
+      .from(BLOG_BUCKET)
+      .createSignedUrl(path, 60 * 60 * 24 * 365 * 10);
+    if (signError || !signed) throw new Error(signError?.message || "Failed to sign URL");
+
+    return { url: signed.signedUrl };
   });
