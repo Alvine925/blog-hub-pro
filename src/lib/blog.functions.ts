@@ -243,18 +243,42 @@ export const upsertPost = createServerFn({ method: "POST" })
         .from("blog_posts")
         .update(record)
         .eq("id", data.id)
-        .select("id, slug")
+        .select("id, slug, status, title, category, published_at")
         .single();
       if (error) throw new Error(error.message);
+      if (data.status === "published") {
+        import("./webhook.functions").then(({ dispatchWebhooks }) =>
+          dispatchWebhooks("post.updated", {
+            id: row.id,
+            slug: row.slug,
+            title: data.title,
+            status: "published",
+            category: data.category,
+            author_name: data.author_name,
+          }).catch(() => {}),
+        );
+      }
       return { id: row.id, slug: row.slug };
     }
 
     const { data: row, error } = await supabase
       .from("blog_posts")
       .insert(record)
-      .select("id, slug")
+      .select("id, slug, status, title, category, published_at")
       .single();
     if (error) throw new Error(error.message);
+    if (data.status === "published") {
+      import("./webhook.functions").then(({ dispatchWebhooks }) =>
+        dispatchWebhooks("post.published", {
+          id: row.id,
+          slug: row.slug,
+          title: data.title,
+          status: "published",
+          category: data.category,
+          author_name: data.author_name,
+        }).catch(() => {}),
+      );
+    }
     return { id: row.id, slug: row.slug };
   });
 
@@ -267,11 +291,25 @@ export const setPostStatus = createServerFn({ method: "POST" })
   .handler(async ({ data }): Promise<{ ok: true }> => {
     const { getAdminClient } = await import("./supabase.server");
     const supabase = await getAdminClient();
-    const { error } = await supabase
+    const { data: row, error } = await supabase
       .from("blog_posts")
       .update({ status: data.status })
-      .eq("id", data.id);
+      .eq("id", data.id)
+      .select("id, slug, title, category, author_name")
+      .single();
     if (error) throw new Error(error.message);
+    const webhookEvent =
+      data.status === "published" ? "post.published" : "post.unpublished";
+    import("./webhook.functions").then(({ dispatchWebhooks }) =>
+      dispatchWebhooks(webhookEvent, {
+        id: row.id,
+        slug: row.slug,
+        title: row.title,
+        status: data.status,
+        category: row.category,
+        author_name: row.author_name,
+      }).catch(() => {}),
+    );
     return { ok: true };
   });
 
@@ -282,8 +320,26 @@ export const deletePost = createServerFn({ method: "POST" })
   .handler(async ({ data }): Promise<{ ok: true }> => {
     const { getAdminClient } = await import("./supabase.server");
     const supabase = await getAdminClient();
+    // Fetch before deletion so webhook payload has full context
+    const { data: post } = await supabase
+      .from("blog_posts")
+      .select("id, slug, title, status, category, author_name")
+      .eq("id", data.id)
+      .maybeSingle();
     const { error } = await supabase.from("blog_posts").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
+    if (post) {
+      import("./webhook.functions").then(({ dispatchWebhooks }) =>
+        dispatchWebhooks("post.deleted", {
+          id: post.id,
+          slug: post.slug,
+          title: post.title,
+          status: post.status,
+          category: post.category,
+          author_name: post.author_name,
+        }).catch(() => {}),
+      );
+    }
     return { ok: true };
   });
 

@@ -14,6 +14,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as BlogsIndexRouteImport } from './routes/blogs.index'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
 import { Route as BlogsSlugRouteImport } from './routes/blogs.$slug'
+import { Route as AdminWebhooksRouteImport } from './routes/admin.webhooks'
 import { Route as AdminMediaRouteImport } from './routes/admin.media'
 import { Route as AdminDashboardRouteImport } from './routes/admin.dashboard'
 import { Route as AdminApiKeysRouteImport } from './routes/admin.api-keys'
@@ -45,6 +46,11 @@ const BlogsSlugRoute = BlogsSlugRouteImport.update({
   id: '/blogs/$slug',
   path: '/blogs/$slug',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AdminWebhooksRoute = AdminWebhooksRouteImport.update({
+  id: '/webhooks',
+  path: '/webhooks',
+  getParentRoute: () => AdminRoute,
 } as any)
 const AdminMediaRoute = AdminMediaRouteImport.update({
   id: '/media',
@@ -83,6 +89,7 @@ export interface FileRoutesByFullPath {
   '/admin/api-keys': typeof AdminApiKeysRoute
   '/admin/dashboard': typeof AdminDashboardRoute
   '/admin/media': typeof AdminMediaRoute
+  '/admin/webhooks': typeof AdminWebhooksRoute
   '/blogs/$slug': typeof BlogsSlugRoute
   '/admin/': typeof AdminIndexRoute
   '/blogs/': typeof BlogsIndexRoute
@@ -95,6 +102,7 @@ export interface FileRoutesByTo {
   '/admin/api-keys': typeof AdminApiKeysRoute
   '/admin/dashboard': typeof AdminDashboardRoute
   '/admin/media': typeof AdminMediaRoute
+  '/admin/webhooks': typeof AdminWebhooksRoute
   '/blogs/$slug': typeof BlogsSlugRoute
   '/admin': typeof AdminIndexRoute
   '/blogs': typeof BlogsIndexRoute
@@ -109,6 +117,7 @@ export interface FileRoutesById {
   '/admin/api-keys': typeof AdminApiKeysRoute
   '/admin/dashboard': typeof AdminDashboardRoute
   '/admin/media': typeof AdminMediaRoute
+  '/admin/webhooks': typeof AdminWebhooksRoute
   '/blogs/$slug': typeof BlogsSlugRoute
   '/admin/': typeof AdminIndexRoute
   '/blogs/': typeof BlogsIndexRoute
@@ -124,6 +133,7 @@ export interface FileRouteTypes {
     | '/admin/api-keys'
     | '/admin/dashboard'
     | '/admin/media'
+    | '/admin/webhooks'
     | '/blogs/$slug'
     | '/admin/'
     | '/blogs/'
@@ -136,6 +146,7 @@ export interface FileRouteTypes {
     | '/admin/api-keys'
     | '/admin/dashboard'
     | '/admin/media'
+    | '/admin/webhooks'
     | '/blogs/$slug'
     | '/admin'
     | '/blogs'
@@ -149,6 +160,7 @@ export interface FileRouteTypes {
     | '/admin/api-keys'
     | '/admin/dashboard'
     | '/admin/media'
+    | '/admin/webhooks'
     | '/blogs/$slug'
     | '/admin/'
     | '/blogs/'
@@ -201,6 +213,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof BlogsSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/webhooks': {
+      id: '/admin/webhooks'
+      path: '/webhooks'
+      fullPath: '/admin/webhooks'
+      preLoaderRoute: typeof AdminWebhooksRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/media': {
       id: '/admin/media'
       path: '/media'
@@ -250,6 +269,7 @@ interface AdminRouteChildren {
   AdminApiKeysRoute: typeof AdminApiKeysRoute
   AdminDashboardRoute: typeof AdminDashboardRoute
   AdminMediaRoute: typeof AdminMediaRoute
+  AdminWebhooksRoute: typeof AdminWebhooksRoute
   AdminIndexRoute: typeof AdminIndexRoute
   AdminBlogsIdRoute: typeof AdminBlogsIdRoute
   AdminBlogsNewRoute: typeof AdminBlogsNewRoute
@@ -260,6 +280,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminApiKeysRoute: AdminApiKeysRoute,
   AdminDashboardRoute: AdminDashboardRoute,
   AdminMediaRoute: AdminMediaRoute,
+  AdminWebhooksRoute: AdminWebhooksRoute,
   AdminIndexRoute: AdminIndexRoute,
   AdminBlogsIdRoute: AdminBlogsIdRoute,
   AdminBlogsNewRoute: AdminBlogsNewRoute,

@@ -1,0 +1,231 @@
+import { createServerFn } from "@tanstack/react-start";
+import { z } from "zod";
+
+export const WEBHOOK_EVENTS = [
+  "post.published",
+  "post.updated",
+  "post.unpublished",
+  "post.deleted",
+] as const;
+
+export type WebhookEvent = (typeof WEBHOOK_EVENTS)[number];
+
+export interface Webhook {
+  id: string;
+  name: string;
+  url: string;
+  secret: string;
+  events: WebhookEvent[];
+  active: boolean;
+  created_at: string;
+}
+
+export interface WebhookLog {
+  id: string;
+  webhook_id: string;
+  event: string;
+  response_status: number | null;
+  duration_ms: number | null;
+  error: string | null;
+  delivered_at: string;
+}
+
+// ---------------------------------------------------------------------------
+// CRUD
+// ---------------------------------------------------------------------------
+
+export const listWebhooks = createServerFn({ method: "GET" }).handler(
+  async (): Promise<Webhook[]> => {
+    const { getAdminClient } = await import("./supabase.server");
+    const supabase = await getAdminClient();
+    const { data, error } = await supabase
+      .from("webhooks")
+      .select("*")
+      .order("created_at", { ascending: false });
+    if (error) {
+      if (error.message.includes("schema cache") || error.code === "PGRST204") return [];
+      throw new Error(error.message);
+    }
+    return (data ?? []) as Webhook[];
+  },
+);
+
+export const getWebhookLogs = createServerFn({ method: "GET" })
+  .validator((input: { webhookId: string }) =>
+    z.object({ webhookId: z.string().uuid() }).parse(input),
+  )
+  .handler(async ({ data }): Promise<WebhookLog[]> => {
+    const { getAdminClient } = await import("./supabase.server");
+    const supabase = await getAdminClient();
+    const { data: rows, error } = await supabase
+      .from("webhook_logs")
+      .select("*")
+      .eq("webhook_id", data.webhookId)
+      .order("delivered_at", { ascending: false })
+      .limit(20);
+    if (error) {
+      if (error.message.includes("schema cache") || error.code === "PGRST204") return [];
+      throw new Error(error.message);
+    }
+    return (rows ?? []) as WebhookLog[];
+  });
+
+export const createWebhook = createServerFn({ method: "POST" })
+  .validator((input: { name: string; url: string; secret: string; events: string[] }) =>
+    z
+      .object({
+        name: z.string().trim().min(1).max(100),
+        url: z.string().url(),
+        secret: z.string().max(200).default(""),
+        events: z.array(z.string()).min(1),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data }): Promise<{ id: string }> => {
+    const { getAdminClient } = await import("./supabase.server");
+    const supabase = await getAdminClient();
+    const { data: row, error } = await supabase
+      .from("webhooks")
+      .insert({ name: data.name, url: data.url, secret: data.secret, events: data.events })
+      .select("id")
+      .single();
+    if (error) throw new Error(error.message);
+    return { id: row.id };
+  });
+
+export const updateWebhook = createServerFn({ method: "POST" })
+  .validator(
+    (input: {
+      id: string;
+      name: string;
+      url: string;
+      secret: string;
+      events: string[];
+      active: boolean;
+    }) =>
+      z
+        .object({
+          id: z.string().uuid(),
+          name: z.string().trim().min(1).max(100),
+          url: z.string().url(),
+          secret: z.string().max(200).default(""),
+          events: z.array(z.string()).min(1),
+          active: z.boolean(),
+        })
+        .parse(input),
+  )
+  .handler(async ({ data }): Promise<{ ok: true }> => {
+    const { getAdminClient } = await import("./supabase.server");
+    const supabase = await getAdminClient();
+    const { error } = await supabase
+      .from("webhooks")
+      .update({
+        name: data.name,
+        url: data.url,
+        secret: data.secret,
+        events: data.events,
+        active: data.active,
+      })
+      .eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const deleteWebhook = createServerFn({ method: "POST" })
+  .validator((input: { id: string }) => z.object({ id: z.string().uuid() }).parse(input))
+  .handler(async ({ data }): Promise<{ ok: true }> => {
+    const { getAdminClient } = await import("./supabase.server");
+    const supabase = await getAdminClient();
+    const { error } = await supabase.from("webhooks").delete().eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const toggleWebhook = createServerFn({ method: "POST" })
+  .validator((input: { id: string; active: boolean }) =>
+    z.object({ id: z.string().uuid(), active: z.boolean() }).parse(input),
+  )
+  .handler(async ({ data }): Promise<{ ok: true }> => {
+    const { getAdminClient } = await import("./supabase.server");
+    const supabase = await getAdminClient();
+    const { error } = await supabase
+      .from("webhooks")
+      .update({ active: data.active })
+      .eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+// ---------------------------------------------------------------------------
+// DISPATCHER (server-side only)
+// ---------------------------------------------------------------------------
+
+async function hmacSha256(secret: string, body: string): Promise<string> {
+  const { createHmac } = await import("node:crypto");
+  return "sha256=" + createHmac("sha256", secret).update(body).digest("hex");
+}
+
+export async function dispatchWebhooks(
+  event: WebhookEvent,
+  payload: Record<string, unknown>,
+): Promise<void> {
+  try {
+    const { getAdminClient } = await import("./supabase.server");
+    const supabase = await getAdminClient();
+
+    const { data: hooks, error } = await supabase
+      .from("webhooks")
+      .select("*")
+      .eq("active", true)
+      .contains("events", [event]);
+
+    if (error || !hooks || hooks.length === 0) return;
+
+    const body = JSON.stringify({
+      event,
+      timestamp: new Date().toISOString(),
+      data: payload,
+    });
+
+    await Promise.allSettled(
+      hooks.map(async (hook: Webhook) => {
+        const start = Date.now();
+        let response_status: number | null = null;
+        let errorMsg: string | null = null;
+
+        try {
+          const headers: Record<string, string> = {
+            "Content-Type": "application/json",
+            "User-Agent": "LunarCMS/1.0",
+            "X-Lunar-Event": event,
+          };
+          if (hook.secret) {
+            headers["X-Lunar-Signature"] = await hmacSha256(hook.secret, body);
+          }
+
+          const res = await fetch(hook.url, {
+            method: "POST",
+            headers,
+            body,
+            signal: AbortSignal.timeout(10_000),
+          });
+          response_status = res.status;
+        } catch (err) {
+          errorMsg = String(err);
+        }
+
+        const duration_ms = Date.now() - start;
+
+        await supabase.from("webhook_logs").insert({
+          webhook_id: hook.id,
+          event,
+          response_status,
+          duration_ms,
+          error: errorMsg,
+        });
+      }),
+    );
+  } catch {
+    // Never crash the caller
+  }
+}

@@ -1,2 +1,3 @@
 - [TanStack Start API routes](tanstack-start-api-routes.md) — createAPIFileRoute is not auto-discovered by @lovable.dev/vite-tanstack-config; use Vite configureServer middleware instead.
 - [Supabase server client](supabase-server-client.md) — Uses anon/publishable key (not service role); RLS policies must be open; auth deferred by design.
+- [Webhook dispatcher pattern](webhook-dispatcher.md) — fire-and-forget via dynamic import + .catch(); never awaited in server fns to avoid blocking responses.

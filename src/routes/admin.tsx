@@ -6,6 +6,7 @@ import {
   Key,
   ExternalLink,
   Moon,
+  Webhook,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -24,6 +25,7 @@ const navItems = [
   { label: "Blogs", to: "/admin/blogs", icon: FileText },
   { label: "Media", to: "/admin/media", icon: ImageIcon },
   { label: "API Keys", to: "/admin/api-keys", icon: Key },
+  { label: "Webhooks", to: "/admin/webhooks", icon: Webhook },
 ];
 
 function AdminLayout() {
