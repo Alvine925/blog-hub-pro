@@ -4,8 +4,8 @@ import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
 import {
   FileText, Layers, ImageIcon, Sparkles, Key, Clock, Activity,
   Plus, Eye, Send, FilePen, ArrowRight, Zap, TrendingUp,
-  Globe, Building2, Users, Mic2, Tag, BookOpen, Target,
-  ChevronRight, ExternalLink, BarChart2, Lightbulb,
+  Globe, Tag, BookOpen, ExternalLink, BarChart2, Lightbulb,
+  ChevronRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -147,90 +147,41 @@ function fmtAction(action: string) {
   return action.replace(/[._]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
-const STATUS_CFG: Record<string, { label: string; class: string; dot: string }> = {
-  published: { label: "Published", class: "text-emerald-700 bg-emerald-50 border-emerald-200", dot: "bg-emerald-500" },
-  draft:     { label: "Draft",     class: "text-gray-600   bg-gray-50   border-gray-200",     dot: "bg-gray-400"   },
-  scheduled: { label: "Scheduled", class: "text-amber-700  bg-amber-50  border-amber-200",    dot: "bg-amber-500"  },
+const STATUS_CFG: Record<string, { label: string; dot: string }> = {
+  published: { label: "Published", dot: "bg-emerald-500" },
+  draft:     { label: "Draft",     dot: "bg-gray-300"   },
+  scheduled: { label: "Scheduled", dot: "bg-amber-400"  },
 };
 
 const PRIORITY_CFG: Record<string, { label: string; class: string }> = {
-  high:   { label: "High",   class: "text-red-700    bg-red-50    border-red-200"   },
-  medium: { label: "Medium", class: "text-amber-700  bg-amber-50  border-amber-200" },
-  low:    { label: "Low",    class: "text-gray-600   bg-gray-50   border-gray-200"  },
+  high:   { label: "High",   class: "text-red-600"   },
+  medium: { label: "Medium", class: "text-amber-600" },
+  low:    { label: "Low",    class: "text-gray-400"  },
 };
 
-// ── Sub-components ─────────────────────────────────────────────────────────────
-function StatCard({
-  label, value, icon: Icon, accent, amber, green,
-}: {
-  label: string; value: number;
-  icon: React.ComponentType<{ className?: string }>;
-  accent?: boolean; amber?: boolean; green?: boolean;
-}) {
-  return (
-    <div className={cn(
-      "flex flex-col gap-3 rounded-xl border p-5 shadow-sm transition-shadow hover:shadow-md",
-      accent ? "border-primary/20 bg-primary/5"
-             : amber ? "border-amber-200 bg-amber-50"
-             : green ? "border-emerald-200 bg-emerald-50"
-             : "border-border bg-white",
-    )}>
-      <div className="flex items-center justify-between">
-        <span className={cn(
-          "flex h-8 w-8 items-center justify-center rounded-lg text-xs",
-          accent ? "bg-primary text-white"
-                 : amber ? "bg-amber-500 text-white"
-                 : green ? "bg-emerald-500 text-white"
-                 : "bg-muted text-muted-foreground",
-        )}>
-          <Icon className="h-3.5 w-3.5" />
-        </span>
-      </div>
-      <div>
-        <p className={cn(
-          "text-2xl font-bold tabular-nums",
-          accent ? "text-primary" : amber ? "text-amber-700" : green ? "text-emerald-700" : "text-foreground",
-        )}>
-          {value.toLocaleString()}
-        </p>
-        <p className="mt-0.5 text-xs text-muted-foreground">{label}</p>
-      </div>
-    </div>
-  );
-}
-
+// ── Sub-components ────────────────────────────────────────────────────────────
 function StatusBadge({ status }: { status: string }) {
   const cfg = STATUS_CFG[status] ?? STATUS_CFG.draft;
   return (
-    <span className={cn("inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium", cfg.class)}>
-      <span className={cn("h-1.5 w-1.5 rounded-full", cfg.dot)} />
+    <span className="inline-flex items-center gap-1.5 text-[11px] text-muted-foreground">
+      <span className={cn("h-1.5 w-1.5 rounded-full shrink-0", cfg.dot)} />
       {cfg.label}
     </span>
   );
 }
 
-function PriorityBadge({ priority }: { priority: string }) {
-  const cfg = PRIORITY_CFG[priority] ?? PRIORITY_CFG.medium;
-  return (
-    <span className={cn("inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-medium", cfg.class)}>
-      {cfg.label}
-    </span>
-  );
-}
-
-function SectionCard({ title, icon: Icon, children, className }: {
-  title: string;
+function SectionHeading({ icon: Icon, title, action }: {
   icon: React.ComponentType<{ className?: string }>;
-  children: React.ReactNode;
-  className?: string;
+  title: string;
+  action?: React.ReactNode;
 }) {
   return (
-    <div className={cn("rounded-xl border border-border bg-white shadow-sm", className)}>
-      <div className="flex items-center gap-2 border-b border-border px-5 py-4">
-        <Icon className="h-4 w-4 text-muted-foreground" />
-        <h2 className="text-sm font-semibold">{title}</h2>
+    <div className="flex items-center justify-between pb-3 border-b border-border/60">
+      <div className="flex items-center gap-2">
+        <Icon className="h-3.5 w-3.5 text-muted-foreground" />
+        <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">{title}</h2>
       </div>
-      {children}
+      {action}
     </div>
   );
 }
@@ -241,9 +192,9 @@ function WorkspaceOverview() {
   const { data } = useSuspenseQuery(overviewQuery(id));
   const {
     stats, recentPosts, recentActivity,
-    intel        = null,
-    competitors  = [],
-    keywords     = [],
+    intel         = null,
+    competitors   = [],
+    keywords      = [],
     opportunities = [],
   } = data as any;
 
@@ -253,20 +204,20 @@ function WorkspaceOverview() {
   const hasIntel = !!(intel?.website_url || intel?.industry || competitors.length || keywords.length || opportunities.length);
 
   const QUICK_ACTIONS = [
-    { label: "New Blog Post",   desc: "Write and publish content",   to: "/admin/blogs/new",     icon: FileText,  primary: true },
-    { label: "New Collection",  desc: "Define a content type",       to: `${base}/collections`,  icon: Layers     },
-    { label: "Upload Media",    desc: "Add images and files",        to: `${base}/media`,        icon: ImageIcon  },
-    { label: "AI Assistant",    desc: "Generate content with AI",    to: `${base}/ai-assistant`, icon: Sparkles   },
-    { label: "API Keys",        desc: "Manage access tokens",        to: `${base}/api-keys`,     icon: Key        },
-    { label: "Analytics",       desc: "View performance metrics",    to: `${base}/analytics`,    icon: TrendingUp },
+    { label: "New Blog Post",  desc: "Write and publish content",  to: "/admin/blogs/new",     icon: FileText,  primary: true },
+    { label: "New Collection", desc: "Define a content type",      to: `${base}/collections`,  icon: Layers     },
+    { label: "Upload Media",   desc: "Add images and files",       to: `${base}/media`,        icon: ImageIcon  },
+    { label: "AI Assistant",   desc: "Generate content with AI",   to: `${base}/ai-assistant`, icon: Sparkles   },
+    { label: "API Keys",       desc: "Manage access tokens",       to: `${base}/api-keys`,     icon: Key        },
+    { label: "Analytics",      desc: "View performance metrics",   to: `${base}/analytics`,    icon: TrendingUp },
   ];
 
   const primaryTopics = intel?.ai_context?.primaryTopics ?? [];
   const suggestedTags = intel?.ai_context?.suggestedTags ?? [];
-  const allKeywords   = keywords.map((k) => k.keyword);
+  const allKeywords   = keywords.map((k: any) => k.keyword);
 
   return (
-    <div className="min-h-full space-y-8 px-8 py-8">
+    <div className="min-h-full space-y-12 px-8 py-8">
 
       {/* ── Header ── */}
       <div className="flex items-start justify-between gap-4">
@@ -276,112 +227,132 @@ function WorkspaceOverview() {
         </div>
         <Link
           to="/admin/blogs/new"
-          className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary/90 transition-colors shrink-0"
+          className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary/90 transition-colors shrink-0"
         >
           <Plus className="h-4 w-4" /> New Post
         </Link>
       </div>
 
-      {/* ── Stat Cards ── */}
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4 lg:grid-cols-7">
-        <StatCard label="Total Posts"  value={stats.postsTotal}     icon={FileText}  />
-        <StatCard label="Published"    value={stats.postsPublished} icon={Send}      green   />
-        <StatCard label="Drafts"       value={stats.postsDraft}     icon={FilePen}   />
-        <StatCard label="Scheduled"    value={stats.postsScheduled} icon={Clock}     amber   />
-        <StatCard label="Collections"  value={stats.collections}    icon={Layers}    accent  />
-        <StatCard label="Media Files"  value={stats.mediaFiles}     icon={ImageIcon} />
-        <StatCard label="AI Gens"      value={stats.aiGenerations}  icon={Sparkles}  />
+      {/* ── Stats row ── */}
+      <div className="grid grid-cols-4 gap-x-8 gap-y-6 sm:grid-cols-7">
+        {[
+          { label: "Total Posts",  value: stats.postsTotal,     icon: FileText  },
+          { label: "Published",    value: stats.postsPublished, icon: Send,      accent: "text-emerald-600" },
+          { label: "Drafts",       value: stats.postsDraft,     icon: FilePen   },
+          { label: "Scheduled",    value: stats.postsScheduled, icon: Clock,     accent: "text-amber-600" },
+          { label: "Collections",  value: stats.collections,    icon: Layers,    accent: "text-primary" },
+          { label: "Media Files",  value: stats.mediaFiles,     icon: ImageIcon },
+          { label: "AI Gens",      value: stats.aiGenerations,  icon: Sparkles  },
+        ].map(({ label, value, icon: Icon, accent }) => (
+          <div key={label} className="space-y-1">
+            <p className={cn("text-2xl font-bold tabular-nums", accent ?? "text-foreground")}>
+              {value.toLocaleString()}
+            </p>
+            <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <Icon className="h-3 w-3 shrink-0" />
+              {label}
+            </p>
+          </div>
+        ))}
       </div>
 
       {/* ── Content Status Bar ── */}
       {stats.postsTotal > 0 && (
-        <div className="rounded-xl border border-border bg-white p-5 shadow-sm">
-          <div className="mb-4 flex items-center gap-2">
-            <Activity className="h-4 w-4 text-muted-foreground" />
-            <h2 className="text-sm font-semibold">Content Status</h2>
-          </div>
-          <div className="flex h-2 overflow-hidden rounded-full bg-muted">
+        <div className="space-y-2">
+          <div className="flex h-1.5 overflow-hidden rounded-full bg-muted">
             <div className="h-full bg-emerald-500 transition-all" style={{ width: `${(stats.postsPublished / total) * 100}%` }} />
             <div className="h-full bg-amber-400  transition-all" style={{ width: `${(stats.postsScheduled / total) * 100}%` }} />
             <div className="h-full bg-zinc-300   transition-all" style={{ width: `${(stats.postsDraft     / total) * 100}%` }} />
           </div>
-          <div className="mt-3 flex flex-wrap items-center gap-5 text-xs text-muted-foreground">
-            <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-emerald-500" />{stats.postsPublished} published</span>
-            <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-amber-400"  />{stats.postsScheduled} scheduled</span>
-            <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-zinc-300"   />{stats.postsDraft} drafts</span>
+          <div className="flex flex-wrap items-center gap-5 text-xs text-muted-foreground">
+            <span className="flex items-center gap-1.5"><span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />{stats.postsPublished} published</span>
+            <span className="flex items-center gap-1.5"><span className="h-1.5 w-1.5 rounded-full bg-amber-400"  />{stats.postsScheduled} scheduled</span>
+            <span className="flex items-center gap-1.5"><span className="h-1.5 w-1.5 rounded-full bg-zinc-300"   />{stats.postsDraft} drafts</span>
           </div>
         </div>
       )}
 
-      {/* ── Site Intelligence Banner ── */}
+      {/* ── Site Intelligence ── */}
       {intel?.website_url && (
-        <div className="rounded-xl border border-primary/20 bg-gradient-to-r from-primary/5 to-violet-50 p-5 shadow-sm">
-          <div className="flex flex-wrap items-start justify-between gap-4">
-            <div className="space-y-1">
-              <div className="flex items-center gap-2">
-                <Globe className="h-4 w-4 text-primary" />
-                <span className="text-sm font-semibold text-primary">Site Intelligence</span>
-              </div>
+        <div className="space-y-4">
+          <SectionHeading icon={Globe} title="Site Intelligence" />
+          <div className="flex flex-wrap gap-x-10 gap-y-4 text-sm">
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/50 mb-1">Website</p>
               <a
                 href={intel.website_url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-1 text-sm text-muted-foreground hover:text-primary transition-colors"
+                className="flex items-center gap-1 text-primary hover:underline text-sm"
               >
-                {intel.website_url}
+                {intel.website_url.replace(/^https?:\/\//, "")}
                 <ExternalLink className="h-3 w-3" />
               </a>
             </div>
-            <div className="flex flex-wrap gap-6 text-xs">
-              {intel.industry && (
-                <div>
-                  <p className="text-muted-foreground/60 uppercase tracking-wide font-medium text-[10px]">Industry</p>
-                  <p className="font-semibold mt-0.5">{intel.industry}</p>
-                </div>
-              )}
-              {intel.brand_voice && (
-                <div>
-                  <p className="text-muted-foreground/60 uppercase tracking-wide font-medium text-[10px]">Brand Voice</p>
-                  <p className="font-semibold mt-0.5">{intel.brand_voice}</p>
-                </div>
-              )}
-              {intel.target_audience && (
-                <div>
-                  <p className="text-muted-foreground/60 uppercase tracking-wide font-medium text-[10px]">Target Audience</p>
-                  <p className="font-semibold mt-0.5 max-w-[200px] truncate">{intel.target_audience}</p>
-                </div>
-              )}
-              {intel.business_model && (
-                <div>
-                  <p className="text-muted-foreground/60 uppercase tracking-wide font-medium text-[10px]">Business Model</p>
-                  <p className="font-semibold mt-0.5">{intel.business_model}</p>
-                </div>
-              )}
-            </div>
+            {intel.industry && (
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/50 mb-1">Industry</p>
+                <p className="font-medium">{intel.industry}</p>
+              </div>
+            )}
+            {intel.brand_voice && (
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/50 mb-1">Brand Voice</p>
+                <p className="font-medium">{intel.brand_voice}</p>
+              </div>
+            )}
+            {intel.business_model && (
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/50 mb-1">Business Model</p>
+                <p className="font-medium">{intel.business_model}</p>
+              </div>
+            )}
+            {intel.target_audience && (
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/50 mb-1">Target Audience</p>
+                <p className="font-medium max-w-xs">{intel.target_audience}</p>
+              </div>
+            )}
           </div>
           {intel.description && (
-            <p className="mt-3 text-xs text-muted-foreground border-t border-primary/10 pt-3 leading-relaxed">
-              {intel.description}
-            </p>
+            <p className="text-sm text-muted-foreground leading-relaxed max-w-2xl">{intel.description}</p>
           )}
         </div>
       )}
 
-      {/* ── Intelligence Grid: Competitors + Keywords + Opportunities ── */}
+      {/* ── Content Pillars ── */}
+      {(intel?.content_pillars?.length ?? 0) > 0 && (
+        <div className="space-y-4">
+          <SectionHeading icon={BookOpen} title="Content Pillars" />
+          <div className="flex flex-wrap gap-2">
+            {intel!.content_pillars.map((p: string, i: number) => (
+              <span key={i} className="flex items-center gap-2 text-sm">
+                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-white">
+                  {i + 1}
+                </span>
+                <span className="font-medium">{p}</span>
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ── Intelligence Grid ── */}
       {hasIntel && (
-        <div className="grid gap-6 lg:grid-cols-3">
+        <div className="grid gap-10 lg:grid-cols-3">
 
           {/* Competitors */}
-          <SectionCard title="Competitors" icon={BarChart2}>
+          <div className="space-y-4">
+            <SectionHeading icon={BarChart2} title="Competitors" />
             {competitors.length === 0 ? (
-              <p className="px-5 py-8 text-center text-sm text-muted-foreground">No competitors identified.</p>
+              <p className="text-sm text-muted-foreground">No competitors identified.</p>
             ) : (
-              <div className="divide-y divide-border">
-                {competitors.map((c) => (
-                  <div key={c.id} className="px-5 py-3 hover:bg-muted/20 transition-colors">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0">
-                        <p className="text-sm font-semibold truncate">{c.name}</p>
+              <div className="space-y-5">
+                {competitors.map((c: any) => (
+                  <div key={c.id}>
+                    <div className="flex items-start gap-2">
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-semibold">{c.name}</p>
                         {c.website && (
                           <a
                             href={c.website.startsWith("http") ? c.website : `https://${c.website}`}
@@ -399,16 +370,12 @@ function WorkspaceOverview() {
                       <p className="mt-1 text-xs text-muted-foreground line-clamp-2">{c.description}</p>
                     )}
                     {(c.strengths?.length > 0 || c.weaknesses?.length > 0) && (
-                      <div className="mt-2 flex flex-wrap gap-1">
-                        {c.strengths?.slice(0, 2).map((s, i) => (
-                          <span key={i} className="inline-flex items-center rounded-full bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 text-[10px] text-emerald-700">
-                            ↑ {s}
-                          </span>
+                      <div className="mt-2 flex flex-wrap gap-1.5">
+                        {c.strengths?.slice(0, 2).map((s: string, i: number) => (
+                          <span key={i} className="text-[11px] text-emerald-700 bg-emerald-50 rounded-full px-2 py-0.5">↑ {s}</span>
                         ))}
-                        {c.weaknesses?.slice(0, 1).map((w, i) => (
-                          <span key={i} className="inline-flex items-center rounded-full bg-red-50 border border-red-200 px-1.5 py-0.5 text-[10px] text-red-700">
-                            ↓ {w}
-                          </span>
+                        {c.weaknesses?.slice(0, 1).map((w: string, i: number) => (
+                          <span key={i} className="text-[11px] text-red-600 bg-red-50 rounded-full px-2 py-0.5">↓ {w}</span>
                         ))}
                       </div>
                     )}
@@ -416,20 +383,21 @@ function WorkspaceOverview() {
                 ))}
               </div>
             )}
-          </SectionCard>
+          </div>
 
           {/* Keywords */}
-          <SectionCard title="Target Keywords" icon={Tag}>
+          <div className="space-y-4">
+            <SectionHeading icon={Tag} title="Target Keywords" />
             {allKeywords.length === 0 && primaryTopics.length === 0 ? (
-              <p className="px-5 py-8 text-center text-sm text-muted-foreground">No keywords identified.</p>
+              <p className="text-sm text-muted-foreground">No keywords identified.</p>
             ) : (
-              <div className="p-5 space-y-4">
+              <div className="space-y-5">
                 {primaryTopics.length > 0 && (
                   <div>
-                    <p className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground/60">Primary Topics</p>
+                    <p className="mb-2 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/50">Primary Topics</p>
                     <div className="flex flex-wrap gap-1.5">
-                      {primaryTopics.map((t, i) => (
-                        <span key={i} className="inline-flex items-center rounded-full bg-primary/10 border border-primary/20 px-2.5 py-1 text-[11px] font-medium text-primary">
+                      {primaryTopics.map((t: string, i: number) => (
+                        <span key={i} className="text-[11px] font-medium text-primary bg-primary/8 rounded-full px-2.5 py-1">
                           {t}
                         </span>
                       ))}
@@ -438,10 +406,10 @@ function WorkspaceOverview() {
                 )}
                 {allKeywords.length > 0 && (
                   <div>
-                    <p className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground/60">SEO Keywords</p>
+                    <p className="mb-2 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/50">SEO Keywords</p>
                     <div className="flex flex-wrap gap-1.5">
-                      {allKeywords.map((kw, i) => (
-                        <span key={i} className="inline-flex items-center rounded-full bg-muted border border-border px-2.5 py-1 text-[11px] text-foreground">
+                      {allKeywords.map((kw: string, i: number) => (
+                        <span key={i} className="text-[11px] text-foreground bg-muted rounded-full px-2.5 py-1">
                           {kw}
                         </span>
                       ))}
@@ -450,10 +418,10 @@ function WorkspaceOverview() {
                 )}
                 {suggestedTags.length > 0 && (
                   <div>
-                    <p className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground/60">Suggested Tags</p>
+                    <p className="mb-2 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/50">Suggested Tags</p>
                     <div className="flex flex-wrap gap-1.5">
-                      {suggestedTags.slice(0, 8).map((t, i) => (
-                        <span key={i} className="inline-flex items-center rounded-full bg-violet-50 border border-violet-200 px-2.5 py-1 text-[11px] text-violet-700">
+                      {suggestedTags.slice(0, 8).map((t: string, i: number) => (
+                        <span key={i} className="text-[11px] text-violet-700 bg-violet-50 rounded-full px-2.5 py-1">
                           #{t}
                         </span>
                       ))}
@@ -462,94 +430,76 @@ function WorkspaceOverview() {
                 )}
               </div>
             )}
-          </SectionCard>
+          </div>
 
           {/* Content Opportunities */}
-          <SectionCard title="Content Opportunities" icon={Lightbulb}>
+          <div className="space-y-4">
+            <SectionHeading icon={Lightbulb} title="Content Opportunities" />
             {opportunities.length === 0 ? (
-              <p className="px-5 py-8 text-center text-sm text-muted-foreground">No opportunities identified.</p>
+              <p className="text-sm text-muted-foreground">No opportunities identified.</p>
             ) : (
-              <div className="divide-y divide-border">
-                {opportunities.map((opp) => (
-                  <div key={opp.id} className="px-5 py-3 hover:bg-muted/20 transition-colors">
-                    <div className="flex items-start justify-between gap-2">
-                      <p className="text-xs font-semibold leading-snug flex-1">{opp.title}</p>
-                      <PriorityBadge priority={opp.priority} />
+              <div className="space-y-5">
+                {opportunities.map((opp: any) => {
+                  const pcfg = PRIORITY_CFG[opp.priority] ?? PRIORITY_CFG.medium;
+                  return (
+                    <div key={opp.id}>
+                      <div className="flex items-start gap-2">
+                        <p className="text-sm font-semibold flex-1 leading-snug">{opp.title}</p>
+                        <span className={cn("text-[11px] font-medium shrink-0", pcfg.class)}>{pcfg.label}</span>
+                      </div>
+                      {opp.topic && (
+                        <p className="mt-0.5 text-[11px] text-primary font-medium">{opp.type} · {opp.topic}</p>
+                      )}
+                      {opp.reason && (
+                        <p className="mt-1 text-[11px] text-muted-foreground line-clamp-2">{opp.reason}</p>
+                      )}
+                      <Link
+                        to="/admin/blogs/new"
+                        className="mt-1.5 inline-flex items-center gap-1 text-[11px] font-medium text-primary hover:underline"
+                      >
+                        Write this post <ChevronRight className="h-2.5 w-2.5" />
+                      </Link>
                     </div>
-                    {opp.topic && (
-                      <p className="mt-0.5 text-[11px] text-primary font-medium">{opp.type} · {opp.topic}</p>
-                    )}
-                    {opp.reason && (
-                      <p className="mt-1 text-[11px] text-muted-foreground line-clamp-2">{opp.reason}</p>
-                    )}
-                    <Link
-                      to="/admin/blogs/new"
-                      className="mt-2 inline-flex items-center gap-1 text-[11px] font-medium text-primary hover:underline"
-                    >
-                      Write this post <ChevronRight className="h-2.5 w-2.5" />
-                    </Link>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
-          </SectionCard>
-        </div>
-      )}
-
-      {/* ── Content Pillars ── */}
-      {(intel?.content_pillars?.length ?? 0) > 0 && (
-        <div className="rounded-xl border border-border bg-white p-5 shadow-sm">
-          <div className="mb-4 flex items-center gap-2">
-            <BookOpen className="h-4 w-4 text-muted-foreground" />
-            <h2 className="text-sm font-semibold">Content Pillars</h2>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {intel!.content_pillars.map((p, i) => (
-              <div key={i} className="flex items-center gap-2 rounded-lg border border-border bg-muted/30 px-3 py-2">
-                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-white">
-                  {i + 1}
-                </span>
-                <span className="text-xs font-medium">{p}</span>
-              </div>
-            ))}
           </div>
         </div>
       )}
 
       {/* ── Main Grid: Posts + Activity ── */}
-      <div className="grid gap-8 lg:grid-cols-[1fr_280px]">
+      <div className="grid gap-12 lg:grid-cols-[1fr_260px]">
 
-        {/* Left: Posts table + Quick Actions */}
-        <div className="space-y-8">
+        {/* Left: Posts + Quick Actions */}
+        <div className="space-y-10">
 
           {/* Recent Posts */}
-          <div className="rounded-xl border border-border bg-white shadow-sm">
-            <div className="flex items-center justify-between border-b border-border px-5 py-4">
-              <div className="flex items-center gap-2">
-                <Eye className="h-4 w-4 text-primary" />
-                <h2 className="text-sm font-semibold">Recent Posts</h2>
-              </div>
-              <Link to={`${base}/blogs`} className="flex items-center gap-1 text-xs text-primary font-medium hover:underline">
-                View all <ArrowRight className="h-3 w-3" />
-              </Link>
-            </div>
-
+          <div className="space-y-4">
+            <SectionHeading
+              icon={Eye}
+              title="Recent Posts"
+              action={
+                <Link to={`${base}/blogs`} className="flex items-center gap-1 text-xs text-primary font-medium hover:underline">
+                  View all <ArrowRight className="h-3 w-3" />
+                </Link>
+              }
+            />
             {recentPosts.length === 0 ? (
-              <div className="flex flex-col items-center gap-3 py-16 text-center px-8">
-                <FileText className="h-8 w-8 text-muted-foreground/30" />
-                <p className="text-sm font-medium">No posts yet</p>
-                <p className="text-xs text-muted-foreground">Create your first post to get started.</p>
+              <div className="py-10 text-center space-y-2">
+                <FileText className="mx-auto h-7 w-7 text-muted-foreground/25" />
+                <p className="text-sm text-muted-foreground">No posts yet — create your first.</p>
                 <Link
                   to="/admin/blogs/new"
-                  className="mt-1 flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-white hover:bg-primary/90 transition-colors"
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-white hover:bg-primary/90 transition-colors mt-1"
                 >
                   <Plus className="h-3 w-3" /> Write first post
                 </Link>
               </div>
             ) : (
-              <div className="divide-y divide-border">
-                {recentPosts.map((post) => (
-                  <div key={post.id} className="flex items-center gap-3 px-5 py-3 hover:bg-muted/30 transition-colors">
+              <div className="divide-y divide-border/60">
+                {recentPosts.map((post: any) => (
+                  <div key={post.id} className="flex items-center gap-3 py-2.5 hover:opacity-80 transition-opacity">
                     <Link
                       to="/admin/blogs/$id"
                       params={{ id: post.id }}
@@ -571,30 +521,24 @@ function WorkspaceOverview() {
           </div>
 
           {/* Quick Actions */}
-          <div>
-            <div className="mb-4 flex items-center gap-2">
-              <Zap className="h-4 w-4 text-muted-foreground" />
-              <h2 className="text-sm font-semibold">Quick Actions</h2>
-            </div>
-            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="space-y-4">
+            <SectionHeading icon={Zap} title="Quick Actions" />
+            <div className="grid gap-0 sm:grid-cols-2 lg:grid-cols-3 divide-y sm:divide-y-0">
               {QUICK_ACTIONS.map((a) => (
-                <Link key={a.to} to={a.to}>
-                  <div className={cn(
-                    "group flex items-center gap-3 rounded-xl border p-4 transition-all hover:shadow-sm cursor-pointer",
-                    a.primary
-                      ? "border-primary/20 bg-primary/5 hover:bg-primary/10"
-                      : "border-border bg-white hover:border-primary/20",
+                <Link
+                  key={a.to}
+                  to={a.to}
+                  className="flex items-center gap-3 py-3 pr-3 hover:opacity-70 transition-opacity group"
+                >
+                  <span className={cn(
+                    "flex h-7 w-7 shrink-0 items-center justify-center rounded-lg",
+                    a.primary ? "bg-primary text-white" : "bg-muted text-muted-foreground",
                   )}>
-                    <span className={cn(
-                      "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-transform group-hover:scale-110",
-                      a.primary ? "bg-primary text-white" : "bg-muted text-muted-foreground",
-                    )}>
-                      <a.icon className="h-3.5 w-3.5" />
-                    </span>
-                    <div className="min-w-0">
-                      <p className={cn("text-sm font-semibold leading-tight", a.primary && "text-primary")}>{a.label}</p>
-                      <p className="text-xs text-muted-foreground truncate">{a.desc}</p>
-                    </div>
+                    <a.icon className="h-3.5 w-3.5" />
+                  </span>
+                  <div className="min-w-0">
+                    <p className={cn("text-sm font-semibold leading-tight", a.primary && "text-primary")}>{a.label}</p>
+                    <p className="text-xs text-muted-foreground truncate">{a.desc}</p>
                   </div>
                 </Link>
               ))}
@@ -603,40 +547,34 @@ function WorkspaceOverview() {
         </div>
 
         {/* Right: Activity */}
-        <div>
-          <div className="rounded-xl border border-border bg-white shadow-sm">
-            <div className="flex items-center gap-2 border-b border-border px-5 py-4">
-              <Activity className="h-4 w-4 text-muted-foreground" />
-              <h2 className="text-sm font-semibold">Activity</h2>
-            </div>
-
-            {recentActivity.length === 0 ? (
-              <p className="px-5 py-8 text-center text-sm text-muted-foreground">No activity yet.</p>
-            ) : (
-              <div className="divide-y divide-border">
-                {recentActivity.map((entry) => (
-                  <div key={entry.id} className="flex items-start gap-3 px-5 py-3">
-                    <div className="mt-1 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-muted">
-                      <Activity className="h-3 w-3 text-muted-foreground" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-xs leading-snug text-foreground">
-                        <span className="font-medium">{entry.actor_name}</span>{" "}
-                        <span className="text-muted-foreground">{fmtAction(entry.action)}</span>
-                        {entry.entity_label && (
-                          <> — <span className="font-medium">{entry.entity_label}</span></>
-                        )}
-                      </p>
-                      <p className="mt-0.5 flex items-center gap-1 text-[10px] text-muted-foreground/60">
-                        <Clock className="h-2.5 w-2.5" />
-                        {fmtRelative(entry.occurred_at)}
-                      </p>
-                    </div>
+        <div className="space-y-4">
+          <SectionHeading icon={Activity} title="Activity" />
+          {recentActivity.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No activity yet.</p>
+          ) : (
+            <div className="space-y-4">
+              {recentActivity.map((entry: any) => (
+                <div key={entry.id} className="flex items-start gap-3">
+                  <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-muted">
+                    <Activity className="h-2.5 w-2.5 text-muted-foreground" />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs leading-snug text-foreground">
+                      <span className="font-medium">{entry.actor_name}</span>{" "}
+                      <span className="text-muted-foreground">{fmtAction(entry.action)}</span>
+                      {entry.entity_label && (
+                        <> — <span className="font-medium">{entry.entity_label}</span></>
+                      )}
+                    </p>
+                    <p className="mt-0.5 flex items-center gap-1 text-[10px] text-muted-foreground/60">
+                      <Clock className="h-2.5 w-2.5" />
+                      {fmtRelative(entry.occurred_at)}
+                    </p>
                   </div>
-                ))}
-              </div>
-            )}
-          </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>
