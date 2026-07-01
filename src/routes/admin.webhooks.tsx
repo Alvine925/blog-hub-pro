@@ -4,45 +4,23 @@ import { queryOptions, useSuspenseQuery, useQueryClient, useQuery } from "@tanst
 import { useState } from "react";
 import { toast } from "sonner";
 import {
-  Plus,
-  Trash2,
-  Loader2,
-  Webhook,
-  ChevronDown,
-  ChevronUp,
-  CheckCircle2,
-  XCircle,
-  Clock,
-  ToggleLeft,
-  ToggleRight,
-  Eye,
-  EyeOff,
+  Plus, Trash2, Loader2, Webhook, ChevronDown, ChevronUp,
+  CheckCircle2, XCircle, Clock, ToggleLeft, ToggleRight, Eye, EyeOff,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
+  AlertDialog, AlertDialogAction, AlertDialogCancel,
+  AlertDialogContent, AlertDialogDescription, AlertDialogFooter,
+  AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import {
-  listWebhooks,
-  getWebhookLogs,
-  createWebhook,
-  deleteWebhook,
-  toggleWebhook,
-  WEBHOOK_EVENTS,
-  type Webhook as WebhookType,
-  type WebhookLog,
+  listWebhooks, getWebhookLogs, createWebhook, deleteWebhook,
+  toggleWebhook, WEBHOOK_EVENTS,
+  type Webhook as WebhookType, type WebhookLog,
 } from "@/lib/webhook.functions";
 import { formatBlogDate } from "@/lib/blog-types";
 
@@ -71,19 +49,15 @@ function LogRow({ log }: { log: WebhookLog }) {
   const ok = log.response_status !== null && log.response_status < 300;
   return (
     <div className="flex items-center gap-3 border-b border-border/50 py-2 text-xs last:border-0">
-      {log.error ? (
+      {log.error || !ok ? (
         <XCircle className="h-3.5 w-3.5 shrink-0 text-destructive" />
-      ) : ok ? (
-        <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-green-500" />
       ) : (
-        <XCircle className="h-3.5 w-3.5 shrink-0 text-destructive" />
+        <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-green-500" />
       )}
       <Badge variant="outline" className="text-[10px] px-1.5 py-0 font-mono">
         {log.response_status ?? "ERR"}
       </Badge>
-      <span className="min-w-0 flex-1 truncate font-medium text-muted-foreground">
-        {log.event}
-      </span>
+      <span className="min-w-0 flex-1 truncate font-medium text-muted-foreground">{log.event}</span>
       {log.duration_ms !== null && (
         <span className="shrink-0 flex items-center gap-1 text-muted-foreground">
           <Clock className="h-3 w-3" /> {log.duration_ms}ms
@@ -91,15 +65,13 @@ function LogRow({ log }: { log: WebhookLog }) {
       )}
       <span className="shrink-0 text-muted-foreground">{formatBlogDate(log.delivered_at)}</span>
       {log.error && (
-        <span className="min-w-0 max-w-[200px] truncate text-destructive" title={log.error}>
-          {log.error}
-        </span>
+        <span className="min-w-0 max-w-[200px] truncate text-destructive" title={log.error}>{log.error}</span>
       )}
     </div>
   );
 }
 
-function WebhookCard({ hook }: { hook: WebhookType }) {
+function WebhookRow({ hook }: { hook: WebhookType }) {
   const queryClient = useQueryClient();
   const del = useServerFn(deleteWebhook);
   const toggle = useServerFn(toggleWebhook);
@@ -141,96 +113,64 @@ function WebhookCard({ hook }: { hook: WebhookType }) {
   }
 
   return (
-    <Card className={hook.active ? "" : "opacity-60"}>
-      <CardContent className="pt-4">
-        <div className="flex items-start gap-3">
-          <div className="flex-1 min-w-0">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="font-semibold">{hook.name}</span>
-              <Badge variant={hook.active ? "default" : "secondary"} className="text-xs">
-                {hook.active ? "Active" : "Paused"}
+    <div className={`border-b border-border py-5 last:border-0 ${!hook.active ? "opacity-60" : ""}`}>
+      <div className="flex items-start gap-3">
+        <div className="flex-1 min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="font-semibold">{hook.name}</span>
+            <Badge variant={hook.active ? "default" : "secondary"} className="text-xs">
+              {hook.active ? "Active" : "Paused"}
+            </Badge>
+          </div>
+          <p className="mt-0.5 truncate text-xs font-mono text-muted-foreground">{hook.url}</p>
+          <div className="mt-1.5 flex flex-wrap gap-1">
+            {hook.events.map((ev) => (
+              <Badge key={ev} variant="outline" className="text-[10px] px-1.5">
+                {EVENT_LABELS[ev] ?? ev}
               </Badge>
-            </div>
-            <p className="mt-0.5 truncate text-xs font-mono text-muted-foreground">{hook.url}</p>
-            <div className="mt-1.5 flex flex-wrap gap-1">
-              {hook.events.map((ev) => (
-                <Badge key={ev} variant="outline" className="text-[10px] px-1.5">
-                  {EVENT_LABELS[ev] ?? ev}
-                </Badge>
-              ))}
-            </div>
-            {hook.secret && (
-              <div className="mt-1.5 flex items-center gap-1">
-                <span className="text-xs text-muted-foreground">Secret:</span>
-                <code className="text-xs font-mono">
-                  {showSecret ? hook.secret : "•".repeat(Math.min(hook.secret.length, 20))}
-                </code>
-                <button
-                  type="button"
-                  onClick={() => setShowSecret((v) => !v)}
-                  className="text-muted-foreground hover:text-foreground"
-                >
-                  {showSecret ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
-                </button>
-              </div>
-            )}
+            ))}
           </div>
-          <div className="flex shrink-0 items-center gap-1">
-            <Button
-              size="icon"
-              variant="ghost"
-              onClick={handleToggle}
-              disabled={busy}
-              title={hook.active ? "Pause" : "Activate"}
-            >
-              {hook.active ? (
-                <ToggleRight className="h-5 w-5 text-primary" />
-              ) : (
-                <ToggleLeft className="h-5 w-5 text-muted-foreground" />
-              )}
-            </Button>
-            <Button
-              size="icon"
-              variant="ghost"
-              className="text-destructive hover:text-destructive"
-              onClick={() => setPendingDelete(true)}
-              disabled={busy}
-              title="Delete"
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
-            <Button
-              size="icon"
-              variant="ghost"
-              onClick={() => setExpanded((v) => !v)}
-              title="Delivery logs"
-            >
-              {expanded ? (
-                <ChevronUp className="h-4 w-4" />
-              ) : (
-                <ChevronDown className="h-4 w-4" />
-              )}
-            </Button>
-          </div>
+          {hook.secret && (
+            <div className="mt-1.5 flex items-center gap-1">
+              <span className="text-xs text-muted-foreground">Secret:</span>
+              <code className="text-xs font-mono">
+                {showSecret ? hook.secret : "•".repeat(Math.min(hook.secret.length, 20))}
+              </code>
+              <button type="button" onClick={() => setShowSecret((v) => !v)} className="text-muted-foreground hover:text-foreground">
+                {showSecret ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
+              </button>
+            </div>
+          )}
         </div>
+        <div className="flex shrink-0 items-center gap-1">
+          <Button size="icon" variant="ghost" onClick={handleToggle} disabled={busy} title={hook.active ? "Pause" : "Activate"}>
+            {hook.active
+              ? <ToggleRight className="h-5 w-5 text-primary" />
+              : <ToggleLeft className="h-5 w-5 text-muted-foreground" />}
+          </Button>
+          <Button size="icon" variant="ghost" className="text-destructive hover:text-destructive" onClick={() => setPendingDelete(true)} disabled={busy}>
+            <Trash2 className="h-4 w-4" />
+          </Button>
+          <Button size="icon" variant="ghost" onClick={() => setExpanded((v) => !v)} title="Delivery logs">
+            {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+          </Button>
+        </div>
+      </div>
 
-        {expanded && (
-          <div className="mt-4 rounded-md border border-border bg-muted/30 p-3">
-            <p className="mb-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-              Recent Deliveries
-            </p>
-            {logsQuery.isLoading ? (
-              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <Loader2 className="h-3 w-3 animate-spin" /> Loading…
-              </div>
-            ) : logsQuery.data && logsQuery.data.length > 0 ? (
-              logsQuery.data.map((log) => <LogRow key={log.id} log={log} />)
-            ) : (
-              <p className="text-xs text-muted-foreground">No deliveries yet.</p>
-            )}
-          </div>
-        )}
-      </CardContent>
+      {expanded && (
+        <div className="mt-4 rounded border border-border bg-muted/30 p-3">
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Recent Deliveries</p>
+          {logsQuery.isLoading ? (
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <Loader2 className="h-3 w-3 animate-spin" /> Loading…
+            </div>
+          ) : logsQuery.data && logsQuery.data.length > 0 ? (
+            logsQuery.data.map((log) => <LogRow key={log.id} log={log} />)
+          ) : (
+            <p className="text-xs text-muted-foreground">No deliveries yet.</p>
+          )}
+        </div>
+      )}
 
       <AlertDialog open={pendingDelete} onOpenChange={(o) => !o && setPendingDelete(false)}>
         <AlertDialogContent>
@@ -242,18 +182,13 @@ function WebhookCard({ hook }: { hook: WebhookType }) {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDelete}
-              disabled={busy}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              {busy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Delete
+            <AlertDialogAction onClick={handleDelete} disabled={busy} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              {busy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Delete
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </Card>
+    </div>
   );
 }
 
@@ -264,7 +199,7 @@ const BLANK_FORM = {
   events: ["post.published", "post.updated", "post.deleted"] as string[],
 };
 
-function CreateWebhookCard() {
+function AddWebhookForm() {
   const queryClient = useQueryClient();
   const create = useServerFn(createWebhook);
   const [form, setForm] = useState(BLANK_FORM);
@@ -298,49 +233,34 @@ function CreateWebhookCard() {
   }
 
   return (
-    <Card>
-      <CardHeader
-        className="cursor-pointer select-none"
+    <div className="border-t border-border pt-6">
+      <button
+        type="button"
+        className="flex w-full items-center justify-between text-sm font-semibold"
         onClick={() => setOpen((v) => !v)}
       >
-        <div className="flex items-center justify-between">
-          <div>
-            <CardTitle className="text-base">Add Webhook</CardTitle>
-            <CardDescription>Notify an external URL when content changes.</CardDescription>
-          </div>
-          {open ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
-        </div>
-      </CardHeader>
+        <span className="flex items-center gap-2">
+          <Plus className="h-4 w-4" /> Add Webhook
+        </span>
+        {open ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
+      </button>
+      <p className="mt-1 text-xs text-muted-foreground">Notify an external URL when content changes.</p>
 
       {open && (
-        <CardContent className="space-y-4 border-t border-border pt-4">
-          <div className="grid gap-3 sm:grid-cols-2">
+        <div className="mt-5 space-y-4">
+          <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-1.5">
               <Label htmlFor="wh-name">Name</Label>
-              <Input
-                id="wh-name"
-                value={form.name}
-                onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-                placeholder="My Website"
-              />
+              <Input id="wh-name" value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} placeholder="My Website" />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="wh-url">URL</Label>
-              <Input
-                id="wh-url"
-                type="url"
-                value={form.url}
-                onChange={(e) => setForm((f) => ({ ...f, url: e.target.value }))}
-                placeholder="https://example.com/webhooks"
-              />
+              <Input id="wh-url" type="url" value={form.url} onChange={(e) => setForm((f) => ({ ...f, url: e.target.value }))} placeholder="https://example.com/webhooks" />
             </div>
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="wh-secret">
-              Signing Secret{" "}
-              <span className="text-muted-foreground font-normal">(optional)</span>
-            </Label>
+            <Label htmlFor="wh-secret">Signing Secret <span className="text-muted-foreground font-normal">(optional)</span></Label>
             <div className="relative">
               <Input
                 id="wh-secret"
@@ -350,17 +270,11 @@ function CreateWebhookCard() {
                 placeholder="my-secret"
                 className="pr-9"
               />
-              <button
-                type="button"
-                onClick={() => setShowSecret((v) => !v)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-              >
+              <button type="button" onClick={() => setShowSecret((v) => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
                 {showSecret ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </button>
             </div>
-            <p className="text-xs text-muted-foreground">
-              Sent as <code>X-Lunar-Signature: sha256=…</code> on each request.
-            </p>
+            <p className="text-xs text-muted-foreground">Sent as <code>X-Lunar-Signature: sha256=…</code> on each request.</p>
           </div>
 
           <div className="space-y-2">
@@ -368,14 +282,8 @@ function CreateWebhookCard() {
             <div className="grid gap-2 sm:grid-cols-2">
               {WEBHOOK_EVENTS.map((ev) => (
                 <div key={ev} className="flex items-center gap-2">
-                  <Checkbox
-                    id={`ev-${ev}`}
-                    checked={form.events.includes(ev)}
-                    onCheckedChange={() => toggleEvent(ev)}
-                  />
-                  <label htmlFor={`ev-${ev}`} className="cursor-pointer text-sm">
-                    {EVENT_LABELS[ev] ?? ev}
-                  </label>
+                  <Checkbox id={`ev-${ev}`} checked={form.events.includes(ev)} onCheckedChange={() => toggleEvent(ev)} />
+                  <label htmlFor={`ev-${ev}`} className="cursor-pointer text-sm">{EVENT_LABELS[ev] ?? ev}</label>
                 </div>
               ))}
             </div>
@@ -385,9 +293,9 @@ function CreateWebhookCard() {
             {busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />}
             Create Webhook
           </Button>
-        </CardContent>
+        </div>
       )}
-    </Card>
+    </div>
   );
 }
 
@@ -395,18 +303,16 @@ function WebhooksPage() {
   const { data: hooks } = useSuspenseQuery(webhooksQuery);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-10 max-w-3xl">
       <div>
         <h1 className="text-2xl font-bold">Webhooks</h1>
-        <p className="text-sm text-muted-foreground">
-          Get notified when content is published, updated, or deleted.
-        </p>
+        <p className="text-sm text-muted-foreground">Get notified when content is published, updated, or deleted.</p>
       </div>
 
-      <Card className="border-border/60 bg-muted/30">
-        <CardContent className="pt-4 space-y-1.5">
-          <p className="text-sm font-medium">Payload format</p>
-          <pre className="overflow-x-auto rounded bg-background p-3 text-xs leading-relaxed border border-border">
+      {/* Payload format */}
+      <div className="space-y-2">
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Payload Format</h2>
+        <pre className="overflow-x-auto rounded border border-border bg-slate-950 p-4 text-xs leading-relaxed text-slate-100">
 {`{
   "event": "post.published",
   "timestamp": "2026-07-01T12:00:00.000Z",
@@ -419,32 +325,30 @@ function WebhooksPage() {
     "author_name": "Admin"
   }
 }`}
-          </pre>
-          <p className="text-xs text-muted-foreground">
-            When a signing secret is set, verify requests using the{" "}
-            <code className="text-xs">X-Lunar-Signature</code> header (HMAC-SHA256 of the
-            raw body).
-          </p>
-        </CardContent>
-      </Card>
+        </pre>
+        <p className="text-xs text-muted-foreground">
+          Verify requests using the <code className="text-xs">X-Lunar-Signature</code> header (HMAC-SHA256 of the raw body).
+        </p>
+      </div>
 
-      <CreateWebhookCard />
+      <div className="border-t border-border" />
 
+      {/* Webhooks list */}
       {hooks.length === 0 ? (
-        <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed border-border py-20 text-center">
+        <div className="flex flex-col items-center gap-3 py-16 text-center">
           <Webhook className="h-9 w-9 text-muted-foreground" />
           <p className="text-muted-foreground">No webhooks configured yet.</p>
-          <p className="text-sm text-muted-foreground">
-            Add one above to start receiving event notifications.
-          </p>
+          <p className="text-sm text-muted-foreground">Add one below to start receiving event notifications.</p>
         </div>
       ) : (
-        <div className="space-y-4">
+        <div>
           {hooks.map((hook) => (
-            <WebhookCard key={hook.id} hook={hook} />
+            <WebhookRow key={hook.id} hook={hook} />
           ))}
         </div>
       )}
+
+      <AddWebhookForm />
     </div>
   );
 }

@@ -3,36 +3,15 @@ import { queryOptions, useSuspenseQuery, useQueryClient } from "@tanstack/react-
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 import { toast } from "sonner";
-import {
-  Plus,
-  Pencil,
-  Trash2,
-  Eye,
-  Send,
-  Undo2,
-  FileText,
-  Clock,
-} from "lucide-react";
-
+import { Plus, Pencil, Trash2, Eye, Send, Undo2, FileText, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { adminListPosts, deletePost, setPostStatus } from "@/lib/blog.functions";
 import { formatBlogDate, type BlogPostSummary } from "@/lib/blog-types";
@@ -79,10 +58,7 @@ function AdminBlogList() {
   async function toggleStatus(post: BlogPostSummary) {
     setBusyId(post.id);
     try {
-      const next =
-        post.status === "published"
-          ? "draft"
-          : "published";
+      const next = post.status === "published" ? "draft" : "published";
       await setStatus({ data: { id: post.id, status: next } });
       toast.success(next === "published" ? "Published" : "Unpublished");
       await refresh();
@@ -138,7 +114,7 @@ function AdminBlogList() {
       </div>
 
       {posts.length === 0 ? (
-        <div className="flex flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-border py-20 text-center">
+        <div className="flex flex-col items-center justify-center gap-3 py-24 text-center border-t border-border">
           <FileText className="h-10 w-10 text-muted-foreground" />
           <p className="text-muted-foreground">No blog posts yet.</p>
           <Button asChild>
@@ -146,7 +122,7 @@ function AdminBlogList() {
           </Button>
         </div>
       ) : (
-        <div className="overflow-x-auto rounded-lg border border-border bg-background">
+        <div className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
@@ -164,11 +140,7 @@ function AdminBlogList() {
                 <TableRow key={post.id}>
                   <TableCell>
                     {post.cover_image ? (
-                      <img
-                        src={post.cover_image}
-                        alt=""
-                        className="h-10 w-14 rounded object-cover"
-                      />
+                      <img src={post.cover_image} alt="" className="h-10 w-14 rounded object-cover" />
                     ) : (
                       <div className="h-10 w-14 rounded bg-muted" />
                     )}
@@ -176,60 +148,35 @@ function AdminBlogList() {
                   <TableCell className="max-w-[280px]">
                     <span className="font-medium">{post.title || "Untitled"}</span>
                     {post.featured && (
-                      <Badge variant="outline" className="ml-2">
-                        Featured
-                      </Badge>
+                      <Badge variant="outline" className="ml-2">Featured</Badge>
                     )}
                   </TableCell>
                   <TableCell>{post.category}</TableCell>
-                  <TableCell>
-                    <StatusBadge post={post} />
-                  </TableCell>
+                  <TableCell><StatusBadge post={post} /></TableCell>
                   <TableCell className="text-muted-foreground text-sm">
                     {post.status === "scheduled" && post.scheduled_at
                       ? `📅 ${formatBlogDate(post.scheduled_at)}`
                       : formatBlogDate(post.published_at) || "—"}
                   </TableCell>
-                  <TableCell className="text-right tabular-nums">
-                    {post.views}
-                  </TableCell>
+                  <TableCell className="text-right tabular-nums">{post.views}</TableCell>
                   <TableCell>
                     <div className="flex items-center justify-end gap-1">
                       {post.status === "published" && (
                         <Button size="icon" variant="ghost" asChild title="Preview">
-                          <Link
-                            to="/blogs/$slug"
-                            params={{ slug: post.slug }}
-                            target="_blank"
-                          >
+                          <Link to="/blogs/$slug" params={{ slug: post.slug }} target="_blank">
                             <Eye className="h-4 w-4" />
                           </Link>
                         </Button>
                       )}
                       {post.status === "scheduled" ? (
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          title="Publish now"
-                          disabled={busyId === post.id}
-                          onClick={() => publishNow(post)}
-                          className="text-xs"
-                        >
+                        <Button size="sm" variant="ghost" disabled={busyId === post.id} onClick={() => publishNow(post)} className="text-xs">
                           <Send className="mr-1 h-3.5 w-3.5" /> Publish now
                         </Button>
                       ) : (
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          title={post.status === "published" ? "Unpublish" : "Publish"}
-                          disabled={busyId === post.id}
-                          onClick={() => toggleStatus(post)}
-                        >
-                          {post.status === "published" ? (
-                            <Undo2 className="h-4 w-4" />
-                          ) : (
-                            <Send className="h-4 w-4" />
-                          )}
+                        <Button size="icon" variant="ghost" title={post.status === "published" ? "Unpublish" : "Publish"} disabled={busyId === post.id} onClick={() => toggleStatus(post)}>
+                          {post.status === "published"
+                            ? <Undo2 className="h-4 w-4" />
+                            : <Send className="h-4 w-4" />}
                         </Button>
                       )}
                       <Button size="icon" variant="ghost" asChild title="Edit">
@@ -237,13 +184,7 @@ function AdminBlogList() {
                           <Pencil className="h-4 w-4" />
                         </Link>
                       </Button>
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        title="Delete"
-                        className="text-destructive hover:text-destructive"
-                        onClick={() => setPendingDelete(post)}
-                      >
+                      <Button size="icon" variant="ghost" className="text-destructive hover:text-destructive" onClick={() => setPendingDelete(post)}>
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
@@ -255,24 +196,17 @@ function AdminBlogList() {
         </div>
       )}
 
-      <AlertDialog
-        open={Boolean(pendingDelete)}
-        onOpenChange={(o) => !o && setPendingDelete(null)}
-      >
+      <AlertDialog open={Boolean(pendingDelete)} onOpenChange={(o) => !o && setPendingDelete(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete this post?</AlertDialogTitle>
             <AlertDialogDescription>
-              "{pendingDelete?.title}" will be permanently removed. This cannot be
-              undone.
+              "{pendingDelete?.title}" will be permanently removed. This cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={confirmDelete}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
+            <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
               Delete
             </AlertDialogAction>
           </AlertDialogFooter>
