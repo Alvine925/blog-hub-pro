@@ -2,7 +2,6 @@ import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { queryOptions, useQuery } from "@tanstack/react-query";
 import { Clock, Calendar, User, ArrowLeft, Tag } from "lucide-react";
 
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { getPostBySlug, getRelatedPosts } from "@/lib/blog.functions";
 import { formatBlogDate, type BlogPost } from "@/lib/blog-types";
@@ -111,9 +110,10 @@ function BlogDetail() {
           </Link>
         </Button>
 
-        <Badge variant="secondary" className="mb-4">
+        <p className="mb-3 text-sm font-semibold uppercase tracking-[0.25em] text-primary">
           {post.category}
-        </Badge>
+        </p>
+
         <h1 className="text-3xl font-bold leading-tight tracking-tight sm:text-4xl">
           {post.title}
         </h1>
@@ -136,10 +136,11 @@ function BlogDetail() {
           <img
             src={post.cover_image}
             alt={post.title}
-            className="aspect-video w-full rounded-xl object-cover"
+            className="aspect-video w-full object-cover"
           />
         </div>
       )}
+
 
       <article className="mx-auto max-w-3xl px-4 py-10">
         <div
@@ -165,48 +166,37 @@ function BlogDetail() {
       </article>
 
       {related && related.length > 0 && (
-        <section className="border-t border-border bg-muted/30">
-          <div className="mx-auto max-w-5xl px-4 py-12">
-            <h2 className="mb-6 text-2xl font-bold">Related Articles</h2>
-            <div className="grid gap-6 sm:grid-cols-3">
+        <section className="border-t border-border">
+          <div className="mx-auto max-w-3xl px-4 py-12">
+            <h2 className="mb-2 text-sm font-semibold uppercase tracking-[0.25em] text-primary">
+              Related Articles
+            </h2>
+            <div className="divide-y divide-border">
               {related.map((r) => (
                 <Link
                   key={r.id}
                   to="/blogs/$slug"
                   params={{ slug: r.slug }}
-                  className="group overflow-hidden rounded-xl border border-border bg-card transition-shadow hover:shadow-lg"
+                  className="group flex items-baseline justify-between gap-4 py-5"
                 >
-                  <div className="aspect-video overflow-hidden bg-muted">
-                    {r.cover_image ? (
-                      <img
-                        src={r.cover_image}
-                        alt={r.title}
-                        loading="lazy"
-                        className="h-full w-full object-cover transition-transform group-hover:scale-105"
-                      />
-                    ) : (
-                      <div className="flex h-full items-center justify-center text-muted-foreground">
-                        {r.category}
-                      </div>
-                    )}
-                  </div>
-                  <div className="space-y-2 p-4">
-                    <Badge variant="secondary" className="text-xs">
+                  <div>
+                    <span className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
                       {r.category}
-                    </Badge>
-                    <h3 className="font-semibold leading-snug group-hover:text-primary">
+                    </span>
+                    <h3 className="text-xl font-bold leading-snug transition-colors group-hover:text-primary">
                       {r.title}
                     </h3>
-                    <p className="text-xs text-muted-foreground">
-                      {r.reading_time} min read
-                    </p>
                   </div>
+                  <span className="shrink-0 text-xs text-muted-foreground">
+                    {r.reading_time} min
+                  </span>
                 </Link>
               ))}
             </div>
           </div>
         </section>
       )}
+
     </div>
   );
 }
