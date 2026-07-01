@@ -134,7 +134,10 @@ function BlogIndex() {
 
   function selectCategory(cat: string) {
     navigate({
-      search: (prev) => ({ ...prev, category: cat === "All" ? undefined : cat }),
+      search: (prev: BlogSearch) => ({
+        ...prev,
+        category: cat === "All" ? undefined : cat,
+      }),
       replace: true,
     });
   }
