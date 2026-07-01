@@ -5,7 +5,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import {
   Plus, Trash2, Loader2, Webhook, ChevronDown, ChevronUp,
-  CheckCircle2, XCircle, Clock, ToggleLeft, ToggleRight, Eye, EyeOff,
+  CheckCircle2, XCircle, Clock, ToggleLeft, ToggleRight, Eye, EyeOff, Send,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,8 +19,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import {
   listWebhooks, getWebhookLogs, createWebhook, deleteWebhook,
-  toggleWebhook, WEBHOOK_EVENTS,
-  type Webhook as WebhookType, type WebhookLog,
+  toggleWebhook, testWebhookDelivery, WEBHOOK_EVENTS,
+  type Webhook as WebhookType, type WebhookLog, type TestDeliveryResult,
 } from "@/lib/webhook.functions";
 import { formatBlogDate } from "@/lib/blog-types";
 
@@ -49,14 +49,10 @@ function LogRow({ log }: { log: WebhookLog }) {
   const ok = log.response_status !== null && log.response_status < 300;
   return (
     <div className="flex items-center gap-3 border-b border-border/50 py-2 text-xs last:border-0">
-      {log.error || !ok ? (
-        <XCircle className="h-3.5 w-3.5 shrink-0 text-destructive" />
-      ) : (
-        <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-green-500" />
-      )}
-      <Badge variant="outline" className="text-[10px] px-1.5 py-0 font-mono">
-        {log.response_status ?? "ERR"}
-      </Badge>
+      {log.error || !ok
+        ? <XCircle className="h-3.5 w-3.5 shrink-0 text-destructive" />
+        : <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-green-500" />}
+      <Badge variant="outline" className="text-[10px] px-1.5 py-0 font-mono">{log.response_status ?? "ERR"}</Badge>
       <span className="min-w-0 flex-1 truncate font-medium text-muted-foreground">{log.event}</span>
       {log.duration_ms !== null && (
         <span className="shrink-0 flex items-center gap-1 text-muted-foreground">
@@ -65,8 +61,22 @@ function LogRow({ log }: { log: WebhookLog }) {
       )}
       <span className="shrink-0 text-muted-foreground">{formatBlogDate(log.delivered_at)}</span>
       {log.error && (
-        <span className="min-w-0 max-w-[200px] truncate text-destructive" title={log.error}>{log.error}</span>
+        <span className="min-w-0 max-w-[180px] truncate text-destructive" title={log.error}>{log.error}</span>
       )}
+    </div>
+  );
+}
+
+function TestResult({ result }: { result: TestDeliveryResult }) {
+  const ok = result.status !== null && result.status < 300;
+  return (
+    <div className={`mt-2 flex items-center gap-2 rounded border px-3 py-2 text-xs ${ok ? "border-green-200 bg-green-50 text-green-700" : "border-red-200 bg-red-50 text-red-700"}`}>
+      {ok
+        ? <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />
+        : <XCircle className="h-3.5 w-3.5 shrink-0" />}
+      {result.error
+        ? <span className="flex-1 truncate">{result.error}</span>
+        : <span className="flex-1">HTTP {result.status} — {result.duration_ms}ms</span>}
     </div>
   );
 }
@@ -75,9 +85,12 @@ function WebhookRow({ hook }: { hook: WebhookType }) {
   const queryClient = useQueryClient();
   const del = useServerFn(deleteWebhook);
   const toggle = useServerFn(toggleWebhook);
+  const testDelivery = useServerFn(testWebhookDelivery);
   const [expanded, setExpanded] = useState(false);
   const [pendingDelete, setPendingDelete] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [testing, setTesting] = useState(false);
+  const [testResult, setTestResult] = useState<TestDeliveryResult | null>(null);
   const [showSecret, setShowSecret] = useState(false);
 
   const logsQuery = useQuery({
@@ -112,6 +125,27 @@ function WebhookRow({ hook }: { hook: WebhookType }) {
     }
   }
 
+  async function handleTest() {
+    setTesting(true);
+    setTestResult(null);
+    try {
+      const result = await testDelivery({ data: { id: hook.id } });
+      setTestResult(result);
+      if (result.status !== null && result.status < 300) {
+        toast.success(`Test delivery succeeded — HTTP ${result.status}`);
+      } else {
+        toast.error(result.error ? `Test failed: ${result.error}` : `Test delivery returned HTTP ${result.status}`);
+      }
+      if (expanded) {
+        await queryClient.invalidateQueries({ queryKey: ["admin", "webhook_logs", hook.id] });
+      }
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Test failed");
+    } finally {
+      setTesting(false);
+    }
+  }
+
   return (
     <div className={`border-b border-border py-5 last:border-0 ${!hook.active ? "opacity-60" : ""}`}>
       <div className="flex items-start gap-3">
@@ -125,9 +159,7 @@ function WebhookRow({ hook }: { hook: WebhookType }) {
           <p className="mt-0.5 truncate text-xs font-mono text-muted-foreground">{hook.url}</p>
           <div className="mt-1.5 flex flex-wrap gap-1">
             {hook.events.map((ev) => (
-              <Badge key={ev} variant="outline" className="text-[10px] px-1.5">
-                {EVENT_LABELS[ev] ?? ev}
-              </Badge>
+              <Badge key={ev} variant="outline" className="text-[10px] px-1.5">{EVENT_LABELS[ev] ?? ev}</Badge>
             ))}
           </div>
           {hook.secret && (
@@ -141,8 +173,23 @@ function WebhookRow({ hook }: { hook: WebhookType }) {
               </button>
             </div>
           )}
+          {testResult && <TestResult result={testResult} />}
         </div>
+
         <div className="flex shrink-0 items-center gap-1">
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={handleTest}
+            disabled={testing || busy}
+            className="text-xs gap-1.5"
+            title="Send a test POST to this URL"
+          >
+            {testing
+              ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              : <Send className="h-3.5 w-3.5" />}
+            Test
+          </Button>
           <Button size="icon" variant="ghost" onClick={handleToggle} disabled={busy} title={hook.active ? "Pause" : "Activate"}>
             {hook.active
               ? <ToggleRight className="h-5 w-5 text-primary" />
@@ -160,15 +207,11 @@ function WebhookRow({ hook }: { hook: WebhookType }) {
       {expanded && (
         <div className="mt-4 rounded border border-border bg-muted/30 p-3">
           <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Recent Deliveries</p>
-          {logsQuery.isLoading ? (
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <Loader2 className="h-3 w-3 animate-spin" /> Loading…
-            </div>
-          ) : logsQuery.data && logsQuery.data.length > 0 ? (
-            logsQuery.data.map((log) => <LogRow key={log.id} log={log} />)
-          ) : (
-            <p className="text-xs text-muted-foreground">No deliveries yet.</p>
-          )}
+          {logsQuery.isLoading
+            ? <div className="flex items-center gap-2 text-xs text-muted-foreground"><Loader2 className="h-3 w-3 animate-spin" /> Loading…</div>
+            : logsQuery.data && logsQuery.data.length > 0
+              ? logsQuery.data.map((log) => <LogRow key={log.id} log={log} />)
+              : <p className="text-xs text-muted-foreground">No deliveries yet.</p>}
         </div>
       )}
 
@@ -176,9 +219,7 @@ function WebhookRow({ hook }: { hook: WebhookType }) {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete "{hook.name}"?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This webhook and all its delivery logs will be permanently removed.
-            </AlertDialogDescription>
+            <AlertDialogDescription>This webhook and all its delivery logs will be permanently removed.</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
@@ -193,9 +234,7 @@ function WebhookRow({ hook }: { hook: WebhookType }) {
 }
 
 const BLANK_FORM = {
-  name: "",
-  url: "",
-  secret: "",
+  name: "", url: "", secret: "",
   events: ["post.published", "post.updated", "post.deleted"] as string[],
 };
 
@@ -234,14 +273,8 @@ function AddWebhookForm() {
 
   return (
     <div className="border-t border-border pt-6">
-      <button
-        type="button"
-        className="flex w-full items-center justify-between text-sm font-semibold"
-        onClick={() => setOpen((v) => !v)}
-      >
-        <span className="flex items-center gap-2">
-          <Plus className="h-4 w-4" /> Add Webhook
-        </span>
+      <button type="button" className="flex w-full items-center justify-between text-sm font-semibold" onClick={() => setOpen((v) => !v)}>
+        <span className="flex items-center gap-2"><Plus className="h-4 w-4" /> Add Webhook</span>
         {open ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
       </button>
       <p className="mt-1 text-xs text-muted-foreground">Notify an external URL when content changes.</p>
@@ -262,14 +295,7 @@ function AddWebhookForm() {
           <div className="space-y-1.5">
             <Label htmlFor="wh-secret">Signing Secret <span className="text-muted-foreground font-normal">(optional)</span></Label>
             <div className="relative">
-              <Input
-                id="wh-secret"
-                type={showSecret ? "text" : "password"}
-                value={form.secret}
-                onChange={(e) => setForm((f) => ({ ...f, secret: e.target.value }))}
-                placeholder="my-secret"
-                className="pr-9"
-              />
+              <Input id="wh-secret" type={showSecret ? "text" : "password"} value={form.secret} onChange={(e) => setForm((f) => ({ ...f, secret: e.target.value }))} placeholder="my-secret" className="pr-9" />
               <button type="button" onClick={() => setShowSecret((v) => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
                 {showSecret ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </button>
@@ -303,13 +329,12 @@ function WebhooksPage() {
   const { data: hooks } = useSuspenseQuery(webhooksQuery);
 
   return (
-    <div className="space-y-10 max-w-3xl">
+    <div className="max-w-3xl space-y-10">
       <div>
         <h1 className="text-2xl font-bold">Webhooks</h1>
         <p className="text-sm text-muted-foreground">Get notified when content is published, updated, or deleted.</p>
       </div>
 
-      {/* Payload format */}
       <div className="space-y-2">
         <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Payload Format</h2>
         <pre className="overflow-x-auto rounded border border-border bg-slate-950 p-4 text-xs leading-relaxed text-slate-100">
@@ -333,7 +358,6 @@ function WebhooksPage() {
 
       <div className="border-t border-border" />
 
-      {/* Webhooks list */}
       {hooks.length === 0 ? (
         <div className="flex flex-col items-center gap-3 py-16 text-center">
           <Webhook className="h-9 w-9 text-muted-foreground" />
@@ -342,9 +366,7 @@ function WebhooksPage() {
         </div>
       ) : (
         <div>
-          {hooks.map((hook) => (
-            <WebhookRow key={hook.id} hook={hook} />
-          ))}
+          {hooks.map((hook) => <WebhookRow key={hook.id} hook={hook} />)}
         </div>
       )}
 

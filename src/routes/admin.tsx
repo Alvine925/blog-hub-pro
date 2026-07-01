@@ -1,16 +1,8 @@
 import { createFileRoute, Link, Outlet, useRouterState } from "@tanstack/react-router";
 import {
-  LayoutDashboard,
-  FileText,
-  ImageIcon,
-  Key,
-  ExternalLink,
-  Moon,
-  Webhook,
-  BarChart2,
-  Settings,
-  Search,
-  Code2,
+  LayoutDashboard, FileText, ImageIcon, Key, ExternalLink, Moon,
+  Webhook, BarChart2, Settings, Search, Code2, Layers, Users,
+  FolderOpen, CreditCard,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -24,16 +16,50 @@ export const Route = createFileRoute("/admin")({
   component: AdminLayout,
 });
 
-const navItems = [
-  { label: "Dashboard", to: "/admin/dashboard", icon: LayoutDashboard },
-  { label: "Blogs", to: "/admin/blogs", icon: FileText },
-  { label: "Media", to: "/admin/media", icon: ImageIcon },
-  { label: "Analytics", to: "/admin/analytics", icon: BarChart2 },
-  { label: "Search", to: "/admin/search", icon: Search },
-  { label: "API Keys", to: "/admin/api-keys", icon: Key },
-  { label: "API Explorer", to: "/admin/api-explorer", icon: Code2 },
-  { label: "Webhooks", to: "/admin/webhooks", icon: Webhook },
-  { label: "Settings", to: "/admin/settings", icon: Settings },
+type NavSection = {
+  label: string;
+  items: { label: string; to: string; icon: React.ComponentType<{ className?: string }> }[];
+};
+
+const navSections: NavSection[] = [
+  {
+    label: "Content",
+    items: [
+      { label: "Dashboard", to: "/admin/dashboard", icon: LayoutDashboard },
+      { label: "Blogs", to: "/admin/blogs", icon: FileText },
+      { label: "Collections", to: "/admin/collections", icon: Layers },
+      { label: "Media", to: "/admin/media", icon: ImageIcon },
+    ],
+  },
+  {
+    label: "Insights",
+    items: [
+      { label: "Analytics", to: "/admin/analytics", icon: BarChart2 },
+      { label: "Search", to: "/admin/search", icon: Search },
+    ],
+  },
+  {
+    label: "Developers",
+    items: [
+      { label: "API Keys", to: "/admin/api-keys", icon: Key },
+      { label: "API Explorer", to: "/admin/api-explorer", icon: Code2 },
+      { label: "Webhooks", to: "/admin/webhooks", icon: Webhook },
+    ],
+  },
+  {
+    label: "Access",
+    items: [
+      { label: "Users & Roles", to: "/admin/users", icon: Users },
+      { label: "Workspaces", to: "/admin/workspaces", icon: FolderOpen },
+    ],
+  },
+  {
+    label: "Account",
+    items: [
+      { label: "Settings", to: "/admin/settings", icon: Settings },
+      { label: "Billing", to: "/admin/billing", icon: CreditCard },
+    ],
+  },
 ];
 
 function AdminLayout() {
@@ -46,26 +72,37 @@ function AdminLayout() {
           <Moon className="h-5 w-5 text-primary" />
           <span className="font-semibold tracking-tight">Lunar CMS</span>
         </div>
-        <nav className="flex-1 space-y-0.5 overflow-y-auto p-3">
-          {navItems.map((item) => {
-            const active = pathname.startsWith(item.to);
-            return (
-              <Link
-                key={item.to}
-                to={item.to}
-                className={cn(
-                  "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
-                  active
-                    ? "bg-primary text-primary-foreground"
-                    : "text-muted-foreground hover:bg-accent hover:text-foreground",
-                )}
-              >
-                <item.icon className="h-4 w-4" />
-                {item.label}
-              </Link>
-            );
-          })}
+
+        <nav className="flex-1 overflow-y-auto p-3 space-y-4">
+          {navSections.map((section) => (
+            <div key={section.label}>
+              <p className="px-3 mb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">
+                {section.label}
+              </p>
+              <div className="space-y-0.5">
+                {section.items.map((item) => {
+                  const active = pathname.startsWith(item.to);
+                  return (
+                    <Link
+                      key={item.to}
+                      to={item.to}
+                      className={cn(
+                        "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+                        active
+                          ? "bg-primary text-primary-foreground"
+                          : "text-muted-foreground hover:bg-accent hover:text-foreground",
+                      )}
+                    >
+                      <item.icon className="h-4 w-4 shrink-0" />
+                      {item.label}
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
         </nav>
+
         <div className="border-t border-border p-3">
           <Link
             to="/blogs"
@@ -83,15 +120,13 @@ function AdminLayout() {
           <Moon className="h-5 w-5 text-primary" />
           <span className="font-semibold">Lunar CMS</span>
           <div className="ml-auto flex items-center gap-3 overflow-x-auto">
-            {navItems.map((item) => (
+            {navSections.flatMap((s) => s.items).map((item) => (
               <Link
                 key={item.to}
                 to={item.to}
                 className={cn(
                   "shrink-0 text-sm font-medium",
-                  pathname.startsWith(item.to)
-                    ? "text-primary"
-                    : "text-muted-foreground",
+                  pathname.startsWith(item.to) ? "text-primary" : "text-muted-foreground",
                 )}
               >
                 {item.label}

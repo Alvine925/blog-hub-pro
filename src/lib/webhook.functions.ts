@@ -30,6 +30,12 @@ export interface WebhookLog {
   delivered_at: string;
 }
 
+export interface TestDeliveryResult {
+  status: number | null;
+  duration_ms: number;
+  error: string | null;
+}
+
 // ---------------------------------------------------------------------------
 // CRUD
 // ---------------------------------------------------------------------------
@@ -95,14 +101,7 @@ export const createWebhook = createServerFn({ method: "POST" })
 
 export const updateWebhook = createServerFn({ method: "POST" })
   .validator(
-    (input: {
-      id: string;
-      name: string;
-      url: string;
-      secret: string;
-      events: string[];
-      active: boolean;
-    }) =>
+    (input: { id: string; name: string; url: string; secret: string; events: string[]; active: boolean }) =>
       z
         .object({
           id: z.string().uuid(),
@@ -119,13 +118,7 @@ export const updateWebhook = createServerFn({ method: "POST" })
     const supabase = await getAdminClient();
     const { error } = await supabase
       .from("webhooks")
-      .update({
-        name: data.name,
-        url: data.url,
-        secret: data.secret,
-        events: data.events,
-        active: data.active,
-      })
+      .update({ name: data.name, url: data.url, secret: data.secret, events: data.events, active: data.active })
       .eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
@@ -148,12 +141,80 @@ export const toggleWebhook = createServerFn({ method: "POST" })
   .handler(async ({ data }): Promise<{ ok: true }> => {
     const { getAdminClient } = await import("./supabase.server");
     const supabase = await getAdminClient();
-    const { error } = await supabase
-      .from("webhooks")
-      .update({ active: data.active })
-      .eq("id", data.id);
+    const { error } = await supabase.from("webhooks").update({ active: data.active }).eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
+  });
+
+// ---------------------------------------------------------------------------
+// TEST DELIVERY
+// ---------------------------------------------------------------------------
+
+export const testWebhookDelivery = createServerFn({ method: "POST" })
+  .validator((input: { id: string }) => z.object({ id: z.string().uuid() }).parse(input))
+  .handler(async ({ data }): Promise<TestDeliveryResult> => {
+    const { getAdminClient } = await import("./supabase.server");
+    const supabase = await getAdminClient();
+
+    const { data: hook, error: hookError } = await supabase
+      .from("webhooks")
+      .select("url, secret")
+      .eq("id", data.id)
+      .single();
+
+    if (hookError || !hook) throw new Error("Webhook not found");
+
+    const body = JSON.stringify({
+      event: "test",
+      timestamp: new Date().toISOString(),
+      data: {
+        id: "00000000-0000-0000-0000-000000000000",
+        slug: "test-delivery",
+        title: "Test Delivery from Lunar CMS",
+        status: "published",
+        category: "General",
+        author_name: "Lunar CMS",
+      },
+    });
+
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+      "User-Agent": "LunarCMS/1.0",
+      "X-Lunar-Event": "test",
+    };
+
+    if (hook.secret) {
+      const { createHmac } = await import("node:crypto");
+      headers["X-Lunar-Signature"] = "sha256=" + createHmac("sha256", hook.secret).update(body).digest("hex");
+    }
+
+    const start = Date.now();
+    let status: number | null = null;
+    let error: string | null = null;
+
+    try {
+      const res = await fetch(hook.url, {
+        method: "POST",
+        headers,
+        body,
+        signal: AbortSignal.timeout(10_000),
+      });
+      status = res.status;
+    } catch (err) {
+      error = err instanceof Error ? err.message : String(err);
+    }
+
+    const duration_ms = Date.now() - start;
+
+    await supabase.from("webhook_logs").insert({
+      webhook_id: data.id,
+      event: "test",
+      response_status: status,
+      duration_ms,
+      error,
+    });
+
+    return { status, duration_ms, error };
   });
 
 // ---------------------------------------------------------------------------
@@ -194,18 +255,16 @@ export async function dispatchWebhooks(
         let errorMsg: string | null = null;
 
         try {
-          const headers: Record<string, string> = {
+          const hdrs: Record<string, string> = {
             "Content-Type": "application/json",
             "User-Agent": "LunarCMS/1.0",
             "X-Lunar-Event": event,
           };
-          if (hook.secret) {
-            headers["X-Lunar-Signature"] = await hmacSha256(hook.secret, body);
-          }
+          if (hook.secret) hdrs["X-Lunar-Signature"] = await hmacSha256(hook.secret, body);
 
           const res = await fetch(hook.url, {
             method: "POST",
-            headers,
+            headers: hdrs,
             body,
             signal: AbortSignal.timeout(10_000),
           });

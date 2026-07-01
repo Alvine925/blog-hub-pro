@@ -14,15 +14,20 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as BlogsIndexRouteImport } from './routes/blogs.index'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
 import { Route as BlogsSlugRouteImport } from './routes/blogs.$slug'
+import { Route as AdminWorkspacesRouteImport } from './routes/admin.workspaces'
 import { Route as AdminWebhooksRouteImport } from './routes/admin.webhooks'
+import { Route as AdminUsersRouteImport } from './routes/admin.users'
 import { Route as AdminSettingsRouteImport } from './routes/admin.settings'
 import { Route as AdminSearchRouteImport } from './routes/admin.search'
 import { Route as AdminMediaRouteImport } from './routes/admin.media'
 import { Route as AdminDashboardRouteImport } from './routes/admin.dashboard'
+import { Route as AdminCollectionsRouteImport } from './routes/admin.collections'
+import { Route as AdminBillingRouteImport } from './routes/admin.billing'
 import { Route as AdminApiKeysRouteImport } from './routes/admin.api-keys'
 import { Route as AdminApiExplorerRouteImport } from './routes/admin.api-explorer'
 import { Route as AdminAnalyticsRouteImport } from './routes/admin.analytics'
 import { Route as AdminBlogsIndexRouteImport } from './routes/admin.blogs.index'
+import { Route as AdminCollectionsIdRouteImport } from './routes/admin.collections.$id'
 import { Route as AdminBlogsNewRouteImport } from './routes/admin.blogs.new'
 import { Route as AdminBlogsIdRouteImport } from './routes/admin.blogs.$id'
 
@@ -51,9 +56,19 @@ const BlogsSlugRoute = BlogsSlugRouteImport.update({
   path: '/blogs/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminWorkspacesRoute = AdminWorkspacesRouteImport.update({
+  id: '/workspaces',
+  path: '/workspaces',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminWebhooksRoute = AdminWebhooksRouteImport.update({
   id: '/webhooks',
   path: '/webhooks',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminUsersRoute = AdminUsersRouteImport.update({
+  id: '/users',
+  path: '/users',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminSettingsRoute = AdminSettingsRouteImport.update({
@@ -76,6 +91,16 @@ const AdminDashboardRoute = AdminDashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminCollectionsRoute = AdminCollectionsRouteImport.update({
+  id: '/collections',
+  path: '/collections',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminBillingRoute = AdminBillingRouteImport.update({
+  id: '/billing',
+  path: '/billing',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminApiKeysRoute = AdminApiKeysRouteImport.update({
   id: '/api-keys',
   path: '/api-keys',
@@ -96,6 +121,11 @@ const AdminBlogsIndexRoute = AdminBlogsIndexRouteImport.update({
   path: '/blogs/',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminCollectionsIdRoute = AdminCollectionsIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => AdminCollectionsRoute,
+} as any)
 const AdminBlogsNewRoute = AdminBlogsNewRouteImport.update({
   id: '/blogs/new',
   path: '/blogs/new',
@@ -113,16 +143,21 @@ export interface FileRoutesByFullPath {
   '/admin/analytics': typeof AdminAnalyticsRoute
   '/admin/api-explorer': typeof AdminApiExplorerRoute
   '/admin/api-keys': typeof AdminApiKeysRoute
+  '/admin/billing': typeof AdminBillingRoute
+  '/admin/collections': typeof AdminCollectionsRouteWithChildren
   '/admin/dashboard': typeof AdminDashboardRoute
   '/admin/media': typeof AdminMediaRoute
   '/admin/search': typeof AdminSearchRoute
   '/admin/settings': typeof AdminSettingsRoute
+  '/admin/users': typeof AdminUsersRoute
   '/admin/webhooks': typeof AdminWebhooksRoute
+  '/admin/workspaces': typeof AdminWorkspacesRoute
   '/blogs/$slug': typeof BlogsSlugRoute
   '/admin/': typeof AdminIndexRoute
   '/blogs/': typeof BlogsIndexRoute
   '/admin/blogs/$id': typeof AdminBlogsIdRoute
   '/admin/blogs/new': typeof AdminBlogsNewRoute
+  '/admin/collections/$id': typeof AdminCollectionsIdRoute
   '/admin/blogs/': typeof AdminBlogsIndexRoute
 }
 export interface FileRoutesByTo {
@@ -130,16 +165,21 @@ export interface FileRoutesByTo {
   '/admin/analytics': typeof AdminAnalyticsRoute
   '/admin/api-explorer': typeof AdminApiExplorerRoute
   '/admin/api-keys': typeof AdminApiKeysRoute
+  '/admin/billing': typeof AdminBillingRoute
+  '/admin/collections': typeof AdminCollectionsRouteWithChildren
   '/admin/dashboard': typeof AdminDashboardRoute
   '/admin/media': typeof AdminMediaRoute
   '/admin/search': typeof AdminSearchRoute
   '/admin/settings': typeof AdminSettingsRoute
+  '/admin/users': typeof AdminUsersRoute
   '/admin/webhooks': typeof AdminWebhooksRoute
+  '/admin/workspaces': typeof AdminWorkspacesRoute
   '/blogs/$slug': typeof BlogsSlugRoute
   '/admin': typeof AdminIndexRoute
   '/blogs': typeof BlogsIndexRoute
   '/admin/blogs/$id': typeof AdminBlogsIdRoute
   '/admin/blogs/new': typeof AdminBlogsNewRoute
+  '/admin/collections/$id': typeof AdminCollectionsIdRoute
   '/admin/blogs': typeof AdminBlogsIndexRoute
 }
 export interface FileRoutesById {
@@ -149,16 +189,21 @@ export interface FileRoutesById {
   '/admin/analytics': typeof AdminAnalyticsRoute
   '/admin/api-explorer': typeof AdminApiExplorerRoute
   '/admin/api-keys': typeof AdminApiKeysRoute
+  '/admin/billing': typeof AdminBillingRoute
+  '/admin/collections': typeof AdminCollectionsRouteWithChildren
   '/admin/dashboard': typeof AdminDashboardRoute
   '/admin/media': typeof AdminMediaRoute
   '/admin/search': typeof AdminSearchRoute
   '/admin/settings': typeof AdminSettingsRoute
+  '/admin/users': typeof AdminUsersRoute
   '/admin/webhooks': typeof AdminWebhooksRoute
+  '/admin/workspaces': typeof AdminWorkspacesRoute
   '/blogs/$slug': typeof BlogsSlugRoute
   '/admin/': typeof AdminIndexRoute
   '/blogs/': typeof BlogsIndexRoute
   '/admin/blogs/$id': typeof AdminBlogsIdRoute
   '/admin/blogs/new': typeof AdminBlogsNewRoute
+  '/admin/collections/$id': typeof AdminCollectionsIdRoute
   '/admin/blogs/': typeof AdminBlogsIndexRoute
 }
 export interface FileRouteTypes {
@@ -169,16 +214,21 @@ export interface FileRouteTypes {
     | '/admin/analytics'
     | '/admin/api-explorer'
     | '/admin/api-keys'
+    | '/admin/billing'
+    | '/admin/collections'
     | '/admin/dashboard'
     | '/admin/media'
     | '/admin/search'
     | '/admin/settings'
+    | '/admin/users'
     | '/admin/webhooks'
+    | '/admin/workspaces'
     | '/blogs/$slug'
     | '/admin/'
     | '/blogs/'
     | '/admin/blogs/$id'
     | '/admin/blogs/new'
+    | '/admin/collections/$id'
     | '/admin/blogs/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -186,16 +236,21 @@ export interface FileRouteTypes {
     | '/admin/analytics'
     | '/admin/api-explorer'
     | '/admin/api-keys'
+    | '/admin/billing'
+    | '/admin/collections'
     | '/admin/dashboard'
     | '/admin/media'
     | '/admin/search'
     | '/admin/settings'
+    | '/admin/users'
     | '/admin/webhooks'
+    | '/admin/workspaces'
     | '/blogs/$slug'
     | '/admin'
     | '/blogs'
     | '/admin/blogs/$id'
     | '/admin/blogs/new'
+    | '/admin/collections/$id'
     | '/admin/blogs'
   id:
     | '__root__'
@@ -204,16 +259,21 @@ export interface FileRouteTypes {
     | '/admin/analytics'
     | '/admin/api-explorer'
     | '/admin/api-keys'
+    | '/admin/billing'
+    | '/admin/collections'
     | '/admin/dashboard'
     | '/admin/media'
     | '/admin/search'
     | '/admin/settings'
+    | '/admin/users'
     | '/admin/webhooks'
+    | '/admin/workspaces'
     | '/blogs/$slug'
     | '/admin/'
     | '/blogs/'
     | '/admin/blogs/$id'
     | '/admin/blogs/new'
+    | '/admin/collections/$id'
     | '/admin/blogs/'
   fileRoutesById: FileRoutesById
 }
@@ -261,11 +321,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof BlogsSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/workspaces': {
+      id: '/admin/workspaces'
+      path: '/workspaces'
+      fullPath: '/admin/workspaces'
+      preLoaderRoute: typeof AdminWorkspacesRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/webhooks': {
       id: '/admin/webhooks'
       path: '/webhooks'
       fullPath: '/admin/webhooks'
       preLoaderRoute: typeof AdminWebhooksRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/users': {
+      id: '/admin/users'
+      path: '/users'
+      fullPath: '/admin/users'
+      preLoaderRoute: typeof AdminUsersRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/settings': {
@@ -296,6 +370,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminDashboardRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/collections': {
+      id: '/admin/collections'
+      path: '/collections'
+      fullPath: '/admin/collections'
+      preLoaderRoute: typeof AdminCollectionsRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/billing': {
+      id: '/admin/billing'
+      path: '/billing'
+      fullPath: '/admin/billing'
+      preLoaderRoute: typeof AdminBillingRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/api-keys': {
       id: '/admin/api-keys'
       path: '/api-keys'
@@ -324,6 +412,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminBlogsIndexRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/collections/$id': {
+      id: '/admin/collections/$id'
+      path: '/$id'
+      fullPath: '/admin/collections/$id'
+      preLoaderRoute: typeof AdminCollectionsIdRouteImport
+      parentRoute: typeof AdminCollectionsRoute
+    }
     '/admin/blogs/new': {
       id: '/admin/blogs/new'
       path: '/blogs/new'
@@ -341,15 +436,30 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface AdminCollectionsRouteChildren {
+  AdminCollectionsIdRoute: typeof AdminCollectionsIdRoute
+}
+
+const AdminCollectionsRouteChildren: AdminCollectionsRouteChildren = {
+  AdminCollectionsIdRoute: AdminCollectionsIdRoute,
+}
+
+const AdminCollectionsRouteWithChildren =
+  AdminCollectionsRoute._addFileChildren(AdminCollectionsRouteChildren)
+
 interface AdminRouteChildren {
   AdminAnalyticsRoute: typeof AdminAnalyticsRoute
   AdminApiExplorerRoute: typeof AdminApiExplorerRoute
   AdminApiKeysRoute: typeof AdminApiKeysRoute
+  AdminBillingRoute: typeof AdminBillingRoute
+  AdminCollectionsRoute: typeof AdminCollectionsRouteWithChildren
   AdminDashboardRoute: typeof AdminDashboardRoute
   AdminMediaRoute: typeof AdminMediaRoute
   AdminSearchRoute: typeof AdminSearchRoute
   AdminSettingsRoute: typeof AdminSettingsRoute
+  AdminUsersRoute: typeof AdminUsersRoute
   AdminWebhooksRoute: typeof AdminWebhooksRoute
+  AdminWorkspacesRoute: typeof AdminWorkspacesRoute
   AdminIndexRoute: typeof AdminIndexRoute
   AdminBlogsIdRoute: typeof AdminBlogsIdRoute
   AdminBlogsNewRoute: typeof AdminBlogsNewRoute
@@ -360,11 +470,15 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminAnalyticsRoute: AdminAnalyticsRoute,
   AdminApiExplorerRoute: AdminApiExplorerRoute,
   AdminApiKeysRoute: AdminApiKeysRoute,
+  AdminBillingRoute: AdminBillingRoute,
+  AdminCollectionsRoute: AdminCollectionsRouteWithChildren,
   AdminDashboardRoute: AdminDashboardRoute,
   AdminMediaRoute: AdminMediaRoute,
   AdminSearchRoute: AdminSearchRoute,
   AdminSettingsRoute: AdminSettingsRoute,
+  AdminUsersRoute: AdminUsersRoute,
   AdminWebhooksRoute: AdminWebhooksRoute,
+  AdminWorkspacesRoute: AdminWorkspacesRoute,
   AdminIndexRoute: AdminIndexRoute,
   AdminBlogsIdRoute: AdminBlogsIdRoute,
   AdminBlogsNewRoute: AdminBlogsNewRoute,
