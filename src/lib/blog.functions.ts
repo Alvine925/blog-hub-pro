@@ -21,7 +21,7 @@ export const listPublishedPosts = createServerFn({ method: "GET" })
   )
   .handler(async ({ data }): Promise<BlogPostSummary[]> => {
     const { getAdminClient } = await import("./supabase.server");
-    const supabase = getAdminClient();
+    const supabase = await getAdminClient();
 
     let query = supabase
       .from("blog_posts")
@@ -56,7 +56,7 @@ export const getPostBySlug = createServerFn({ method: "GET" })
   )
   .handler(async ({ data }): Promise<BlogPost | null> => {
     const { getAdminClient } = await import("./supabase.server");
-    const supabase = getAdminClient();
+    const supabase = await getAdminClient();
 
     const { data: row, error } = await supabase
       .from("blog_posts")
@@ -89,7 +89,7 @@ export const getRelatedPosts = createServerFn({ method: "GET" })
   )
   .handler(async ({ data }): Promise<BlogPostSummary[]> => {
     const { getAdminClient } = await import("./supabase.server");
-    const supabase = getAdminClient();
+    const supabase = await getAdminClient();
 
     const { data: rows, error } = await supabase
       .from("blog_posts")
@@ -132,7 +132,7 @@ export const getRelatedPosts = createServerFn({ method: "GET" })
 export const adminListPosts = createServerFn({ method: "GET" }).handler(
   async (): Promise<BlogPostSummary[]> => {
     const { getAdminClient } = await import("./supabase.server");
-    const supabase = getAdminClient();
+    const supabase = await getAdminClient();
 
     const { data: rows, error } = await supabase
       .from("blog_posts")
@@ -154,7 +154,7 @@ export const adminGetPost = createServerFn({ method: "GET" })
   )
   .handler(async ({ data }): Promise<BlogPost | null> => {
     const { getAdminClient } = await import("./supabase.server");
-    const supabase = getAdminClient();
+    const supabase = await getAdminClient();
 
     const { data: row, error } = await supabase
       .from("blog_posts")
@@ -175,7 +175,7 @@ export const checkSlugAvailable = createServerFn({ method: "GET" })
   )
   .handler(async ({ data }): Promise<{ available: boolean }> => {
     const { getAdminClient } = await import("./supabase.server");
-    const supabase = getAdminClient();
+    const supabase = await getAdminClient();
 
     let query = supabase.from("blog_posts").select("id").eq("slug", data.slug);
     if (data.excludeId) query = query.neq("id", data.excludeId);
@@ -204,7 +204,7 @@ export const upsertPost = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => postInputSchema.parse(input))
   .handler(async ({ data }): Promise<{ id: string; slug: string }> => {
     const { getAdminClient } = await import("./supabase.server");
-    const supabase = getAdminClient();
+    const supabase = await getAdminClient();
 
     let slug = slugify(data.slug || data.title);
     if (!slug) slug = `post-${Date.now()}`;
@@ -266,7 +266,7 @@ export const setPostStatus = createServerFn({ method: "POST" })
   )
   .handler(async ({ data }): Promise<{ ok: true }> => {
     const { getAdminClient } = await import("./supabase.server");
-    const supabase = getAdminClient();
+    const supabase = await getAdminClient();
     const { error } = await supabase
       .from("blog_posts")
       .update({ status: data.status })
@@ -281,7 +281,7 @@ export const deletePost = createServerFn({ method: "POST" })
   )
   .handler(async ({ data }): Promise<{ ok: true }> => {
     const { getAdminClient } = await import("./supabase.server");
-    const supabase = getAdminClient();
+    const supabase = await getAdminClient();
     const { error } = await supabase.from("blog_posts").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
@@ -299,7 +299,7 @@ export const uploadCoverImage = createServerFn({ method: "POST" })
   )
   .handler(async ({ data }): Promise<{ url: string }> => {
     const { getAdminClient, BLOG_BUCKET } = await import("./supabase.server");
-    const supabase = getAdminClient();
+    const supabase = await getAdminClient();
 
     const base64 = data.fileBase64.includes(",")
       ? data.fileBase64.split(",")[1]
