@@ -43,6 +43,18 @@ import { Route as AdminWorkspacesIdRouteImport } from './routes/admin.workspaces
 import { Route as AdminCollectionsIdRouteImport } from './routes/admin.collections.$id'
 import { Route as AdminBlogsNewRouteImport } from './routes/admin.blogs.new'
 import { Route as AdminBlogsIdRouteImport } from './routes/admin.blogs.$id'
+import { Route as AdminWorkspacesIdIndexRouteImport } from './routes/admin.workspaces.$id.index'
+import { Route as AdminWorkspacesIdWebhooksRouteImport } from './routes/admin.workspaces.$id.webhooks'
+import { Route as AdminWorkspacesIdUsersRouteImport } from './routes/admin.workspaces.$id.users'
+import { Route as AdminWorkspacesIdSettingsRouteImport } from './routes/admin.workspaces.$id.settings'
+import { Route as AdminWorkspacesIdNotificationsRouteImport } from './routes/admin.workspaces.$id.notifications'
+import { Route as AdminWorkspacesIdMediaRouteImport } from './routes/admin.workspaces.$id.media'
+import { Route as AdminWorkspacesIdCollectionsRouteImport } from './routes/admin.workspaces.$id.collections'
+import { Route as AdminWorkspacesIdBlogsRouteImport } from './routes/admin.workspaces.$id.blogs'
+import { Route as AdminWorkspacesIdApiKeysRouteImport } from './routes/admin.workspaces.$id.api-keys'
+import { Route as AdminWorkspacesIdApiExplorerRouteImport } from './routes/admin.workspaces.$id.api-explorer'
+import { Route as AdminWorkspacesIdAnalyticsRouteImport } from './routes/admin.workspaces.$id.analytics'
+import { Route as AdminWorkspacesIdAiAssistantRouteImport } from './routes/admin.workspaces.$id.ai-assistant'
 
 const SignupRoute = SignupRouteImport.update({
   id: '/signup',
@@ -214,6 +226,74 @@ const AdminBlogsIdRoute = AdminBlogsIdRouteImport.update({
   path: '/blogs/$id',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminWorkspacesIdIndexRoute = AdminWorkspacesIdIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AdminWorkspacesIdRoute,
+} as any)
+const AdminWorkspacesIdWebhooksRoute =
+  AdminWorkspacesIdWebhooksRouteImport.update({
+    id: '/webhooks',
+    path: '/webhooks',
+    getParentRoute: () => AdminWorkspacesIdRoute,
+  } as any)
+const AdminWorkspacesIdUsersRoute = AdminWorkspacesIdUsersRouteImport.update({
+  id: '/users',
+  path: '/users',
+  getParentRoute: () => AdminWorkspacesIdRoute,
+} as any)
+const AdminWorkspacesIdSettingsRoute =
+  AdminWorkspacesIdSettingsRouteImport.update({
+    id: '/settings',
+    path: '/settings',
+    getParentRoute: () => AdminWorkspacesIdRoute,
+  } as any)
+const AdminWorkspacesIdNotificationsRoute =
+  AdminWorkspacesIdNotificationsRouteImport.update({
+    id: '/notifications',
+    path: '/notifications',
+    getParentRoute: () => AdminWorkspacesIdRoute,
+  } as any)
+const AdminWorkspacesIdMediaRoute = AdminWorkspacesIdMediaRouteImport.update({
+  id: '/media',
+  path: '/media',
+  getParentRoute: () => AdminWorkspacesIdRoute,
+} as any)
+const AdminWorkspacesIdCollectionsRoute =
+  AdminWorkspacesIdCollectionsRouteImport.update({
+    id: '/collections',
+    path: '/collections',
+    getParentRoute: () => AdminWorkspacesIdRoute,
+  } as any)
+const AdminWorkspacesIdBlogsRoute = AdminWorkspacesIdBlogsRouteImport.update({
+  id: '/blogs',
+  path: '/blogs',
+  getParentRoute: () => AdminWorkspacesIdRoute,
+} as any)
+const AdminWorkspacesIdApiKeysRoute =
+  AdminWorkspacesIdApiKeysRouteImport.update({
+    id: '/api-keys',
+    path: '/api-keys',
+    getParentRoute: () => AdminWorkspacesIdRoute,
+  } as any)
+const AdminWorkspacesIdApiExplorerRoute =
+  AdminWorkspacesIdApiExplorerRouteImport.update({
+    id: '/api-explorer',
+    path: '/api-explorer',
+    getParentRoute: () => AdminWorkspacesIdRoute,
+  } as any)
+const AdminWorkspacesIdAnalyticsRoute =
+  AdminWorkspacesIdAnalyticsRouteImport.update({
+    id: '/analytics',
+    path: '/analytics',
+    getParentRoute: () => AdminWorkspacesIdRoute,
+  } as any)
+const AdminWorkspacesIdAiAssistantRoute =
+  AdminWorkspacesIdAiAssistantRouteImport.update({
+    id: '/ai-assistant',
+    path: '/ai-assistant',
+    getParentRoute: () => AdminWorkspacesIdRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -248,8 +328,20 @@ export interface FileRoutesByFullPath {
   '/admin/blogs/$id': typeof AdminBlogsIdRoute
   '/admin/blogs/new': typeof AdminBlogsNewRoute
   '/admin/collections/$id': typeof AdminCollectionsIdRoute
-  '/admin/workspaces/$id': typeof AdminWorkspacesIdRoute
+  '/admin/workspaces/$id': typeof AdminWorkspacesIdRouteWithChildren
   '/admin/blogs/': typeof AdminBlogsIndexRoute
+  '/admin/workspaces/$id/ai-assistant': typeof AdminWorkspacesIdAiAssistantRoute
+  '/admin/workspaces/$id/analytics': typeof AdminWorkspacesIdAnalyticsRoute
+  '/admin/workspaces/$id/api-explorer': typeof AdminWorkspacesIdApiExplorerRoute
+  '/admin/workspaces/$id/api-keys': typeof AdminWorkspacesIdApiKeysRoute
+  '/admin/workspaces/$id/blogs': typeof AdminWorkspacesIdBlogsRoute
+  '/admin/workspaces/$id/collections': typeof AdminWorkspacesIdCollectionsRoute
+  '/admin/workspaces/$id/media': typeof AdminWorkspacesIdMediaRoute
+  '/admin/workspaces/$id/notifications': typeof AdminWorkspacesIdNotificationsRoute
+  '/admin/workspaces/$id/settings': typeof AdminWorkspacesIdSettingsRoute
+  '/admin/workspaces/$id/users': typeof AdminWorkspacesIdUsersRoute
+  '/admin/workspaces/$id/webhooks': typeof AdminWorkspacesIdWebhooksRoute
+  '/admin/workspaces/$id/': typeof AdminWorkspacesIdIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -282,8 +374,19 @@ export interface FileRoutesByTo {
   '/admin/blogs/$id': typeof AdminBlogsIdRoute
   '/admin/blogs/new': typeof AdminBlogsNewRoute
   '/admin/collections/$id': typeof AdminCollectionsIdRoute
-  '/admin/workspaces/$id': typeof AdminWorkspacesIdRoute
   '/admin/blogs': typeof AdminBlogsIndexRoute
+  '/admin/workspaces/$id/ai-assistant': typeof AdminWorkspacesIdAiAssistantRoute
+  '/admin/workspaces/$id/analytics': typeof AdminWorkspacesIdAnalyticsRoute
+  '/admin/workspaces/$id/api-explorer': typeof AdminWorkspacesIdApiExplorerRoute
+  '/admin/workspaces/$id/api-keys': typeof AdminWorkspacesIdApiKeysRoute
+  '/admin/workspaces/$id/blogs': typeof AdminWorkspacesIdBlogsRoute
+  '/admin/workspaces/$id/collections': typeof AdminWorkspacesIdCollectionsRoute
+  '/admin/workspaces/$id/media': typeof AdminWorkspacesIdMediaRoute
+  '/admin/workspaces/$id/notifications': typeof AdminWorkspacesIdNotificationsRoute
+  '/admin/workspaces/$id/settings': typeof AdminWorkspacesIdSettingsRoute
+  '/admin/workspaces/$id/users': typeof AdminWorkspacesIdUsersRoute
+  '/admin/workspaces/$id/webhooks': typeof AdminWorkspacesIdWebhooksRoute
+  '/admin/workspaces/$id': typeof AdminWorkspacesIdIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -319,8 +422,20 @@ export interface FileRoutesById {
   '/admin/blogs/$id': typeof AdminBlogsIdRoute
   '/admin/blogs/new': typeof AdminBlogsNewRoute
   '/admin/collections/$id': typeof AdminCollectionsIdRoute
-  '/admin/workspaces/$id': typeof AdminWorkspacesIdRoute
+  '/admin/workspaces/$id': typeof AdminWorkspacesIdRouteWithChildren
   '/admin/blogs/': typeof AdminBlogsIndexRoute
+  '/admin/workspaces/$id/ai-assistant': typeof AdminWorkspacesIdAiAssistantRoute
+  '/admin/workspaces/$id/analytics': typeof AdminWorkspacesIdAnalyticsRoute
+  '/admin/workspaces/$id/api-explorer': typeof AdminWorkspacesIdApiExplorerRoute
+  '/admin/workspaces/$id/api-keys': typeof AdminWorkspacesIdApiKeysRoute
+  '/admin/workspaces/$id/blogs': typeof AdminWorkspacesIdBlogsRoute
+  '/admin/workspaces/$id/collections': typeof AdminWorkspacesIdCollectionsRoute
+  '/admin/workspaces/$id/media': typeof AdminWorkspacesIdMediaRoute
+  '/admin/workspaces/$id/notifications': typeof AdminWorkspacesIdNotificationsRoute
+  '/admin/workspaces/$id/settings': typeof AdminWorkspacesIdSettingsRoute
+  '/admin/workspaces/$id/users': typeof AdminWorkspacesIdUsersRoute
+  '/admin/workspaces/$id/webhooks': typeof AdminWorkspacesIdWebhooksRoute
+  '/admin/workspaces/$id/': typeof AdminWorkspacesIdIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -359,6 +474,18 @@ export interface FileRouteTypes {
     | '/admin/collections/$id'
     | '/admin/workspaces/$id'
     | '/admin/blogs/'
+    | '/admin/workspaces/$id/ai-assistant'
+    | '/admin/workspaces/$id/analytics'
+    | '/admin/workspaces/$id/api-explorer'
+    | '/admin/workspaces/$id/api-keys'
+    | '/admin/workspaces/$id/blogs'
+    | '/admin/workspaces/$id/collections'
+    | '/admin/workspaces/$id/media'
+    | '/admin/workspaces/$id/notifications'
+    | '/admin/workspaces/$id/settings'
+    | '/admin/workspaces/$id/users'
+    | '/admin/workspaces/$id/webhooks'
+    | '/admin/workspaces/$id/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -391,8 +518,19 @@ export interface FileRouteTypes {
     | '/admin/blogs/$id'
     | '/admin/blogs/new'
     | '/admin/collections/$id'
-    | '/admin/workspaces/$id'
     | '/admin/blogs'
+    | '/admin/workspaces/$id/ai-assistant'
+    | '/admin/workspaces/$id/analytics'
+    | '/admin/workspaces/$id/api-explorer'
+    | '/admin/workspaces/$id/api-keys'
+    | '/admin/workspaces/$id/blogs'
+    | '/admin/workspaces/$id/collections'
+    | '/admin/workspaces/$id/media'
+    | '/admin/workspaces/$id/notifications'
+    | '/admin/workspaces/$id/settings'
+    | '/admin/workspaces/$id/users'
+    | '/admin/workspaces/$id/webhooks'
+    | '/admin/workspaces/$id'
   id:
     | '__root__'
     | '/'
@@ -429,6 +567,18 @@ export interface FileRouteTypes {
     | '/admin/collections/$id'
     | '/admin/workspaces/$id'
     | '/admin/blogs/'
+    | '/admin/workspaces/$id/ai-assistant'
+    | '/admin/workspaces/$id/analytics'
+    | '/admin/workspaces/$id/api-explorer'
+    | '/admin/workspaces/$id/api-keys'
+    | '/admin/workspaces/$id/blogs'
+    | '/admin/workspaces/$id/collections'
+    | '/admin/workspaces/$id/media'
+    | '/admin/workspaces/$id/notifications'
+    | '/admin/workspaces/$id/settings'
+    | '/admin/workspaces/$id/users'
+    | '/admin/workspaces/$id/webhooks'
+    | '/admin/workspaces/$id/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -681,6 +831,90 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminBlogsIdRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/workspaces/$id/': {
+      id: '/admin/workspaces/$id/'
+      path: '/'
+      fullPath: '/admin/workspaces/$id/'
+      preLoaderRoute: typeof AdminWorkspacesIdIndexRouteImport
+      parentRoute: typeof AdminWorkspacesIdRoute
+    }
+    '/admin/workspaces/$id/webhooks': {
+      id: '/admin/workspaces/$id/webhooks'
+      path: '/webhooks'
+      fullPath: '/admin/workspaces/$id/webhooks'
+      preLoaderRoute: typeof AdminWorkspacesIdWebhooksRouteImport
+      parentRoute: typeof AdminWorkspacesIdRoute
+    }
+    '/admin/workspaces/$id/users': {
+      id: '/admin/workspaces/$id/users'
+      path: '/users'
+      fullPath: '/admin/workspaces/$id/users'
+      preLoaderRoute: typeof AdminWorkspacesIdUsersRouteImport
+      parentRoute: typeof AdminWorkspacesIdRoute
+    }
+    '/admin/workspaces/$id/settings': {
+      id: '/admin/workspaces/$id/settings'
+      path: '/settings'
+      fullPath: '/admin/workspaces/$id/settings'
+      preLoaderRoute: typeof AdminWorkspacesIdSettingsRouteImport
+      parentRoute: typeof AdminWorkspacesIdRoute
+    }
+    '/admin/workspaces/$id/notifications': {
+      id: '/admin/workspaces/$id/notifications'
+      path: '/notifications'
+      fullPath: '/admin/workspaces/$id/notifications'
+      preLoaderRoute: typeof AdminWorkspacesIdNotificationsRouteImport
+      parentRoute: typeof AdminWorkspacesIdRoute
+    }
+    '/admin/workspaces/$id/media': {
+      id: '/admin/workspaces/$id/media'
+      path: '/media'
+      fullPath: '/admin/workspaces/$id/media'
+      preLoaderRoute: typeof AdminWorkspacesIdMediaRouteImport
+      parentRoute: typeof AdminWorkspacesIdRoute
+    }
+    '/admin/workspaces/$id/collections': {
+      id: '/admin/workspaces/$id/collections'
+      path: '/collections'
+      fullPath: '/admin/workspaces/$id/collections'
+      preLoaderRoute: typeof AdminWorkspacesIdCollectionsRouteImport
+      parentRoute: typeof AdminWorkspacesIdRoute
+    }
+    '/admin/workspaces/$id/blogs': {
+      id: '/admin/workspaces/$id/blogs'
+      path: '/blogs'
+      fullPath: '/admin/workspaces/$id/blogs'
+      preLoaderRoute: typeof AdminWorkspacesIdBlogsRouteImport
+      parentRoute: typeof AdminWorkspacesIdRoute
+    }
+    '/admin/workspaces/$id/api-keys': {
+      id: '/admin/workspaces/$id/api-keys'
+      path: '/api-keys'
+      fullPath: '/admin/workspaces/$id/api-keys'
+      preLoaderRoute: typeof AdminWorkspacesIdApiKeysRouteImport
+      parentRoute: typeof AdminWorkspacesIdRoute
+    }
+    '/admin/workspaces/$id/api-explorer': {
+      id: '/admin/workspaces/$id/api-explorer'
+      path: '/api-explorer'
+      fullPath: '/admin/workspaces/$id/api-explorer'
+      preLoaderRoute: typeof AdminWorkspacesIdApiExplorerRouteImport
+      parentRoute: typeof AdminWorkspacesIdRoute
+    }
+    '/admin/workspaces/$id/analytics': {
+      id: '/admin/workspaces/$id/analytics'
+      path: '/analytics'
+      fullPath: '/admin/workspaces/$id/analytics'
+      preLoaderRoute: typeof AdminWorkspacesIdAnalyticsRouteImport
+      parentRoute: typeof AdminWorkspacesIdRoute
+    }
+    '/admin/workspaces/$id/ai-assistant': {
+      id: '/admin/workspaces/$id/ai-assistant'
+      path: '/ai-assistant'
+      fullPath: '/admin/workspaces/$id/ai-assistant'
+      preLoaderRoute: typeof AdminWorkspacesIdAiAssistantRouteImport
+      parentRoute: typeof AdminWorkspacesIdRoute
+    }
   }
 }
 
@@ -695,12 +929,45 @@ const AdminCollectionsRouteChildren: AdminCollectionsRouteChildren = {
 const AdminCollectionsRouteWithChildren =
   AdminCollectionsRoute._addFileChildren(AdminCollectionsRouteChildren)
 
+interface AdminWorkspacesIdRouteChildren {
+  AdminWorkspacesIdAiAssistantRoute: typeof AdminWorkspacesIdAiAssistantRoute
+  AdminWorkspacesIdAnalyticsRoute: typeof AdminWorkspacesIdAnalyticsRoute
+  AdminWorkspacesIdApiExplorerRoute: typeof AdminWorkspacesIdApiExplorerRoute
+  AdminWorkspacesIdApiKeysRoute: typeof AdminWorkspacesIdApiKeysRoute
+  AdminWorkspacesIdBlogsRoute: typeof AdminWorkspacesIdBlogsRoute
+  AdminWorkspacesIdCollectionsRoute: typeof AdminWorkspacesIdCollectionsRoute
+  AdminWorkspacesIdMediaRoute: typeof AdminWorkspacesIdMediaRoute
+  AdminWorkspacesIdNotificationsRoute: typeof AdminWorkspacesIdNotificationsRoute
+  AdminWorkspacesIdSettingsRoute: typeof AdminWorkspacesIdSettingsRoute
+  AdminWorkspacesIdUsersRoute: typeof AdminWorkspacesIdUsersRoute
+  AdminWorkspacesIdWebhooksRoute: typeof AdminWorkspacesIdWebhooksRoute
+  AdminWorkspacesIdIndexRoute: typeof AdminWorkspacesIdIndexRoute
+}
+
+const AdminWorkspacesIdRouteChildren: AdminWorkspacesIdRouteChildren = {
+  AdminWorkspacesIdAiAssistantRoute: AdminWorkspacesIdAiAssistantRoute,
+  AdminWorkspacesIdAnalyticsRoute: AdminWorkspacesIdAnalyticsRoute,
+  AdminWorkspacesIdApiExplorerRoute: AdminWorkspacesIdApiExplorerRoute,
+  AdminWorkspacesIdApiKeysRoute: AdminWorkspacesIdApiKeysRoute,
+  AdminWorkspacesIdBlogsRoute: AdminWorkspacesIdBlogsRoute,
+  AdminWorkspacesIdCollectionsRoute: AdminWorkspacesIdCollectionsRoute,
+  AdminWorkspacesIdMediaRoute: AdminWorkspacesIdMediaRoute,
+  AdminWorkspacesIdNotificationsRoute: AdminWorkspacesIdNotificationsRoute,
+  AdminWorkspacesIdSettingsRoute: AdminWorkspacesIdSettingsRoute,
+  AdminWorkspacesIdUsersRoute: AdminWorkspacesIdUsersRoute,
+  AdminWorkspacesIdWebhooksRoute: AdminWorkspacesIdWebhooksRoute,
+  AdminWorkspacesIdIndexRoute: AdminWorkspacesIdIndexRoute,
+}
+
+const AdminWorkspacesIdRouteWithChildren =
+  AdminWorkspacesIdRoute._addFileChildren(AdminWorkspacesIdRouteChildren)
+
 interface AdminWorkspacesRouteChildren {
-  AdminWorkspacesIdRoute: typeof AdminWorkspacesIdRoute
+  AdminWorkspacesIdRoute: typeof AdminWorkspacesIdRouteWithChildren
 }
 
 const AdminWorkspacesRouteChildren: AdminWorkspacesRouteChildren = {
-  AdminWorkspacesIdRoute: AdminWorkspacesIdRoute,
+  AdminWorkspacesIdRoute: AdminWorkspacesIdRouteWithChildren,
 }
 
 const AdminWorkspacesRouteWithChildren = AdminWorkspacesRoute._addFileChildren(
