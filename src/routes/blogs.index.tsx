@@ -120,7 +120,10 @@ function BlogIndex() {
     const t = setTimeout(() => {
       const next = term.trim() || undefined;
       if (next !== search.q) {
-        navigate({ search: (prev) => ({ ...prev, q: next }), replace: true });
+        navigate({
+          search: (prev: BlogSearch) => ({ ...prev, q: next }),
+          replace: true,
+        });
       }
     }, 350);
     return () => clearTimeout(t);
