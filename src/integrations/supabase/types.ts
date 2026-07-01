@@ -14,13 +14,75 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      blog_posts: {
+        Row: {
+          author_name: string
+          category: string
+          content: string
+          cover_image: string | null
+          created_at: string
+          excerpt: string
+          featured: boolean
+          id: string
+          meta_description: string | null
+          published_at: string | null
+          reading_time: number
+          seo_title: string | null
+          slug: string
+          status: string
+          tags: Json
+          title: string
+          updated_at: string
+          views: number
+        }
+        Insert: {
+          author_name?: string
+          category?: string
+          content?: string
+          cover_image?: string | null
+          created_at?: string
+          excerpt?: string
+          featured?: boolean
+          id?: string
+          meta_description?: string | null
+          published_at?: string | null
+          reading_time?: number
+          seo_title?: string | null
+          slug: string
+          status?: string
+          tags?: Json
+          title?: string
+          updated_at?: string
+          views?: number
+        }
+        Update: {
+          author_name?: string
+          category?: string
+          content?: string
+          cover_image?: string | null
+          created_at?: string
+          excerpt?: string
+          featured?: boolean
+          id?: string
+          meta_description?: string | null
+          published_at?: string | null
+          reading_time?: number
+          seo_title?: string | null
+          slug?: string
+          status?: string
+          tags?: Json
+          title?: string
+          updated_at?: string
+          views?: number
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      increment_blog_views: { Args: { post_slug: string }; Returns: undefined }
     }
     Enums: {
       [_ in never]: never
