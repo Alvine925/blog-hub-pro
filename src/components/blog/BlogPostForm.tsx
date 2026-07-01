@@ -3,7 +3,10 @@ import { useNavigate } from "@tanstack/react-router";
 import { useMutation } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { Loader2, Upload, Eye, X } from "lucide-react";
+import { marked } from "marked";
+import { supabase } from "@/integrations/supabase/client";
+import { Loader2, Upload, Eye, X, FileCode, Sparkles, Wand2 } from "lucide-react";
+
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -30,7 +33,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { RichTextEditor } from "@/components/blog/RichTextEditor";
+
 import {
   BLOG_CATEGORIES,
   slugify,
@@ -75,6 +85,54 @@ export function BlogPostForm({ initial }: BlogPostFormProps) {
   const [slugStatus, setSlugStatus] = useState<"idle" | "checking" | "ok" | "taken">(
     "idle",
   );
+  const [markdownOpen, setMarkdownOpen] = useState(false);
+  const [markdownText, setMarkdownText] = useState("");
+  const [refining, setRefining] = useState(false);
+
+  function importMarkdown() {
+    if (!markdownText.trim()) {
+      toast.error("Paste some markdown first");
+      return;
+    }
+    try {
+      const html = marked.parse(markdownText, { async: false }) as string;
+      setContent(html);
+      setMarkdownOpen(false);
+      setMarkdownText("");
+      toast.success("Markdown imported into the editor");
+    } catch {
+      toast.error("Could not parse the markdown");
+    }
+  }
+
+  async function refineWithAI(
+    mode: "improve" | "grammar" | "shorten" | "expand" | "seo",
+  ) {
+    const current = content.trim();
+    if (!current) {
+      toast.error("Add some content before refining");
+      return;
+    }
+    setRefining(true);
+    const toastId = toast.loading("AI is refining your content…");
+    try {
+      const { data, error } = await supabase.functions.invoke("refine-content", {
+        body: { content: current, title, mode },
+      });
+      if (error) throw new Error(error.message);
+      if (data?.error) throw new Error(data.error);
+      if (!data?.refined) throw new Error("No content returned");
+      setContent(data.refined as string);
+      toast.success("Content refined by AI", { id: toastId });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "AI refine failed", {
+        id: toastId,
+      });
+    } finally {
+      setRefining(false);
+    }
+  }
+
 
   // Auto-generate slug from the title until the user edits it manually.
   useEffect(() => {
@@ -228,8 +286,47 @@ export function BlogPostForm({ initial }: BlogPostFormProps) {
         </Card>
 
         <Card>
-          <CardHeader>
+          <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0">
             <CardTitle className="text-base">Content</CardTitle>
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() => setMarkdownOpen(true)}
+              >
+                <FileCode className="mr-2 h-4 w-4" /> Import Markdown
+              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button type="button" size="sm" variant="default" disabled={refining}>
+                    {refining ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      <Sparkles className="mr-2 h-4 w-4" />
+                    )}
+                    Refine with AI
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => refineWithAI("improve")}>
+                    <Wand2 className="mr-2 h-4 w-4" /> Improve writing
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => refineWithAI("grammar")}>
+                    Fix grammar & spelling
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => refineWithAI("shorten")}>
+                    Make it shorter
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => refineWithAI("expand")}>
+                    Expand with detail
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => refineWithAI("seo")}>
+                    Optimize for SEO
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           </CardHeader>
           <CardContent>
             <RichTextEditor value={content} onChange={setContent} />
@@ -238,6 +335,7 @@ export function BlogPostForm({ initial }: BlogPostFormProps) {
             </p>
           </CardContent>
         </Card>
+
 
         <Card>
           <CardHeader>
@@ -431,7 +529,35 @@ export function BlogPostForm({ initial }: BlogPostFormProps) {
         </Card>
       </div>
 
+      <Dialog open={markdownOpen} onOpenChange={setMarkdownOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Import Markdown</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Paste Markdown below. It will be converted to rich text and replace
+            the current editor content.
+          </p>
+          <Textarea
+            value={markdownText}
+            onChange={(e) => setMarkdownText(e.target.value)}
+            rows={14}
+            placeholder={"# My heading\n\nWrite your post in **markdown**…"}
+            className="font-mono text-sm"
+          />
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" type="button" onClick={() => setMarkdownOpen(false)}>
+              Cancel
+            </Button>
+            <Button type="button" onClick={importMarkdown}>
+              <FileCode className="mr-2 h-4 w-4" /> Import
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
+
         <DialogContent className="max-h-[85vh] max-w-3xl overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Preview</DialogTitle>
