@@ -2,3 +2,5 @@
 - [Scheduling implementation](scheduling-impl.md) — publishScheduledPosts is a separate server fn in schedule.functions.ts; triggered in dashboard loader, not cron.
 - [Supabase new-table access](new-table-types.md) — tables added after type-gen need (client as any); regenerate types after applying migrations to remove casts.
 - [Edge function AI fallback](edge-fn-ai-fallback.md) — all AI edge functions use Lovable gateway primary → Mistral fallback; never accept workspace_id from client.
+- [Vite SSR env loading](vite-ssr-env-loading.md) — Vite does NOT inject .env vars into process.env in SSR; use fs.readFileSync to parse .env as fallback; supabase.server.ts handles this.
+- [TanStack Start route import paths](tanstack-start-route-imports.md) — relative imports like ../lib/x in route files resolve wrong in SSR virtual modules; always use @/lib/x alias in route files; ./x works fine in src/lib/*.ts files.

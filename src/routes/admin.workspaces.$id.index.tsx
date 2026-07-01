@@ -4,6 +4,8 @@ import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
 import {
   FileText, Layers, ImageIcon, Sparkles, Key, Clock, Activity,
   Plus, Eye, Send, FilePen, ArrowRight, Zap, TrendingUp,
+  Globe, Building2, Users, Mic2, Tag, BookOpen, Target,
+  ChevronRight, ExternalLink, BarChart2, Lightbulb,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -16,6 +18,33 @@ interface ActivityEntry {
   id: string; actor_name: string; action: string;
   entity_label: string | null; occurred_at: string; entity_type: string;
 }
+interface Competitor {
+  id: string; name: string; website: string | null;
+  description: string | null; strengths: string[]; weaknesses: string[];
+  content_strategy: string | null;
+}
+interface Keyword {
+  id: string; keyword: string; opportunity_type: string;
+}
+interface ContentOpportunity {
+  id: string; title: string; type: string;
+  topic: string | null; reason: string | null; priority: "high" | "medium" | "low";
+}
+interface WorkspaceIntel {
+  website_url: string | null;
+  industry: string | null;
+  description: string | null;
+  target_audience: string | null;
+  business_model: string | null;
+  brand_voice: string | null;
+  content_pillars: string[];
+  ai_context: {
+    brandSummary?: string;
+    primaryTopics?: string[];
+    suggestedCategories?: string[];
+    suggestedTags?: string[];
+  } | null;
+}
 interface Overview {
   stats: {
     postsTotal: number; postsPublished: number; postsDraft: number;
@@ -23,6 +52,10 @@ interface Overview {
   };
   recentPosts: RecentPost[];
   recentActivity: ActivityEntry[];
+  intel: WorkspaceIntel | null;
+  competitors: Competitor[];
+  keywords: Keyword[];
+  opportunities: ContentOpportunity[];
 }
 
 // ── Server fn ─────────────────────────────────────────────────────────────────
@@ -32,7 +65,10 @@ const getOverview = createServerFn({ method: "GET" })
     const { getAdminClient } = await import("@/lib/supabase.server");
     const db = getAdminClient() as any;
 
-    const [pubRes, draftRes, schedRes, collRes, mediaRes, aiRes, postsRes, actRes] = await Promise.all([
+    const [
+      pubRes, draftRes, schedRes, collRes, mediaRes, aiRes,
+      postsRes, actRes, wsRes, compRes, kwRes, oppRes,
+    ] = await Promise.all([
       db.from("blog_posts").select("id", { count: "exact", head: true }).eq("status", "published"),
       db.from("blog_posts").select("id", { count: "exact", head: true }).eq("status", "draft"),
       db.from("blog_posts").select("id", { count: "exact", head: true }).eq("status", "scheduled"),
@@ -47,6 +83,15 @@ const getOverview = createServerFn({ method: "GET" })
         .select("id,actor_name,action,entity_label,occurred_at,entity_type")
         .order("occurred_at", { ascending: false })
         .limit(8),
+      db.from("workspaces")
+        .select("website_url,industry,description,target_audience,business_model,brand_voice,content_pillars,ai_context")
+        .eq("id", data.id)
+        .maybeSingle(),
+      db.from("workspace_competitors").select("*").eq("workspace_id", data.id).limit(6),
+      db.from("workspace_keywords").select("*").eq("workspace_id", data.id).limit(24),
+      db.from("workspace_content_opportunities")
+        .select("*").eq("workspace_id", data.id)
+        .order("priority", { ascending: true }).limit(8),
     ]);
 
     const pub   = pubRes.count   ?? 0;
@@ -63,15 +108,19 @@ const getOverview = createServerFn({ method: "GET" })
         mediaFiles:     mediaRes.count ?? 0,
         aiGenerations:  aiRes.count    ?? 0,
       },
-      recentPosts:    postsRes.data ?? [],
-      recentActivity: actRes.data   ?? [],
+      recentPosts:    postsRes.data  ?? [],
+      recentActivity: actRes.data    ?? [],
+      intel:          wsRes.data     ?? null,
+      competitors:    compRes.data   ?? [],
+      keywords:       kwRes.data     ?? [],
+      opportunities:  oppRes.data    ?? [],
     };
   });
 
 // ── Route ─────────────────────────────────────────────────────────────────────
 const overviewQuery = (id: string) =>
   queryOptions({
-    queryKey: ["workspace-overview", id],
+    queryKey: ["workspace-overview", id, "v2"],
     queryFn:  () => getOverview({ data: { id } }),
   });
 
@@ -102,6 +151,12 @@ const STATUS_CFG: Record<string, { label: string; class: string; dot: string }> 
   published: { label: "Published", class: "text-emerald-700 bg-emerald-50 border-emerald-200", dot: "bg-emerald-500" },
   draft:     { label: "Draft",     class: "text-gray-600   bg-gray-50   border-gray-200",     dot: "bg-gray-400"   },
   scheduled: { label: "Scheduled", class: "text-amber-700  bg-amber-50  border-amber-200",    dot: "bg-amber-500"  },
+};
+
+const PRIORITY_CFG: Record<string, { label: string; class: string }> = {
+  high:   { label: "High",   class: "text-red-700    bg-red-50    border-red-200"   },
+  medium: { label: "Medium", class: "text-amber-700  bg-amber-50  border-amber-200" },
+  low:    { label: "Low",    class: "text-gray-600   bg-gray-50   border-gray-200"  },
 };
 
 // ── Sub-components ─────────────────────────────────────────────────────────────
@@ -154,14 +209,48 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
+function PriorityBadge({ priority }: { priority: string }) {
+  const cfg = PRIORITY_CFG[priority] ?? PRIORITY_CFG.medium;
+  return (
+    <span className={cn("inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-medium", cfg.class)}>
+      {cfg.label}
+    </span>
+  );
+}
+
+function SectionCard({ title, icon: Icon, children, className }: {
+  title: string;
+  icon: React.ComponentType<{ className?: string }>;
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <div className={cn("rounded-xl border border-border bg-white shadow-sm", className)}>
+      <div className="flex items-center gap-2 border-b border-border px-5 py-4">
+        <Icon className="h-4 w-4 text-muted-foreground" />
+        <h2 className="text-sm font-semibold">{title}</h2>
+      </div>
+      {children}
+    </div>
+  );
+}
+
 // ── Page ──────────────────────────────────────────────────────────────────────
 function WorkspaceOverview() {
   const { id } = Route.useParams();
   const { data } = useSuspenseQuery(overviewQuery(id));
-  const { stats, recentPosts, recentActivity } = data;
+  const {
+    stats, recentPosts, recentActivity,
+    intel        = null,
+    competitors  = [],
+    keywords     = [],
+    opportunities = [],
+  } = data as any;
 
   const base  = `/admin/workspaces/${id}`;
   const total = Math.max(stats.postsTotal, 1);
+
+  const hasIntel = !!(intel?.website_url || intel?.industry || competitors.length || keywords.length || opportunities.length);
 
   const QUICK_ACTIONS = [
     { label: "New Blog Post",   desc: "Write and publish content",   to: "/admin/blogs/new",     icon: FileText,  primary: true },
@@ -172,6 +261,10 @@ function WorkspaceOverview() {
     { label: "Analytics",       desc: "View performance metrics",    to: `${base}/analytics`,    icon: TrendingUp },
   ];
 
+  const primaryTopics = intel?.ai_context?.primaryTopics ?? [];
+  const suggestedTags = intel?.ai_context?.suggestedTags ?? [];
+  const allKeywords   = keywords.map((k) => k.keyword);
+
   return (
     <div className="min-h-full space-y-8 px-8 py-8">
 
@@ -179,7 +272,7 @@ function WorkspaceOverview() {
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-xl font-bold tracking-tight">Overview</h1>
-          <p className="mt-0.5 text-sm text-muted-foreground">Content and activity summary for this workspace.</p>
+          <p className="mt-0.5 text-sm text-muted-foreground">Content, activity, and site intelligence for this workspace.</p>
         </div>
         <Link
           to="/admin/blogs/new"
@@ -200,7 +293,7 @@ function WorkspaceOverview() {
         <StatCard label="AI Gens"      value={stats.aiGenerations}  icon={Sparkles}  />
       </div>
 
-      {/* ── Content Status ── */}
+      {/* ── Content Status Bar ── */}
       {stats.postsTotal > 0 && (
         <div className="rounded-xl border border-border bg-white p-5 shadow-sm">
           <div className="mb-4 flex items-center gap-2">
@@ -220,7 +313,210 @@ function WorkspaceOverview() {
         </div>
       )}
 
-      {/* ── Main Grid ── */}
+      {/* ── Site Intelligence Banner ── */}
+      {intel?.website_url && (
+        <div className="rounded-xl border border-primary/20 bg-gradient-to-r from-primary/5 to-violet-50 p-5 shadow-sm">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <Globe className="h-4 w-4 text-primary" />
+                <span className="text-sm font-semibold text-primary">Site Intelligence</span>
+              </div>
+              <a
+                href={intel.website_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1 text-sm text-muted-foreground hover:text-primary transition-colors"
+              >
+                {intel.website_url}
+                <ExternalLink className="h-3 w-3" />
+              </a>
+            </div>
+            <div className="flex flex-wrap gap-6 text-xs">
+              {intel.industry && (
+                <div>
+                  <p className="text-muted-foreground/60 uppercase tracking-wide font-medium text-[10px]">Industry</p>
+                  <p className="font-semibold mt-0.5">{intel.industry}</p>
+                </div>
+              )}
+              {intel.brand_voice && (
+                <div>
+                  <p className="text-muted-foreground/60 uppercase tracking-wide font-medium text-[10px]">Brand Voice</p>
+                  <p className="font-semibold mt-0.5">{intel.brand_voice}</p>
+                </div>
+              )}
+              {intel.target_audience && (
+                <div>
+                  <p className="text-muted-foreground/60 uppercase tracking-wide font-medium text-[10px]">Target Audience</p>
+                  <p className="font-semibold mt-0.5 max-w-[200px] truncate">{intel.target_audience}</p>
+                </div>
+              )}
+              {intel.business_model && (
+                <div>
+                  <p className="text-muted-foreground/60 uppercase tracking-wide font-medium text-[10px]">Business Model</p>
+                  <p className="font-semibold mt-0.5">{intel.business_model}</p>
+                </div>
+              )}
+            </div>
+          </div>
+          {intel.description && (
+            <p className="mt-3 text-xs text-muted-foreground border-t border-primary/10 pt-3 leading-relaxed">
+              {intel.description}
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* ── Intelligence Grid: Competitors + Keywords + Opportunities ── */}
+      {hasIntel && (
+        <div className="grid gap-6 lg:grid-cols-3">
+
+          {/* Competitors */}
+          <SectionCard title="Competitors" icon={BarChart2}>
+            {competitors.length === 0 ? (
+              <p className="px-5 py-8 text-center text-sm text-muted-foreground">No competitors identified.</p>
+            ) : (
+              <div className="divide-y divide-border">
+                {competitors.map((c) => (
+                  <div key={c.id} className="px-5 py-3 hover:bg-muted/20 transition-colors">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold truncate">{c.name}</p>
+                        {c.website && (
+                          <a
+                            href={c.website.startsWith("http") ? c.website : `https://${c.website}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-1 text-[11px] text-primary hover:underline"
+                          >
+                            {c.website.replace(/^https?:\/\//, "")}
+                            <ExternalLink className="h-2.5 w-2.5" />
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                    {c.description && (
+                      <p className="mt-1 text-xs text-muted-foreground line-clamp-2">{c.description}</p>
+                    )}
+                    {(c.strengths?.length > 0 || c.weaknesses?.length > 0) && (
+                      <div className="mt-2 flex flex-wrap gap-1">
+                        {c.strengths?.slice(0, 2).map((s, i) => (
+                          <span key={i} className="inline-flex items-center rounded-full bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 text-[10px] text-emerald-700">
+                            ↑ {s}
+                          </span>
+                        ))}
+                        {c.weaknesses?.slice(0, 1).map((w, i) => (
+                          <span key={i} className="inline-flex items-center rounded-full bg-red-50 border border-red-200 px-1.5 py-0.5 text-[10px] text-red-700">
+                            ↓ {w}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </SectionCard>
+
+          {/* Keywords */}
+          <SectionCard title="Target Keywords" icon={Tag}>
+            {allKeywords.length === 0 && primaryTopics.length === 0 ? (
+              <p className="px-5 py-8 text-center text-sm text-muted-foreground">No keywords identified.</p>
+            ) : (
+              <div className="p-5 space-y-4">
+                {primaryTopics.length > 0 && (
+                  <div>
+                    <p className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground/60">Primary Topics</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {primaryTopics.map((t, i) => (
+                        <span key={i} className="inline-flex items-center rounded-full bg-primary/10 border border-primary/20 px-2.5 py-1 text-[11px] font-medium text-primary">
+                          {t}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {allKeywords.length > 0 && (
+                  <div>
+                    <p className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground/60">SEO Keywords</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {allKeywords.map((kw, i) => (
+                        <span key={i} className="inline-flex items-center rounded-full bg-muted border border-border px-2.5 py-1 text-[11px] text-foreground">
+                          {kw}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {suggestedTags.length > 0 && (
+                  <div>
+                    <p className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground/60">Suggested Tags</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {suggestedTags.slice(0, 8).map((t, i) => (
+                        <span key={i} className="inline-flex items-center rounded-full bg-violet-50 border border-violet-200 px-2.5 py-1 text-[11px] text-violet-700">
+                          #{t}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </SectionCard>
+
+          {/* Content Opportunities */}
+          <SectionCard title="Content Opportunities" icon={Lightbulb}>
+            {opportunities.length === 0 ? (
+              <p className="px-5 py-8 text-center text-sm text-muted-foreground">No opportunities identified.</p>
+            ) : (
+              <div className="divide-y divide-border">
+                {opportunities.map((opp) => (
+                  <div key={opp.id} className="px-5 py-3 hover:bg-muted/20 transition-colors">
+                    <div className="flex items-start justify-between gap-2">
+                      <p className="text-xs font-semibold leading-snug flex-1">{opp.title}</p>
+                      <PriorityBadge priority={opp.priority} />
+                    </div>
+                    {opp.topic && (
+                      <p className="mt-0.5 text-[11px] text-primary font-medium">{opp.type} · {opp.topic}</p>
+                    )}
+                    {opp.reason && (
+                      <p className="mt-1 text-[11px] text-muted-foreground line-clamp-2">{opp.reason}</p>
+                    )}
+                    <Link
+                      to="/admin/blogs/new"
+                      className="mt-2 inline-flex items-center gap-1 text-[11px] font-medium text-primary hover:underline"
+                    >
+                      Write this post <ChevronRight className="h-2.5 w-2.5" />
+                    </Link>
+                  </div>
+                ))}
+              </div>
+            )}
+          </SectionCard>
+        </div>
+      )}
+
+      {/* ── Content Pillars ── */}
+      {(intel?.content_pillars?.length ?? 0) > 0 && (
+        <div className="rounded-xl border border-border bg-white p-5 shadow-sm">
+          <div className="mb-4 flex items-center gap-2">
+            <BookOpen className="h-4 w-4 text-muted-foreground" />
+            <h2 className="text-sm font-semibold">Content Pillars</h2>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {intel!.content_pillars.map((p, i) => (
+              <div key={i} className="flex items-center gap-2 rounded-lg border border-border bg-muted/30 px-3 py-2">
+                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-white">
+                  {i + 1}
+                </span>
+                <span className="text-xs font-medium">{p}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ── Main Grid: Posts + Activity ── */}
       <div className="grid gap-8 lg:grid-cols-[1fr_280px]">
 
         {/* Left: Posts table + Quick Actions */}
