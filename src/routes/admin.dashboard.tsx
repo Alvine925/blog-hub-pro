@@ -1,10 +1,15 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
-import { FileText, Eye, Send, FilePen, ArrowRight, Clock } from "lucide-react";
+import {
+  FileText, Eye, Send, FilePen, ArrowRight, Clock, Plus, ImageIcon,
+  Layers, Key, BarChart2, Settings, Sparkles, TrendingUp, Users,
+  Activity,
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { getDashboardStats } from "@/lib/apikey.functions";
 import { publishScheduledPosts } from "@/lib/schedule.functions";
 import { formatBlogDate } from "@/lib/blog-types";
+import { cn } from "@/lib/utils";
 
 const statsQuery = queryOptions({
   queryKey: ["admin", "dashboard"],
@@ -12,7 +17,7 @@ const statsQuery = queryOptions({
 });
 
 export const Route = createFileRoute("/admin/dashboard")({
-  head: () => ({ meta: [{ title: "Dashboard — Admin" }] }),
+  head: () => ({ meta: [{ title: "Dashboard — Lunar CMS" }] }),
   loader: async ({ context }) => {
     await publishScheduledPosts().catch(() => {});
     return context.queryClient.ensureQueryData(statsQuery);
@@ -23,174 +28,227 @@ export const Route = createFileRoute("/admin/dashboard")({
   ),
 });
 
+type StatConfig = {
+  label: string;
+  value: string | number;
+  icon: React.ComponentType<{ className?: string }>;
+  accent?: boolean;
+  amber?: boolean;
+  trend?: string;
+};
+
+function StatCard({ label, value, icon: Icon, accent, amber, trend }: StatConfig) {
+  return (
+    <div className="flex flex-col gap-3 rounded-xl border border-border bg-background p-5 shadow-sm transition-shadow hover:shadow-md">
+      <div className="flex items-center justify-between">
+        <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{label}</span>
+        <span className={cn(
+          "flex h-8 w-8 items-center justify-center rounded-lg",
+          accent ? "bg-primary/10 text-primary" : amber ? "bg-amber-50 text-amber-600" : "bg-muted text-muted-foreground",
+        )}>
+          <Icon className="h-4 w-4" />
+        </span>
+      </div>
+      <div>
+        <p className={cn(
+          "text-3xl font-bold tabular-nums",
+          accent ? "text-primary" : amber ? "text-amber-600" : "",
+        )}>
+          {value}
+        </p>
+        {trend && (
+          <p className="mt-1 flex items-center gap-1 text-xs text-green-600">
+            <TrendingUp className="h-3 w-3" /> {trend}
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+type QuickAction = {
+  label: string;
+  description: string;
+  to: string;
+  icon: React.ComponentType<{ className?: string }>;
+  primary?: boolean;
+};
+
+const QUICK_ACTIONS: QuickAction[] = [
+  { label: "New Post", description: "Write and publish a blog post", to: "/admin/blogs/new", icon: FileText, primary: true },
+  { label: "Media Library", description: "Upload and manage images", to: "/admin/media", icon: ImageIcon },
+  { label: "Collections", description: "Manage content types", to: "/admin/collections", icon: Layers },
+  { label: "AI Assistant", description: "Generate content with AI", to: "/admin/ai-assistant", icon: Sparkles },
+  { label: "API Keys", description: "Generate access tokens", to: "/admin/api-keys", icon: Key },
+  { label: "Analytics", description: "View performance metrics", to: "/admin/analytics", icon: BarChart2 },
+];
+
+function QuickActionCard({ action }: { action: QuickAction }) {
+  const Icon = action.icon;
+  return (
+    <Link
+      to={action.to}
+      className={cn(
+        "group flex items-center gap-4 rounded-xl border p-4 transition-all hover:shadow-sm",
+        action.primary
+          ? "border-primary/30 bg-primary/5 hover:border-primary/60"
+          : "border-border bg-background hover:border-border/80 hover:bg-accent/40",
+      )}
+    >
+      <span className={cn(
+        "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-transform group-hover:scale-110",
+        action.primary ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground",
+      )}>
+        <Icon className="h-5 w-5" />
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className={cn("text-sm font-semibold", action.primary && "text-primary")}>{action.label}</p>
+        <p className="text-xs text-muted-foreground">{action.description}</p>
+      </div>
+      <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground/40 transition-transform group-hover:translate-x-0.5 group-hover:text-muted-foreground" />
+    </Link>
+  );
+}
+
+function StatusBadge({ status }: { status: string }) {
+  const cfg: Record<string, { variant: "default" | "secondary" | "outline"; className?: string }> = {
+    published: { variant: "default" },
+    draft: { variant: "secondary" },
+    scheduled: { variant: "outline", className: "border-amber-300 bg-amber-50 text-amber-700" },
+  };
+  const c = cfg[status] ?? { variant: "secondary" };
+  return (
+    <Badge variant={c.variant} className={cn("text-xs capitalize", c.className)}>
+      {status}
+    </Badge>
+  );
+}
+
 function Dashboard() {
   const { data: stats } = useSuspenseQuery(statsQuery);
 
+  const statCards: StatConfig[] = [
+    { label: "Total Posts", value: stats.total, icon: FileText },
+    { label: "Published", value: stats.published, icon: Send, accent: true },
+    { label: "Drafts", value: stats.drafts, icon: FilePen },
+    { label: "Scheduled", value: stats.scheduled, icon: Clock, amber: true },
+    { label: "Total Views", value: stats.totalViews.toLocaleString(), icon: Eye, trend: "All time" },
+  ];
+
   return (
     <div className="space-y-10">
-      <div>
-        <h1 className="text-2xl font-bold">Dashboard</h1>
-        <p className="text-sm text-muted-foreground">Overview of your content</p>
-      </div>
-
-      {/* Flat stat row — no card boxes */}
-      <div className="grid grid-cols-2 gap-x-10 gap-y-8 sm:grid-cols-3 lg:grid-cols-5">
-        {[
-          { label: "Total Posts", value: stats.total, icon: FileText, accent: false },
-          { label: "Published", value: stats.published, icon: Send, accent: true },
-          { label: "Drafts", value: stats.drafts, icon: FilePen, accent: false },
-          { label: "Scheduled", value: stats.scheduled, icon: Clock, amber: true },
-          {
-            label: "Total Views",
-            value: stats.totalViews.toLocaleString(),
-            icon: Eye,
-            accent: false,
-          },
-        ].map((s) => (
-          <div key={s.label} className="space-y-1.5">
-            <div className="flex items-center gap-2">
-              <s.icon
-                className={`h-4 w-4 ${s.accent ? "text-primary" : s.amber ? "text-amber-500" : "text-muted-foreground"}`}
-              />
-              <span className="text-xs font-medium text-muted-foreground">{s.label}</span>
-            </div>
-            <p
-              className={`text-3xl font-bold tabular-nums ${s.accent ? "text-primary" : s.amber ? "text-amber-600" : ""}`}
-            >
-              {s.value}
-            </p>
-          </div>
-        ))}
-      </div>
-
-      <div className="border-t border-border" />
-
-      <div className="grid gap-10 lg:grid-cols-2">
-        {/* Top Posts */}
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-sm font-semibold">Top Posts by Views</h2>
-            <Link
-              to="/admin/blogs"
-              className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
-            >
-              View all <ArrowRight className="h-3.5 w-3.5" />
-            </Link>
-          </div>
-          {stats.topPosts.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No published posts yet.</p>
-          ) : (
-            <div className="space-y-0">
-              {stats.topPosts.map((post) => (
-                <div
-                  key={post.id}
-                  className="flex items-center justify-between gap-3 border-b border-border/50 py-3 last:border-0"
-                >
-                  <Link
-                    to="/blogs/$slug"
-                    params={{ slug: post.slug }}
-                    target="_blank"
-                    className="min-w-0 flex-1 truncate text-sm font-medium hover:text-primary"
-                  >
-                    {post.title || "Untitled"}
-                  </Link>
-                  <span className="shrink-0 text-sm tabular-nums text-muted-foreground">
-                    {post.views} views
-                  </span>
-                </div>
-              ))}
-            </div>
-          )}
+      {/* Header */}
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold">Dashboard</h1>
+          <p className="text-sm text-muted-foreground">Overview of your content and workspace</p>
         </div>
+        <Link
+          to="/admin/blogs/new"
+          className="hidden items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90 sm:flex"
+        >
+          <Plus className="h-4 w-4" /> New Post
+        </Link>
+      </div>
 
-        {/* Recently Updated */}
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-sm font-semibold">Recently Updated</h2>
-            <Link
-              to="/admin/blogs"
-              className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
-            >
-              View all <ArrowRight className="h-3.5 w-3.5" />
-            </Link>
-          </div>
-          {stats.recent.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No posts yet.</p>
-          ) : (
-            <div className="space-y-0">
-              {stats.recent.map((post) => (
-                <div
-                  key={post.id}
-                  className="flex items-center justify-between gap-3 border-b border-border/50 py-3 last:border-0"
-                >
-                  <Link
-                    to="/admin/blogs/$id"
-                    params={{ id: post.id }}
-                    className="min-w-0 flex-1 truncate text-sm font-medium hover:text-primary"
-                  >
-                    {post.title || "Untitled"}
-                  </Link>
-                  <div className="flex shrink-0 items-center gap-2">
-                    <Badge
-                      variant={post.status === "published" ? "default" : "secondary"}
-                      className={`text-xs ${post.status === "scheduled" ? "bg-amber-500 text-white hover:bg-amber-500/90" : ""}`}
+      {/* Stats grid */}
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
+        {statCards.map((s) => <StatCard key={s.label} {...s} />)}
+      </div>
+
+      {/* Content + Actions */}
+      <div className="grid gap-8 lg:grid-cols-[1fr_320px]">
+        {/* Content tables */}
+        <div className="space-y-8">
+          {/* Top Posts */}
+          <div className="rounded-xl border border-border bg-background shadow-sm">
+            <div className="flex items-center justify-between border-b border-border px-5 py-4">
+              <div className="flex items-center gap-2">
+                <Eye className="h-4 w-4 text-primary" />
+                <h2 className="text-sm font-semibold">Top Posts by Views</h2>
+              </div>
+              <Link
+                to="/admin/blogs"
+                className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+              >
+                View all <ArrowRight className="h-3.5 w-3.5" />
+              </Link>
+            </div>
+            <div className="divide-y divide-border/60 px-5">
+              {stats.topPosts.length === 0 ? (
+                <p className="py-8 text-center text-sm text-muted-foreground">No published posts yet.</p>
+              ) : (
+                stats.topPosts.map((post, i) => (
+                  <div key={post.id} className="flex items-center gap-3 py-3">
+                    <span className="w-5 shrink-0 text-right text-xs font-bold text-muted-foreground/50 tabular-nums">
+                      {i + 1}
+                    </span>
+                    <Link
+                      to="/blogs/$slug"
+                      params={{ slug: post.slug }}
+                      target="_blank"
+                      className="min-w-0 flex-1 truncate text-sm font-medium hover:text-primary transition-colors"
                     >
-                      {post.status}
-                    </Badge>
-                    <span className="text-xs text-muted-foreground">
-                      {formatBlogDate(post.updated_at)}
+                      {post.title || "Untitled"}
+                    </Link>
+                    <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-xs tabular-nums text-muted-foreground">
+                      {post.views.toLocaleString()} views
                     </span>
                   </div>
-                </div>
-              ))}
+                ))
+              )}
             </div>
-          )}
+          </div>
+
+          {/* Recently Updated */}
+          <div className="rounded-xl border border-border bg-background shadow-sm">
+            <div className="flex items-center justify-between border-b border-border px-5 py-4">
+              <div className="flex items-center gap-2">
+                <Activity className="h-4 w-4 text-primary" />
+                <h2 className="text-sm font-semibold">Recently Updated</h2>
+              </div>
+              <Link
+                to="/admin/blogs"
+                className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+              >
+                View all <ArrowRight className="h-3.5 w-3.5" />
+              </Link>
+            </div>
+            <div className="divide-y divide-border/60 px-5">
+              {stats.recent.length === 0 ? (
+                <p className="py-8 text-center text-sm text-muted-foreground">No posts yet.</p>
+              ) : (
+                stats.recent.map((post) => (
+                  <div key={post.id} className="flex items-center gap-3 py-3">
+                    <Link
+                      to="/admin/blogs/$id"
+                      params={{ id: post.id }}
+                      className="min-w-0 flex-1 truncate text-sm font-medium hover:text-primary transition-colors"
+                    >
+                      {post.title || "Untitled"}
+                    </Link>
+                    <div className="flex shrink-0 items-center gap-2">
+                      <StatusBadge status={post.status} />
+                      <span className="text-xs text-muted-foreground">{formatBlogDate(post.updated_at)}</span>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
         </div>
-      </div>
 
-      <div className="border-t border-border" />
-
-      {/* Quick Actions — flat button row */}
-      <div className="space-y-3">
-        <h2 className="text-sm font-semibold">Quick Actions</h2>
-        <div className="flex flex-wrap gap-3">
-          <Link
-            to="/admin/blogs/new"
-            className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
-          >
-            <FileText className="h-4 w-4" /> New Post
-          </Link>
-          <Link
-            to="/admin/media"
-            className="inline-flex items-center gap-2 rounded-md border border-border bg-background px-4 py-2 text-sm font-medium text-foreground hover:bg-accent"
-          >
-            Media Library
-          </Link>
-          <Link
-            to="/admin/api-explorer"
-            className="inline-flex items-center gap-2 rounded-md border border-border bg-background px-4 py-2 text-sm font-medium text-foreground hover:bg-accent"
-          >
-            API Explorer
-          </Link>
-          <Link
-            to="/admin/analytics"
-            className="inline-flex items-center gap-2 rounded-md border border-border bg-background px-4 py-2 text-sm font-medium text-foreground hover:bg-accent"
-          >
-            Analytics
-          </Link>
-          <Link
-            to="/admin/settings"
-            className="inline-flex items-center gap-2 rounded-md border border-border bg-background px-4 py-2 text-sm font-medium text-foreground hover:bg-accent"
-          >
-            Settings
-          </Link>
-          <Link
-            to="/blogs"
-            target="_blank"
-            className="inline-flex items-center gap-2 rounded-md border border-border bg-background px-4 py-2 text-sm font-medium text-foreground hover:bg-accent"
-          >
-            View Public Blog
-          </Link>
+        {/* Right: Quick Actions */}
+        <div className="space-y-4">
+          <div className="flex items-center gap-2">
+            <Settings className="h-4 w-4 text-muted-foreground" />
+            <h2 className="text-sm font-semibold">Quick Actions</h2>
+          </div>
+          <div className="space-y-2">
+            {QUICK_ACTIONS.map((action) => (
+              <QuickActionCard key={action.to} action={action} />
+            ))}
+          </div>
         </div>
       </div>
     </div>

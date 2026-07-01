@@ -1,2 +1,4 @@
 - [TanStack Start API routes](tanstack-start-api-routes.md) — createAPIFileRoute is NOT auto-discovered; use Vite configureServer middleware instead.
 - [Scheduling implementation](scheduling-impl.md) — publishScheduledPosts is a separate server fn in schedule.functions.ts; triggered in dashboard loader, not cron.
+- [Supabase new-table access](new-table-types.md) — tables added after type-gen need (client as any); regenerate types after applying migrations to remove casts.
+- [Edge function AI fallback](edge-fn-ai-fallback.md) — all AI edge functions use Lovable gateway primary → Mistral fallback; never accept workspace_id from client.
