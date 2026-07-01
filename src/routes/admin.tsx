@@ -1,18 +1,30 @@
 import { createFileRoute, Link, Outlet, useRouterState } from "@tanstack/react-router";
-import { FileText, LayoutDashboard, ExternalLink } from "lucide-react";
+import {
+  LayoutDashboard,
+  FileText,
+  ImageIcon,
+  Key,
+  ExternalLink,
+  Moon,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/admin")({
   head: () => ({
     meta: [
-      { title: "Admin — Blog Management" },
+      { title: "Lunar CMS — Admin" },
       { name: "robots", content: "noindex, nofollow" },
     ],
   }),
   component: AdminLayout,
 });
 
-const navItems = [{ label: "Blogs", to: "/admin/blogs", icon: FileText }];
+const navItems = [
+  { label: "Dashboard", to: "/admin/dashboard", icon: LayoutDashboard },
+  { label: "Blogs", to: "/admin/blogs", icon: FileText },
+  { label: "Media", to: "/admin/media", icon: ImageIcon },
+  { label: "API Keys", to: "/admin/api-keys", icon: Key },
+];
 
 function AdminLayout() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
@@ -21,8 +33,8 @@ function AdminLayout() {
     <div className="flex min-h-screen w-full bg-muted/30">
       <aside className="hidden w-60 shrink-0 flex-col border-r border-border bg-background md:flex">
         <div className="flex h-14 items-center gap-2 border-b border-border px-5">
-          <LayoutDashboard className="h-5 w-5 text-primary" />
-          <span className="font-semibold">Admin</span>
+          <Moon className="h-5 w-5 text-primary" />
+          <span className="font-semibold tracking-tight">Lunar CMS</span>
         </div>
         <nav className="flex-1 space-y-1 p-3">
           {navItems.map((item) => {
@@ -56,16 +68,25 @@ function AdminLayout() {
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        {/* Mobile top nav */}
         <div className="flex items-center gap-3 border-b border-border bg-background px-4 py-3 md:hidden">
-          <LayoutDashboard className="h-5 w-5 text-primary" />
-          <span className="font-semibold">Admin</span>
-          <Link
-            to="/admin/blogs"
-            className="ml-auto text-sm font-medium text-primary"
-          >
-            Blogs
-          </Link>
+          <Moon className="h-5 w-5 text-primary" />
+          <span className="font-semibold">Lunar CMS</span>
+          <div className="ml-auto flex items-center gap-3">
+            {navItems.map((item) => (
+              <Link
+                key={item.to}
+                to={item.to}
+                className={cn(
+                  "text-sm font-medium",
+                  pathname.startsWith(item.to)
+                    ? "text-primary"
+                    : "text-muted-foreground",
+                )}
+              >
+                {item.label}
+              </Link>
+            ))}
+          </div>
         </div>
         <main className="flex-1 p-4 md:p-8">
           <Outlet />

@@ -5,6 +5,29 @@
 //     error logger plugins, and sandbox detection (port/host/strictPort).
 // You can pass additional config via defineConfig({ vite: { ... }, etc... }) if needed.
 import { defineConfig } from "@lovable.dev/vite-tanstack-config";
+import type { Plugin } from "vite";
+
+function lunarCmsApiPlugin(): Plugin {
+  return {
+    name: "lunar-cms-api",
+    apply: "serve",
+    configureServer(server) {
+      server.middlewares.use(async (req, res, next) => {
+        const url = req.url ?? "/";
+        if (!url.startsWith("/api/v1/")) return next();
+        try {
+          const { lunarApiMiddleware } = await import(
+            "./src/lib/api-handler.node.ts"
+          );
+          return lunarApiMiddleware()(req, res, next);
+        } catch (err) {
+          res.writeHead(500, { "Content-Type": "application/json" });
+          res.end(JSON.stringify({ error: String(err) }));
+        }
+      });
+    },
+  };
+}
 
 export default defineConfig({
   tanstackStart: {
@@ -13,6 +36,7 @@ export default defineConfig({
     server: { entry: "server" },
   },
   vite: {
+    plugins: [lunarCmsApiPlugin()],
     server: {
       host: "0.0.0.0",
       port: 5000,
