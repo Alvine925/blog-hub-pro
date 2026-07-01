@@ -4,6 +4,7 @@ import { FileText, Eye, Send, FilePen, ArrowRight, Clock } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { getDashboardStats } from "@/lib/apikey.functions";
+import { publishScheduledPosts } from "@/lib/schedule.functions";
 import { formatBlogDate } from "@/lib/blog-types";
 
 const statsQuery = queryOptions({
@@ -13,7 +14,11 @@ const statsQuery = queryOptions({
 
 export const Route = createFileRoute("/admin/dashboard")({
   head: () => ({ meta: [{ title: "Dashboard — Admin" }] }),
-  loader: ({ context }) => context.queryClient.ensureQueryData(statsQuery),
+  loader: async ({ context }) => {
+    // Check and auto-publish any due scheduled posts before loading stats
+    await publishScheduledPosts().catch(() => {});
+    return context.queryClient.ensureQueryData(statsQuery);
+  },
   component: Dashboard,
   errorComponent: ({ error }) => (
     <p className="text-sm text-destructive">Failed to load stats: {error.message}</p>
@@ -25,18 +30,20 @@ function StatCard({
   value,
   icon: Icon,
   accent,
+  color,
 }: {
   label: string;
   value: number | string;
   icon: React.ElementType;
   accent?: boolean;
+  color?: string;
 }) {
   return (
     <Card>
       <CardContent className="flex items-center gap-4 pt-6">
         <div
           className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-lg ${
-            accent ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
+            color ?? (accent ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground")
           }`}
         >
           <Icon className="h-5 w-5" />
@@ -60,10 +67,16 @@ function Dashboard() {
         <p className="text-sm text-muted-foreground">Overview of your content</p>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
         <StatCard label="Total Posts" value={stats.total} icon={FileText} />
         <StatCard label="Published" value={stats.published} icon={Send} accent />
         <StatCard label="Drafts" value={stats.drafts} icon={FilePen} />
+        <StatCard
+          label="Scheduled"
+          value={stats.scheduled}
+          icon={Clock}
+          color="bg-amber-100 text-amber-700"
+        />
         <StatCard label="Total Views" value={stats.totalViews.toLocaleString()} icon={Eye} />
       </div>
 
@@ -130,7 +143,7 @@ function Dashboard() {
                     <div className="flex shrink-0 items-center gap-2">
                       <Badge
                         variant={post.status === "published" ? "default" : "secondary"}
-                        className="text-xs"
+                        className={`text-xs ${post.status === "scheduled" ? "bg-amber-500 text-white hover:bg-amber-500/90" : ""}`}
                       >
                         {post.status}
                       </Badge>
@@ -169,6 +182,12 @@ function Dashboard() {
             className="inline-flex items-center gap-2 rounded-md border border-border bg-background px-4 py-2 text-sm font-medium text-foreground hover:bg-accent"
           >
             API Keys
+          </Link>
+          <Link
+            to="/admin/webhooks"
+            className="inline-flex items-center gap-2 rounded-md border border-border bg-background px-4 py-2 text-sm font-medium text-foreground hover:bg-accent"
+          >
+            Webhooks
           </Link>
           <Link
             to="/blogs"

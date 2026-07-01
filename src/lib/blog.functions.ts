@@ -4,7 +4,7 @@ import type { BlogPost, BlogPostSummary } from "./blog-types";
 import { slugify, estimateReadingTime } from "./blog-types";
 
 const SUMMARY_COLUMNS =
-  "id, title, slug, excerpt, cover_image, category, tags, author_name, seo_title, meta_description, featured, status, published_at, reading_time, views, created_at, updated_at";
+  "id, title, slug, excerpt, cover_image, category, tags, author_name, seo_title, meta_description, featured, status, published_at, scheduled_at, reading_time, views, created_at, updated_at";
 
 function normalizeTags(tags: unknown): string[] {
   if (Array.isArray(tags)) return tags.map((t) => String(t));
@@ -197,7 +197,8 @@ const postInputSchema = z.object({
   seo_title: z.string().trim().max(200).nullable().default(null),
   meta_description: z.string().trim().max(320).nullable().default(null),
   featured: z.boolean().default(false),
-  status: z.enum(["draft", "published"]).default("draft"),
+  status: z.enum(["draft", "published", "scheduled"]).default("draft"),
+  scheduled_at: z.string().nullable().optional(),
 });
 
 export const upsertPost = createServerFn({ method: "POST" })
@@ -235,6 +236,7 @@ export const upsertPost = createServerFn({ method: "POST" })
       meta_description: data.meta_description,
       featured: data.featured,
       status: data.status,
+      scheduled_at: data.status === "scheduled" ? (data.scheduled_at ?? null) : null,
       reading_time: estimateReadingTime(data.content),
     };
 
@@ -283,17 +285,22 @@ export const upsertPost = createServerFn({ method: "POST" })
   });
 
 export const setPostStatus = createServerFn({ method: "POST" })
-  .inputValidator((input: { id: string; status: "draft" | "published" }) =>
+  .inputValidator((input: { id: string; status: "draft" | "published" | "scheduled" }) =>
     z
-      .object({ id: z.string().uuid(), status: z.enum(["draft", "published"]) })
+      .object({ id: z.string().uuid(), status: z.enum(["draft", "published", "scheduled"]) })
       .parse(input),
   )
   .handler(async ({ data }): Promise<{ ok: true }> => {
     const { getAdminClient } = await import("./supabase.server");
     const supabase = await getAdminClient();
+    const update: Record<string, unknown> = { status: data.status };
+    // Clear scheduled_at whenever moving away from 'scheduled'
+    if (data.status !== "scheduled") update.scheduled_at = null;
+    // Set published_at when publishing
+    if (data.status === "published") update.published_at = new Date().toISOString();
     const { data: row, error } = await supabase
       .from("blog_posts")
-      .update({ status: data.status })
+      .update(update)
       .eq("id", data.id)
       .select("id, slug, title, category, author_name")
       .single();

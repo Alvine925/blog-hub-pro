@@ -116,6 +116,7 @@ export const getDashboardStats = createServerFn({ method: "GET" }).handler(
       { count: total },
       { count: published },
       { count: drafts },
+      { count: scheduled },
       { data: topPosts },
       { data: recent },
     ] = await Promise.all([
@@ -128,6 +129,10 @@ export const getDashboardStats = createServerFn({ method: "GET" }).handler(
         .from("blog_posts")
         .select("*", { count: "exact", head: true })
         .eq("status", "draft"),
+      supabase
+        .from("blog_posts")
+        .select("*", { count: "exact", head: true })
+        .eq("status", "scheduled"),
       supabase
         .from("blog_posts")
         .select("id, title, slug, views, status")
@@ -150,6 +155,7 @@ export const getDashboardStats = createServerFn({ method: "GET" }).handler(
       total: total ?? 0,
       published: published ?? 0,
       drafts: drafts ?? 0,
+      scheduled: scheduled ?? 0,
       totalViews,
       topPosts: (topPosts ?? []) as Array<{
         id: string;

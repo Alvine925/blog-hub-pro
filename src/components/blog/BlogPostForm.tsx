@@ -5,7 +5,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { marked } from "marked";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Upload, Eye, X, FileCode, Sparkles, Wand2 } from "lucide-react";
+import { Loader2, Upload, Eye, X, FileCode, Sparkles, Wand2, Clock } from "lucide-react";
 
 
 import { Button } from "@/components/ui/button";
@@ -79,7 +79,26 @@ export function BlogPostForm({ initial }: BlogPostFormProps) {
   );
   const [authorName, setAuthorName] = useState(initial?.author_name ?? "Admin");
   const [featured, setFeatured] = useState(initial?.featured ?? false);
-  const [published, setPublished] = useState(initial?.status === "published");
+  const [publishMode, setPublishMode] = useState<"draft" | "publish" | "schedule">(
+    initial?.status === "published"
+      ? "publish"
+      : initial?.status === "scheduled"
+        ? "schedule"
+        : "draft",
+  );
+  // datetime-local value, e.g. "2026-07-15T09:00"
+  const [scheduledAt, setScheduledAt] = useState<string>(() => {
+    if (initial?.scheduled_at) {
+      // Convert UTC ISO to local datetime-local format
+      const d = new Date(initial.scheduled_at);
+      const pad = (n: number) => String(n).padStart(2, "0");
+      return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    }
+    // Default: 1 hour from now (local time)
+    const d = new Date(Date.now() + 3600_000);
+    const pad = (n: number) => String(n).padStart(2, "0");
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  });
   const [uploading, setUploading] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [slugStatus, setSlugStatus] = useState<"idle" | "checking" | "ok" | "taken">(
@@ -242,7 +261,10 @@ export function BlogPostForm({ initial }: BlogPostFormProps) {
   }
 
   const mutation = useMutation({
-    mutationFn: (status: "draft" | "published") =>
+    mutationFn: (opts: {
+      status: "draft" | "published" | "scheduled";
+      scheduledAt?: string;
+    }) =>
       upsert({
         data: {
           id: initial?.id,
@@ -257,12 +279,17 @@ export function BlogPostForm({ initial }: BlogPostFormProps) {
           seo_title: seoTitle || null,
           meta_description: metaDescription || null,
           featured,
-          status,
+          status: opts.status,
+          scheduled_at: opts.scheduledAt ?? null,
         },
       }),
-    onSuccess: (_res, status) => {
+    onSuccess: (_res, opts) => {
       toast.success(
-        status === "published" ? "Post published" : "Draft saved",
+        opts.status === "published"
+          ? "Post published"
+          : opts.status === "scheduled"
+            ? "Post scheduled"
+            : "Draft saved",
       );
       navigate({ to: "/admin/blogs" });
     },
@@ -270,7 +297,7 @@ export function BlogPostForm({ initial }: BlogPostFormProps) {
       toast.error(err instanceof Error ? err.message : "Save failed"),
   });
 
-  function submit(status: "draft" | "published") {
+  function submit() {
     if (!title.trim()) {
       toast.error("Title is required");
       return;
@@ -279,7 +306,23 @@ export function BlogPostForm({ initial }: BlogPostFormProps) {
       toast.error("Slug is already in use");
       return;
     }
-    mutation.mutate(status);
+    if (publishMode === "schedule") {
+      if (!scheduledAt) {
+        toast.error("Please pick a date and time to schedule");
+        return;
+      }
+      const dt = new Date(scheduledAt);
+      if (isNaN(dt.getTime()) || dt <= new Date()) {
+        toast.error("Scheduled time must be in the future");
+        return;
+      }
+      mutation.mutate({
+        status: "scheduled",
+        scheduledAt: dt.toISOString(),
+      });
+      return;
+    }
+    mutation.mutate({ status: publishMode === "publish" ? "published" : "draft" });
   }
 
   const readingTime = estimateReadingTime(content);
@@ -420,32 +463,61 @@ export function BlogPostForm({ initial }: BlogPostFormProps) {
             <CardTitle className="text-base">Publish</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="flex items-center justify-between">
-              <Label htmlFor="published">Published</Label>
-              <Switch
-                id="published"
-                checked={published}
-                onCheckedChange={setPublished}
-              />
+            {/* Publish mode selector */}
+            <div className="grid grid-cols-3 gap-1 rounded-lg border border-border bg-muted p-1">
+              {(
+                [
+                  { id: "draft", label: "Draft" },
+                  { id: "publish", label: "Now" },
+                  { id: "schedule", label: "Schedule" },
+                ] as const
+              ).map((m) => (
+                <button
+                  key={m.id}
+                  type="button"
+                  onClick={() => setPublishMode(m.id)}
+                  className={`rounded-md px-2 py-1.5 text-xs font-medium transition-colors ${
+                    publishMode === m.id
+                      ? "bg-background text-foreground shadow-sm"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {m.id === "schedule" && <Clock className="mr-1 inline h-3 w-3" />}
+                  {m.label}
+                </button>
+              ))}
             </div>
+
+            {/* Schedule datetime picker */}
+            {publishMode === "schedule" && (
+              <div className="space-y-1.5">
+                <Label htmlFor="scheduledAt" className="text-xs text-muted-foreground">
+                  Publish at (your local time)
+                </Label>
+                <input
+                  id="scheduledAt"
+                  type="datetime-local"
+                  value={scheduledAt}
+                  onChange={(e) => setScheduledAt(e.target.value)}
+                  min={new Date(Date.now() + 60_000).toISOString().slice(0, 16)}
+                  className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                />
+              </div>
+            )}
+
             <div className="flex items-center justify-between">
               <Label htmlFor="featured">Featured</Label>
               <Switch id="featured" checked={featured} onCheckedChange={setFeatured} />
             </div>
+
             <div className="flex flex-col gap-2 pt-2">
-              <Button
-                onClick={() => submit(published ? "published" : "draft")}
-                disabled={saving}
-              >
+              <Button onClick={submit} disabled={saving}>
                 {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {published ? "Publish" : "Save Draft"}
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => submit("draft")}
-                disabled={saving}
-              >
-                Save as Draft
+                {publishMode === "publish"
+                  ? "Publish Now"
+                  : publishMode === "schedule"
+                    ? "Schedule"
+                    : "Save Draft"}
               </Button>
               <Button
                 variant="ghost"

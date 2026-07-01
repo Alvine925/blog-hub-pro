@@ -1,6 +1,6 @@
 // Client-safe blog domain types and helpers (no server imports here).
 
-export type BlogStatus = "draft" | "published";
+export type BlogStatus = "draft" | "published" | "scheduled";
 
 export interface BlogPost {
   id: string;
@@ -17,6 +17,7 @@ export interface BlogPost {
   featured: boolean;
   status: BlogStatus;
   published_at: string | null;
+  scheduled_at: string | null;
   reading_time: number;
   views: number;
   created_at: string;

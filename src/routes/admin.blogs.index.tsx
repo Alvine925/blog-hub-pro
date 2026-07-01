@@ -11,6 +11,7 @@ import {
   Send,
   Undo2,
   FileText,
+  Clock,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -49,6 +50,18 @@ export const Route = createFileRoute("/admin/blogs/")({
   ),
 });
 
+function StatusBadge({ post }: { post: BlogPostSummary }) {
+  if (post.status === "published") return <Badge>published</Badge>;
+  if (post.status === "scheduled") {
+    return (
+      <Badge className="bg-amber-500 text-white hover:bg-amber-500/90 gap-1">
+        <Clock className="h-3 w-3" /> scheduled
+      </Badge>
+    );
+  }
+  return <Badge variant="secondary">draft</Badge>;
+}
+
 function AdminBlogList() {
   const { data: posts } = useSuspenseQuery(listQuery);
   const queryClient = useQueryClient();
@@ -66,9 +79,25 @@ function AdminBlogList() {
   async function toggleStatus(post: BlogPostSummary) {
     setBusyId(post.id);
     try {
-      const status = post.status === "published" ? "draft" : "published";
-      await setStatus({ data: { id: post.id, status } });
-      toast.success(status === "published" ? "Published" : "Unpublished");
+      const next =
+        post.status === "published"
+          ? "draft"
+          : "published";
+      await setStatus({ data: { id: post.id, status: next } });
+      toast.success(next === "published" ? "Published" : "Unpublished");
+      await refresh();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed");
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function publishNow(post: BlogPostSummary) {
+    setBusyId(post.id);
+    try {
+      await setStatus({ data: { id: post.id, status: "published" } });
+      toast.success("Published now");
       await refresh();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed");
@@ -125,7 +154,7 @@ function AdminBlogList() {
                 <TableHead>Title</TableHead>
                 <TableHead>Category</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead>Published</TableHead>
+                <TableHead>Date</TableHead>
                 <TableHead className="text-right">Views</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
@@ -154,14 +183,12 @@ function AdminBlogList() {
                   </TableCell>
                   <TableCell>{post.category}</TableCell>
                   <TableCell>
-                    <Badge
-                      variant={post.status === "published" ? "default" : "secondary"}
-                    >
-                      {post.status}
-                    </Badge>
+                    <StatusBadge post={post} />
                   </TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {formatBlogDate(post.published_at) || "—"}
+                  <TableCell className="text-muted-foreground text-sm">
+                    {post.status === "scheduled" && post.scheduled_at
+                      ? `📅 ${formatBlogDate(post.scheduled_at)}`
+                      : formatBlogDate(post.published_at) || "—"}
                   </TableCell>
                   <TableCell className="text-right tabular-nums">
                     {post.views}
@@ -179,19 +206,32 @@ function AdminBlogList() {
                           </Link>
                         </Button>
                       )}
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        title={post.status === "published" ? "Unpublish" : "Publish"}
-                        disabled={busyId === post.id}
-                        onClick={() => toggleStatus(post)}
-                      >
-                        {post.status === "published" ? (
-                          <Undo2 className="h-4 w-4" />
-                        ) : (
-                          <Send className="h-4 w-4" />
-                        )}
-                      </Button>
+                      {post.status === "scheduled" ? (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          title="Publish now"
+                          disabled={busyId === post.id}
+                          onClick={() => publishNow(post)}
+                          className="text-xs"
+                        >
+                          <Send className="mr-1 h-3.5 w-3.5" /> Publish now
+                        </Button>
+                      ) : (
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          title={post.status === "published" ? "Unpublish" : "Publish"}
+                          disabled={busyId === post.id}
+                          onClick={() => toggleStatus(post)}
+                        >
+                          {post.status === "published" ? (
+                            <Undo2 className="h-4 w-4" />
+                          ) : (
+                            <Send className="h-4 w-4" />
+                          )}
+                        </Button>
+                      )}
                       <Button size="icon" variant="ghost" asChild title="Edit">
                         <Link to="/admin/blogs/$id" params={{ id: post.id }}>
                           <Pencil className="h-4 w-4" />
