@@ -15,9 +15,13 @@ import { Route as BlogsIndexRouteImport } from './routes/blogs.index'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
 import { Route as BlogsSlugRouteImport } from './routes/blogs.$slug'
 import { Route as AdminWebhooksRouteImport } from './routes/admin.webhooks'
+import { Route as AdminSettingsRouteImport } from './routes/admin.settings'
+import { Route as AdminSearchRouteImport } from './routes/admin.search'
 import { Route as AdminMediaRouteImport } from './routes/admin.media'
 import { Route as AdminDashboardRouteImport } from './routes/admin.dashboard'
 import { Route as AdminApiKeysRouteImport } from './routes/admin.api-keys'
+import { Route as AdminApiExplorerRouteImport } from './routes/admin.api-explorer'
+import { Route as AdminAnalyticsRouteImport } from './routes/admin.analytics'
 import { Route as AdminBlogsIndexRouteImport } from './routes/admin.blogs.index'
 import { Route as AdminBlogsNewRouteImport } from './routes/admin.blogs.new'
 import { Route as AdminBlogsIdRouteImport } from './routes/admin.blogs.$id'
@@ -52,6 +56,16 @@ const AdminWebhooksRoute = AdminWebhooksRouteImport.update({
   path: '/webhooks',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminSettingsRoute = AdminSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminSearchRoute = AdminSearchRouteImport.update({
+  id: '/search',
+  path: '/search',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminMediaRoute = AdminMediaRouteImport.update({
   id: '/media',
   path: '/media',
@@ -65,6 +79,16 @@ const AdminDashboardRoute = AdminDashboardRouteImport.update({
 const AdminApiKeysRoute = AdminApiKeysRouteImport.update({
   id: '/api-keys',
   path: '/api-keys',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminApiExplorerRoute = AdminApiExplorerRouteImport.update({
+  id: '/api-explorer',
+  path: '/api-explorer',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminAnalyticsRoute = AdminAnalyticsRouteImport.update({
+  id: '/analytics',
+  path: '/analytics',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminBlogsIndexRoute = AdminBlogsIndexRouteImport.update({
@@ -86,9 +110,13 @@ const AdminBlogsIdRoute = AdminBlogsIdRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
+  '/admin/analytics': typeof AdminAnalyticsRoute
+  '/admin/api-explorer': typeof AdminApiExplorerRoute
   '/admin/api-keys': typeof AdminApiKeysRoute
   '/admin/dashboard': typeof AdminDashboardRoute
   '/admin/media': typeof AdminMediaRoute
+  '/admin/search': typeof AdminSearchRoute
+  '/admin/settings': typeof AdminSettingsRoute
   '/admin/webhooks': typeof AdminWebhooksRoute
   '/blogs/$slug': typeof BlogsSlugRoute
   '/admin/': typeof AdminIndexRoute
@@ -99,9 +127,13 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/admin/analytics': typeof AdminAnalyticsRoute
+  '/admin/api-explorer': typeof AdminApiExplorerRoute
   '/admin/api-keys': typeof AdminApiKeysRoute
   '/admin/dashboard': typeof AdminDashboardRoute
   '/admin/media': typeof AdminMediaRoute
+  '/admin/search': typeof AdminSearchRoute
+  '/admin/settings': typeof AdminSettingsRoute
   '/admin/webhooks': typeof AdminWebhooksRoute
   '/blogs/$slug': typeof BlogsSlugRoute
   '/admin': typeof AdminIndexRoute
@@ -114,9 +146,13 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
+  '/admin/analytics': typeof AdminAnalyticsRoute
+  '/admin/api-explorer': typeof AdminApiExplorerRoute
   '/admin/api-keys': typeof AdminApiKeysRoute
   '/admin/dashboard': typeof AdminDashboardRoute
   '/admin/media': typeof AdminMediaRoute
+  '/admin/search': typeof AdminSearchRoute
+  '/admin/settings': typeof AdminSettingsRoute
   '/admin/webhooks': typeof AdminWebhooksRoute
   '/blogs/$slug': typeof BlogsSlugRoute
   '/admin/': typeof AdminIndexRoute
@@ -130,9 +166,13 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/admin'
+    | '/admin/analytics'
+    | '/admin/api-explorer'
     | '/admin/api-keys'
     | '/admin/dashboard'
     | '/admin/media'
+    | '/admin/search'
+    | '/admin/settings'
     | '/admin/webhooks'
     | '/blogs/$slug'
     | '/admin/'
@@ -143,9 +183,13 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/admin/analytics'
+    | '/admin/api-explorer'
     | '/admin/api-keys'
     | '/admin/dashboard'
     | '/admin/media'
+    | '/admin/search'
+    | '/admin/settings'
     | '/admin/webhooks'
     | '/blogs/$slug'
     | '/admin'
@@ -157,9 +201,13 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/admin'
+    | '/admin/analytics'
+    | '/admin/api-explorer'
     | '/admin/api-keys'
     | '/admin/dashboard'
     | '/admin/media'
+    | '/admin/search'
+    | '/admin/settings'
     | '/admin/webhooks'
     | '/blogs/$slug'
     | '/admin/'
@@ -220,6 +268,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminWebhooksRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/settings': {
+      id: '/admin/settings'
+      path: '/settings'
+      fullPath: '/admin/settings'
+      preLoaderRoute: typeof AdminSettingsRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/search': {
+      id: '/admin/search'
+      path: '/search'
+      fullPath: '/admin/search'
+      preLoaderRoute: typeof AdminSearchRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/media': {
       id: '/admin/media'
       path: '/media'
@@ -239,6 +301,20 @@ declare module '@tanstack/react-router' {
       path: '/api-keys'
       fullPath: '/admin/api-keys'
       preLoaderRoute: typeof AdminApiKeysRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/api-explorer': {
+      id: '/admin/api-explorer'
+      path: '/api-explorer'
+      fullPath: '/admin/api-explorer'
+      preLoaderRoute: typeof AdminApiExplorerRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/analytics': {
+      id: '/admin/analytics'
+      path: '/analytics'
+      fullPath: '/admin/analytics'
+      preLoaderRoute: typeof AdminAnalyticsRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/blogs/': {
@@ -266,9 +342,13 @@ declare module '@tanstack/react-router' {
 }
 
 interface AdminRouteChildren {
+  AdminAnalyticsRoute: typeof AdminAnalyticsRoute
+  AdminApiExplorerRoute: typeof AdminApiExplorerRoute
   AdminApiKeysRoute: typeof AdminApiKeysRoute
   AdminDashboardRoute: typeof AdminDashboardRoute
   AdminMediaRoute: typeof AdminMediaRoute
+  AdminSearchRoute: typeof AdminSearchRoute
+  AdminSettingsRoute: typeof AdminSettingsRoute
   AdminWebhooksRoute: typeof AdminWebhooksRoute
   AdminIndexRoute: typeof AdminIndexRoute
   AdminBlogsIdRoute: typeof AdminBlogsIdRoute
@@ -277,9 +357,13 @@ interface AdminRouteChildren {
 }
 
 const AdminRouteChildren: AdminRouteChildren = {
+  AdminAnalyticsRoute: AdminAnalyticsRoute,
+  AdminApiExplorerRoute: AdminApiExplorerRoute,
   AdminApiKeysRoute: AdminApiKeysRoute,
   AdminDashboardRoute: AdminDashboardRoute,
   AdminMediaRoute: AdminMediaRoute,
+  AdminSearchRoute: AdminSearchRoute,
+  AdminSettingsRoute: AdminSettingsRoute,
   AdminWebhooksRoute: AdminWebhooksRoute,
   AdminIndexRoute: AdminIndexRoute,
   AdminBlogsIdRoute: AdminBlogsIdRoute,

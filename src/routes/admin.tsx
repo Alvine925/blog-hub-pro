@@ -7,6 +7,10 @@ import {
   ExternalLink,
   Moon,
   Webhook,
+  BarChart2,
+  Settings,
+  Search,
+  Code2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -24,8 +28,12 @@ const navItems = [
   { label: "Dashboard", to: "/admin/dashboard", icon: LayoutDashboard },
   { label: "Blogs", to: "/admin/blogs", icon: FileText },
   { label: "Media", to: "/admin/media", icon: ImageIcon },
+  { label: "Analytics", to: "/admin/analytics", icon: BarChart2 },
+  { label: "Search", to: "/admin/search", icon: Search },
   { label: "API Keys", to: "/admin/api-keys", icon: Key },
+  { label: "API Explorer", to: "/admin/api-explorer", icon: Code2 },
   { label: "Webhooks", to: "/admin/webhooks", icon: Webhook },
+  { label: "Settings", to: "/admin/settings", icon: Settings },
 ];
 
 function AdminLayout() {
@@ -38,7 +46,7 @@ function AdminLayout() {
           <Moon className="h-5 w-5 text-primary" />
           <span className="font-semibold tracking-tight">Lunar CMS</span>
         </div>
-        <nav className="flex-1 space-y-1 p-3">
+        <nav className="flex-1 space-y-0.5 overflow-y-auto p-3">
           {navItems.map((item) => {
             const active = pathname.startsWith(item.to);
             return (
@@ -69,17 +77,18 @@ function AdminLayout() {
         </div>
       </aside>
 
+      {/* Mobile top bar */}
       <div className="flex min-w-0 flex-1 flex-col">
         <div className="flex items-center gap-3 border-b border-border bg-background px-4 py-3 md:hidden">
           <Moon className="h-5 w-5 text-primary" />
           <span className="font-semibold">Lunar CMS</span>
-          <div className="ml-auto flex items-center gap-3">
+          <div className="ml-auto flex items-center gap-3 overflow-x-auto">
             {navItems.map((item) => (
               <Link
                 key={item.to}
                 to={item.to}
                 className={cn(
-                  "text-sm font-medium",
+                  "shrink-0 text-sm font-medium",
                   pathname.startsWith(item.to)
                     ? "text-primary"
                     : "text-muted-foreground",

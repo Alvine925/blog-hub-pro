@@ -4,7 +4,7 @@ import type { BlogPost, BlogPostSummary } from "./blog-types";
 import { slugify, estimateReadingTime } from "./blog-types";
 
 const SUMMARY_COLUMNS =
-  "id, title, slug, excerpt, cover_image, category, tags, author_name, seo_title, meta_description, featured, status, published_at, scheduled_at, reading_time, views, created_at, updated_at";
+  "id, title, slug, excerpt, cover_image, category, tags, author_name, seo_title, meta_description, featured, status, published_at, scheduled_at, reading_time, views, created_at, updated_at, og_image, og_title, og_description, twitter_card, canonical_url, robots, focus_keyword";
 
 function normalizeTags(tags: unknown): string[] {
   if (Array.isArray(tags)) return tags.map((t) => String(t));
@@ -16,7 +16,7 @@ function normalizeTags(tags: unknown): string[] {
 // ---------------------------------------------------------------------------
 
 export const listPublishedPosts = createServerFn({ method: "GET" })
-  .inputValidator(
+  .validator(
     (input: { search?: string; category?: string } | undefined) => input ?? {},
   )
   .handler(async ({ data }): Promise<BlogPostSummary[]> => {
@@ -35,7 +35,6 @@ export const listPublishedPosts = createServerFn({ method: "GET" })
 
     const search = data.search?.trim();
     if (search) {
-      // Match title, excerpt, content or category. Tags handled below.
       query = query.or(
         `title.ilike.%${search}%,excerpt.ilike.%${search}%,content.ilike.%${search}%,category.ilike.%${search}%`,
       );
@@ -51,7 +50,7 @@ export const listPublishedPosts = createServerFn({ method: "GET" })
   });
 
 export const getPostBySlug = createServerFn({ method: "GET" })
-  .inputValidator((input: { slug: string }) =>
+  .validator((input: { slug: string }) =>
     z.object({ slug: z.string().min(1).max(120) }).parse(input),
   )
   .handler(async ({ data }): Promise<BlogPost | null> => {
@@ -68,7 +67,6 @@ export const getPostBySlug = createServerFn({ method: "GET" })
     if (error) throw new Error(error.message);
     if (!row) return null;
 
-    // Fire-and-forget view increment.
     await supabase
       .from("blog_posts")
       .update({ views: (row.views ?? 0) + 1 })
@@ -78,7 +76,7 @@ export const getPostBySlug = createServerFn({ method: "GET" })
   });
 
 export const getRelatedPosts = createServerFn({ method: "GET" })
-  .inputValidator((input: { slug: string; category: string; tags: string[] }) =>
+  .validator((input: { slug: string; category: string; tags: string[] }) =>
     z
       .object({
         slug: z.string().min(1),
@@ -104,7 +102,6 @@ export const getRelatedPosts = createServerFn({ method: "GET" })
 
     let results = (rows ?? []) as BlogPostSummary[];
 
-    // Fallback: if not enough same-category matches, fill with recent posts.
     if (results.length < 3) {
       const { data: extra } = await supabase
         .from("blog_posts")
@@ -126,7 +123,7 @@ export const getRelatedPosts = createServerFn({ method: "GET" })
   });
 
 // ---------------------------------------------------------------------------
-// ADMIN OPERATIONS (service role — no public exposure of drafts via UI gate)
+// ADMIN OPERATIONS
 // ---------------------------------------------------------------------------
 
 export const adminListPosts = createServerFn({ method: "GET" }).handler(
@@ -149,7 +146,7 @@ export const adminListPosts = createServerFn({ method: "GET" }).handler(
 );
 
 export const adminGetPost = createServerFn({ method: "GET" })
-  .inputValidator((input: { id: string }) =>
+  .validator((input: { id: string }) =>
     z.object({ id: z.string().uuid() }).parse(input),
   )
   .handler(async ({ data }): Promise<BlogPost | null> => {
@@ -168,7 +165,7 @@ export const adminGetPost = createServerFn({ method: "GET" })
   });
 
 export const checkSlugAvailable = createServerFn({ method: "GET" })
-  .inputValidator((input: { slug: string; excludeId?: string }) =>
+  .validator((input: { slug: string; excludeId?: string }) =>
     z
       .object({ slug: z.string().min(1), excludeId: z.string().uuid().optional() })
       .parse(input),
@@ -199,10 +196,18 @@ const postInputSchema = z.object({
   featured: z.boolean().default(false),
   status: z.enum(["draft", "published", "scheduled"]).default("draft"),
   scheduled_at: z.string().nullable().optional(),
+  // Extended SEO
+  og_image: z.string().trim().max(2000).nullable().default(null),
+  og_title: z.string().trim().max(200).nullable().default(null),
+  og_description: z.string().trim().max(320).nullable().default(null),
+  twitter_card: z.string().trim().max(40).nullable().default("summary_large_image"),
+  canonical_url: z.string().trim().max(500).nullable().default(null),
+  robots: z.string().trim().max(100).nullable().default("index, follow"),
+  focus_keyword: z.string().trim().max(100).nullable().default(null),
 });
 
 export const upsertPost = createServerFn({ method: "POST" })
-  .inputValidator((input: unknown) => postInputSchema.parse(input))
+  .validator((input: unknown) => postInputSchema.parse(input))
   .handler(async ({ data }): Promise<{ id: string; slug: string }> => {
     const { getAdminClient } = await import("./supabase.server");
     const supabase = await getAdminClient();
@@ -210,10 +215,8 @@ export const upsertPost = createServerFn({ method: "POST" })
     let slug = slugify(data.slug || data.title);
     if (!slug) slug = `post-${Date.now()}`;
 
-    // Ensure slug uniqueness (excluding self).
     let unique = slug;
     let attempt = 1;
-    // eslint-disable-next-line no-constant-condition
     while (true) {
       let q = supabase.from("blog_posts").select("id").eq("slug", unique);
       if (data.id) q = q.neq("id", data.id);
@@ -238,9 +241,34 @@ export const upsertPost = createServerFn({ method: "POST" })
       status: data.status,
       scheduled_at: data.status === "scheduled" ? (data.scheduled_at ?? null) : null,
       reading_time: estimateReadingTime(data.content),
+      og_image: data.og_image,
+      og_title: data.og_title,
+      og_description: data.og_description,
+      twitter_card: data.twitter_card,
+      canonical_url: data.canonical_url,
+      robots: data.robots,
+      focus_keyword: data.focus_keyword,
     };
 
     if (data.id) {
+      // Save version snapshot before updating
+      const { data: existing } = await supabase
+        .from("blog_posts")
+        .select("*")
+        .eq("id", data.id)
+        .maybeSingle();
+
+      if (existing) {
+        await supabase.from("post_versions").insert({
+          post_id: data.id,
+          title: existing.title,
+          excerpt: existing.excerpt,
+          status: existing.status,
+          author_name: existing.author_name,
+          snapshot: existing,
+        });
+      }
+
       const { data: row, error } = await supabase
         .from("blog_posts")
         .update(record)
@@ -285,7 +313,7 @@ export const upsertPost = createServerFn({ method: "POST" })
   });
 
 export const setPostStatus = createServerFn({ method: "POST" })
-  .inputValidator((input: { id: string; status: "draft" | "published" | "scheduled" }) =>
+  .validator((input: { id: string; status: "draft" | "published" | "scheduled" }) =>
     z
       .object({ id: z.string().uuid(), status: z.enum(["draft", "published", "scheduled"]) })
       .parse(input),
@@ -294,9 +322,7 @@ export const setPostStatus = createServerFn({ method: "POST" })
     const { getAdminClient } = await import("./supabase.server");
     const supabase = await getAdminClient();
     const update: Record<string, unknown> = { status: data.status };
-    // Clear scheduled_at whenever moving away from 'scheduled'
     if (data.status !== "scheduled") update.scheduled_at = null;
-    // Set published_at when publishing
     if (data.status === "published") update.published_at = new Date().toISOString();
     const { data: row, error } = await supabase
       .from("blog_posts")
@@ -321,13 +347,12 @@ export const setPostStatus = createServerFn({ method: "POST" })
   });
 
 export const deletePost = createServerFn({ method: "POST" })
-  .inputValidator((input: { id: string }) =>
+  .validator((input: { id: string }) =>
     z.object({ id: z.string().uuid() }).parse(input),
   )
   .handler(async ({ data }): Promise<{ ok: true }> => {
     const { getAdminClient } = await import("./supabase.server");
     const supabase = await getAdminClient();
-    // Fetch before deletion so webhook payload has full context
     const { data: post } = await supabase
       .from("blog_posts")
       .select("id, slug, title, status, category, author_name")
@@ -351,7 +376,7 @@ export const deletePost = createServerFn({ method: "POST" })
   });
 
 export const uploadCoverImage = createServerFn({ method: "POST" })
-  .inputValidator((input: { fileBase64: string; fileName: string; contentType: string }) =>
+  .validator((input: { fileBase64: string; fileName: string; contentType: string }) =>
     z
       .object({
         fileBase64: z.string().min(1),
@@ -381,7 +406,6 @@ export const uploadCoverImage = createServerFn({ method: "POST" })
       .upload(path, buffer, { contentType: data.contentType, upsert: false });
     if (uploadError) throw new Error(uploadError.message);
 
-    // Private bucket -> long-lived signed URL (10 years).
     const { data: signed, error: signError } = await supabase.storage
       .from(BLOG_BUCKET)
       .createSignedUrl(path, 60 * 60 * 24 * 365 * 10);

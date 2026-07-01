@@ -22,6 +22,14 @@ export interface BlogPost {
   views: number;
   created_at: string;
   updated_at: string;
+  // Extended SEO fields
+  og_image: string | null;
+  og_title: string | null;
+  og_description: string | null;
+  twitter_card: string | null;
+  canonical_url: string | null;
+  robots: string | null;
+  focus_keyword: string | null;
 }
 
 // Card/list projection (no heavy content field).

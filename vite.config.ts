@@ -1,9 +1,3 @@
-// @lovable.dev/vite-tanstack-config already includes the following — do NOT add them manually
-// or the app will break with duplicate plugins:
-//   - tanstackStart, viteReact, tailwindcss, tsConfigPaths, nitro (build-only using cloudflare as a default target),
-//     componentTagger (dev-only), VITE_* env injection, @ path alias, React/TanStack dedupe,
-//     error logger plugins, and sandbox detection (port/host/strictPort).
-// You can pass additional config via defineConfig({ vite: { ... }, etc... }) if needed.
 import { defineConfig } from "@lovable.dev/vite-tanstack-config";
 import type { Plugin } from "vite";
 
@@ -48,14 +42,31 @@ function lunarRssPlugin(): Plugin {
   };
 }
 
+function lunarSitemapPlugin(): Plugin {
+  return {
+    name: "lunar-cms-sitemap",
+    apply: "serve",
+    configureServer(server) {
+      server.middlewares.use(async (req, res, next) => {
+        if (req.url !== "/sitemap.xml") return next();
+        try {
+          const { sitemapMiddleware } = await import("./src/lib/sitemap-handler.node.ts");
+          return sitemapMiddleware()(req, res, next);
+        } catch (err) {
+          res.writeHead(500, { "Content-Type": "text/plain" });
+          res.end(`Sitemap error: ${String(err)}`);
+        }
+      });
+    },
+  };
+}
+
 export default defineConfig({
   tanstackStart: {
-    // Redirect TanStack Start's bundled server entry to src/server.ts (our SSR error wrapper).
-    // nitro/vite builds from this
     server: { entry: "server" },
   },
   vite: {
-    plugins: [lunarCmsApiPlugin(), lunarRssPlugin()],
+    plugins: [lunarCmsApiPlugin(), lunarRssPlugin(), lunarSitemapPlugin()],
     server: {
       host: "0.0.0.0",
       port: 5000,
