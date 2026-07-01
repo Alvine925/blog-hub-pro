@@ -55,7 +55,7 @@ function PreparingStep() {
         if (!session) throw new Error("Not authenticated. Please sign in again.");
 
         const userId = session.user.id;
-        const state  = await getOnboardingState();
+        const state  = await getOnboardingState({ userId });
 
         let workspaceId: string;
 
@@ -105,6 +105,7 @@ function PreparingStep() {
         }
 
         await upsertOnboardingState({
+          userId,
           step: "complete",
           workspace_id: workspaceId,
           completed_at: new Date().toISOString(),
