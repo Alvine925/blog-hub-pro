@@ -1,0 +1,966 @@
+# Product Requirements Document (PRD)
+
+# Project Name
+
+**Lunar CMS (Working Name)**
+
+**Tagline:**
+A modern, AI-powered headless CMS that allows anyone to build blogs, websites, documentation, and content-driven applications without the complexity of traditional CMS platforms.
+
+---
+
+# Vision
+
+Build the easiest headless CMS in the world.
+
+Unlike existing solutions that require developers to learn schemas, queries, SDKs, and configuration files, Lunar CMS should allow users to create and manage content through an intuitive interface while automatically exposing APIs that developers can consume from any frontend.
+
+The platform should feel as easy as using Notion while remaining as powerful as a headless CMS.
+
+---
+
+# Problem Statement
+
+Current headless CMS platforms have several pain points:
+
+* Too technical for non-developers.
+* Complex content modeling.
+* Steep learning curve.
+* Multiple setup steps before content can be created.
+* Overly complicated APIs.
+* Expensive pricing as usage grows.
+* Weak AI integration.
+* Poor onboarding experience.
+
+There is an opportunity to create a CMS that prioritizes simplicity, speed, and AI-assisted content creation.
+
+---
+
+# Target Users
+
+## Primary
+
+* Small businesses
+* Startups
+* Marketing teams
+* Content creators
+* Agencies
+* Freelancers
+
+---
+
+## Secondary
+
+* Developers
+* SaaS founders
+* Mobile app developers
+* Website builders
+* No-code users
+
+---
+
+# Core Product Principles
+
+1. Simplicity first.
+2. No coding required for content management.
+3. API-first architecture.
+4. AI built into every workflow.
+5. Fast setup (under 5 minutes).
+6. Modern UI.
+7. Affordable pricing.
+8. Multi-tenant from day one.
+
+---
+
+# MVP Goals
+
+Users should be able to:
+
+* Create an account.
+* Create a workspace.
+* Create a website/project.
+* Create collections.
+* Create content.
+* Publish content.
+* Fetch content through APIs.
+* Display content on their websites.
+
+Everything else is secondary.
+
+---
+
+# Multi-Tenant Architecture
+
+One platform should support unlimited customers.
+
+Workspace
+
+↓
+
+Projects
+
+↓
+
+Collections
+
+↓
+
+Content
+
+Example:
+
+Workspace
+
+Acme Agency
+
+Projects
+
+* Company Website
+* Documentation
+* Client A
+* Client B
+
+Each project has independent content and APIs.
+
+---
+
+# Authentication
+
+* Email & Password
+* Google Login
+* GitHub Login
+* Magic Link
+
+Future
+
+* Microsoft
+* Apple
+
+---
+
+# Dashboard
+
+After login users see:
+
+Dashboard
+
+Projects
+
+Collections
+
+Media
+
+API Keys
+
+Users
+
+Analytics
+
+Settings
+
+Billing
+
+AI
+
+---
+
+# Project Creation
+
+User clicks
+
+New Project
+
+Fields
+
+Project Name
+
+Project Slug
+
+Domain (optional)
+
+Logo
+
+Timezone
+
+Language
+
+Visibility
+
+Generate API Key automatically.
+
+---
+
+# Collections
+
+Collections represent content types.
+
+Examples
+
+Blogs
+
+Products
+
+Events
+
+Pages
+
+FAQs
+
+Testimonials
+
+Team Members
+
+Services
+
+Portfolio
+
+Jobs
+
+Documentation
+
+Recipes
+
+Users can create unlimited collections.
+
+---
+
+# Collection Builder
+
+Instead of writing schemas, users build collections visually.
+
+Supported field types:
+
+Single Line Text
+
+Long Text
+
+Rich Text
+
+Number
+
+Boolean
+
+Email
+
+Phone
+
+URL
+
+Image
+
+Gallery
+
+File
+
+Date
+
+Time
+
+Color
+
+JSON
+
+Markdown
+
+Location
+
+Relationship
+
+Select
+
+Multi Select
+
+Tags
+
+Repeater
+
+Slug
+
+Password (optional)
+
+AI Generated Field
+
+Computed Field
+
+Each field supports:
+
+Label
+
+Placeholder
+
+Required
+
+Default Value
+
+Validation Rules
+
+Help Text
+
+Visibility
+
+---
+
+# Content Manager
+
+Each collection has a content manager.
+
+Example
+
+Blogs
+
+Create
+
+Edit
+
+Delete
+
+Duplicate
+
+Archive
+
+Publish
+
+Unpublish
+
+Draft
+
+Bulk Delete
+
+Bulk Publish
+
+Bulk Archive
+
+---
+
+# Rich Text Editor
+
+Support
+
+Headings
+
+Paragraphs
+
+Bold
+
+Italic
+
+Underline
+
+Lists
+
+Tables
+
+Images
+
+Videos
+
+Quotes
+
+Code Blocks
+
+Embeds
+
+Callouts
+
+Mentions
+
+Links
+
+Horizontal Rules
+
+Emoji
+
+Markdown shortcuts
+
+Autosave
+
+Word count
+
+Reading time
+
+---
+
+# Media Library
+
+Folders
+
+Image Upload
+
+Drag & Drop
+
+Bulk Upload
+
+Image Compression
+
+Alt Text
+
+File Search
+
+File Preview
+
+Copy URL
+
+Storage Usage
+
+Supported
+
+PNG
+
+JPG
+
+WEBP
+
+SVG
+
+GIF
+
+MP4
+
+PDF
+
+DOCX
+
+ZIP
+
+---
+
+# Blog System
+
+Users can create:
+
+Title
+
+Slug
+
+Excerpt
+
+Cover Image
+
+Content
+
+Category
+
+Tags
+
+Author
+
+SEO
+
+Status
+
+Publish Date
+
+Reading Time
+
+Views
+
+Related Articles
+
+---
+
+# SEO Module
+
+Every content item includes:
+
+SEO Title
+
+Meta Description
+
+Canonical URL
+
+Robots
+
+Open Graph
+
+Twitter Card
+
+Keywords
+
+Schema Type
+
+Focus Keyword
+
+Slug
+
+Preview
+
+Automatic sitemap inclusion.
+
+---
+
+# AI Features
+
+Built into every editor.
+
+Buttons
+
+Generate
+
+Rewrite
+
+Expand
+
+Shorten
+
+Professional
+
+Friendly
+
+Translate
+
+Fix Grammar
+
+Generate FAQs
+
+Generate Summary
+
+Generate SEO
+
+Generate Tags
+
+Generate Categories
+
+Generate Meta Description
+
+Generate Social Posts
+
+Generate Image Prompt
+
+Generate Feature Image
+
+Future
+
+Automatic publishing workflows.
+
+---
+
+# API Layer
+
+Every project automatically gets APIs.
+
+REST
+
+GET collections
+
+GET content
+
+GET single item
+
+POST
+
+PUT
+
+DELETE
+
+Future
+
+GraphQL
+
+Realtime subscriptions
+
+Webhooks
+
+---
+
+# SDKs
+
+Official SDKs
+
+JavaScript
+
+TypeScript
+
+React
+
+Next.js
+
+Vue
+
+Nuxt
+
+Angular
+
+Flutter
+
+React Native
+
+Swift
+
+Kotlin
+
+Python
+
+PHP
+
+Laravel
+
+Node
+
+---
+
+# API Explorer
+
+Built-in API testing.
+
+Copy code snippets.
+
+Languages
+
+JavaScript
+
+Python
+
+PHP
+
+Go
+
+C#
+
+Ruby
+
+Java
+
+---
+
+# Website Integration
+
+Developers connect a website using an API Key.
+
+Example
+
+Create Project
+
+↓
+
+Copy API Key
+
+↓
+
+Install SDK
+
+↓
+
+Fetch Data
+
+↓
+
+Render Website
+
+No additional setup required.
+
+---
+
+# Dynamic Routing
+
+Blogs
+
+/blog
+
+/blog/[slug]
+
+Products
+
+/products
+
+/products/[slug]
+
+Documentation
+
+/docs
+
+/docs/[slug]
+
+Events
+
+/events
+
+/events/[slug]
+
+Pages
+
+/page/[slug]
+
+The CMS provides data only. Rendering remains the responsibility of the consuming application.
+
+---
+
+# Search
+
+Global search.
+
+Search
+
+Collections
+
+Content
+
+Media
+
+Users
+
+Tags
+
+Categories
+
+Full-text search.
+
+---
+
+# Roles & Permissions
+
+Owner
+
+Admin
+
+Editor
+
+Author
+
+Viewer
+
+Custom roles (future)
+
+---
+
+# Version History
+
+Every save creates a version.
+
+Restore previous versions.
+
+Compare changes.
+
+Audit history.
+
+---
+
+# Scheduling
+
+Publish later.
+
+Expire content.
+
+Archive automatically.
+
+Recurring publishing (future).
+
+---
+
+# Analytics
+
+Views
+
+API Requests
+
+Top Content
+
+Search Terms
+
+Storage Usage
+
+Bandwidth
+
+Top Authors
+
+Traffic Sources (future)
+
+---
+
+# Webhooks
+
+Events
+
+Content Created
+
+Updated
+
+Deleted
+
+Published
+
+Media Uploaded
+
+User Created
+
+Project Created
+
+---
+
+# Integrations
+
+OpenAI
+
+Google Gemini
+
+Supabase
+
+Cloudinary
+
+AWS S3
+
+Vercel
+
+Netlify
+
+GitHub
+
+Slack
+
+Discord
+
+Zapier
+
+n8n
+
+Make
+
+Google Analytics
+
+Google Search Console
+
+Future
+
+Stripe
+
+Mailchimp
+
+Brevo
+
+Resend
+
+---
+
+# Billing
+
+Free
+
+Starter
+
+Pro
+
+Business
+
+Enterprise
+
+---
+
+# Admin Panel
+
+Dashboard
+
+Projects
+
+Collections
+
+Content
+
+Media
+
+Users
+
+API Keys
+
+Analytics
+
+AI
+
+Billing
+
+Settings
+
+Logs
+
+Support
+
+---
+
+# Technology Stack (Recommended)
+
+Frontend
+
+* Next.js
+* React
+* TypeScript
+* Tailwind CSS
+* shadcn/ui
+
+Backend
+
+* Supabase
+* PostgreSQL
+* Supabase Auth
+* Supabase Storage
+* Supabase Edge Functions
+
+Search
+
+* PostgreSQL Full Text Search (MVP)
+* Meilisearch or Typesense (future)
+
+AI
+
+* OpenAI
+* Gemini
+
+Hosting
+
+* Vercel (Frontend)
+* Supabase (Backend)
+
+---
+
+# Future Roadmap
+
+### Phase 1 (MVP)
+
+* Authentication
+* Projects
+* Collections
+* Content
+* Rich Text Editor
+* Media Library
+* REST API
+* SDK
+* SEO
+* Blog Management
+
+### Phase 2
+
+* AI Assistant
+* Version History
+* Scheduling
+* Analytics
+* Comments
+* Collaboration
+* Webhooks
+
+### Phase 3
+
+* GraphQL
+* Marketplace
+* Plugins
+* Themes
+* Form Builder
+* Automation Engine
+* Visual Page Builder
+* AI Agents
+* Multi-language Support
+
+---
+
+# Success Metrics
+
+* New project creation time under 5 minutes.
+* Publish first article in under 10 minutes.
+* API response time under 300 ms.
+* Lighthouse score above 95.
+* First Contentful Paint under 2 seconds.
+* 99.9% uptime.
+* Zero-code onboarding for non-technical users.
+* High developer satisfaction through simple APIs and SDKs.
+
+---
+
+# Product Vision
+
+Lunar CMS should become the simplest headless CMS available, combining intuitive content management, AI-assisted creation, and developer-friendly APIs. Rather than competing by matching every advanced feature of existing enterprise CMS platforms, it should win by being dramatically easier to learn, faster to implement, and pleasant for both technical and non-technical users. The long-term goal is to make content management feel effortless while providing the flexibility needed to power websites, mobile apps, SaaS products, documentation portals, ecommerce catalogs, and future AI-driven applications from a single platform.
