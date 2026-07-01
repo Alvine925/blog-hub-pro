@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Outlet, useRouterState } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { queryOptions, useSuspenseQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
@@ -22,11 +22,19 @@ const wsQuery = queryOptions({
 export const Route = createFileRoute("/admin/workspaces")({
   head: () => ({ meta: [{ title: "Workspaces — Admin" }] }),
   loader: ({ context }) => context.queryClient.ensureQueryData(wsQuery),
-  component: WorkspacesPage,
+  component: WorkspacesRouteGuard,
   errorComponent: ({ error }) => (
     <p className="text-sm text-destructive">Failed to load workspaces: {error.message}</p>
   ),
 });
+
+// If a specific workspace is selected, pass through to child route (WorkspaceShell).
+// Otherwise render the workspaces list.
+function WorkspacesRouteGuard() {
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  if (/^\/admin\/workspaces\/[^/]/.test(pathname)) return <Outlet />;
+  return <WorkspacesPage />;
+}
 
 const WS_GRADIENTS = [
   "from-red-500 to-rose-600",
