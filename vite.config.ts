@@ -29,6 +29,25 @@ function lunarCmsApiPlugin(): Plugin {
   };
 }
 
+function lunarRssPlugin(): Plugin {
+  return {
+    name: "lunar-cms-rss",
+    apply: "serve",
+    configureServer(server) {
+      server.middlewares.use(async (req, res, next) => {
+        if (req.url !== "/feed.xml") return next();
+        try {
+          const { rssMiddleware } = await import("./src/lib/rss-handler.node.ts");
+          return rssMiddleware()(req, res, next);
+        } catch (err) {
+          res.writeHead(500, { "Content-Type": "text/plain" });
+          res.end(`RSS error: ${String(err)}`);
+        }
+      });
+    },
+  };
+}
+
 export default defineConfig({
   tanstackStart: {
     // Redirect TanStack Start's bundled server entry to src/server.ts (our SSR error wrapper).
@@ -36,7 +55,7 @@ export default defineConfig({
     server: { entry: "server" },
   },
   vite: {
-    plugins: [lunarCmsApiPlugin()],
+    plugins: [lunarCmsApiPlugin(), lunarRssPlugin()],
     server: {
       host: "0.0.0.0",
       port: 5000,
