@@ -3,13 +3,15 @@ import {
   LayoutDashboard, FileText, ImageIcon, Key, ExternalLink, Moon,
   Webhook, BarChart2, Settings, Search, Code2, Layers, Users,
   FolderOpen, CreditCard, Bell, Sparkles, Menu, X, ChevronRight,
-  ChevronDown, Check,
+  ChevronDown, Check, Loader2, LogOut,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState, useRef, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { listWorkspaces, type Workspace } from "@/lib/workspace.functions";
 import { queryOptions } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/admin")({
   head: () => ({
@@ -18,8 +20,68 @@ export const Route = createFileRoute("/admin")({
       { name: "robots", content: "noindex, nofollow" },
     ],
   }),
-  component: AdminLayout,
+  component: AdminLayoutGuard,
 });
+
+const STEP_ROUTES: Record<string, string> = {
+  welcome:     "/onboarding/welcome",
+  website:     "/onboarding/website",
+  analyzing:   "/onboarding/analyzing",
+  collections: "/onboarding/collections",
+  preparing:   "/onboarding/preparing",
+  complete:    "/admin/dashboard",
+};
+
+function AdminLayoutGuard() {
+  const navigate = useNavigate();
+  const [checking, setChecking] = useState(true);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (!session) {
+        navigate({ to: "/login" });
+        return;
+      }
+
+      // Enforce onboarding gate
+      try {
+        const { data } = await supabase
+          .from("user_onboarding" as never)
+          .select("step, completed_at")
+          .eq("user_id", session.user.id)
+          .maybeSingle() as { data: { step: string; completed_at: string | null } | null };
+
+        if (!data || data.step !== "complete" || !data.completed_at) {
+          // Send back to where they left off
+          const step = data?.step ?? "welcome";
+          const route = STEP_ROUTES[step] ?? "/onboarding/welcome";
+          navigate({ to: route as "/" });
+          return;
+        }
+      } catch {
+        // If the table doesn't exist yet, let them through
+      }
+
+      setChecking(false);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!session) navigate({ to: "/login" });
+    });
+
+    return () => subscription.unsubscribe();
+  }, [navigate]);
+
+  if (checking) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-white">
+        <Loader2 className="h-5 w-5 animate-spin text-zinc-400" />
+      </div>
+    );
+  }
+
+  return <AdminLayout />;
+}
 
 type NavItem = { label: string; to: string; icon: React.ComponentType<{ className?: string }> };
 type NavSection = { label: string; items: NavItem[] };

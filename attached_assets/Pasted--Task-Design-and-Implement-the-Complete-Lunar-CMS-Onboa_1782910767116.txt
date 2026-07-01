@@ -1,0 +1,724 @@
+# Task: Design and Implement the Complete Lunar CMS Onboarding Experience
+
+## Objective
+
+Design a world-class onboarding flow that takes a user from signup to publishing their first blog post in under 10 minutes.
+
+The onboarding should feel intelligent, personalized, and guided.
+
+Unlike traditional CMS platforms, users should not be required to manually configure collections, APIs, or technical settings before they can create content.
+
+The system should understand the user's website, automatically create the workspace context, and use AI to help them generate better content.
+
+The onboarding experience should feel similar to a combination of:
+
+* Notion
+* Linear
+* Canva
+* Shopify
+* HubSpot
+
+Simple, guided, and highly personalized.
+
+---
+
+# Core Principle
+
+The user should never see a blank dashboard.
+
+The system should understand:
+
+* Who they are
+* What website they own
+* What industry they operate in
+* Who their competitors are
+* What content opportunities exist
+
+before they create their first piece of content.
+
+---
+
+# Complete User Journey
+
+## Step 1: Signup
+
+User lands on:
+
+```text
+/signup
+```
+
+Options:
+
+* Email + Password
+* Google
+* GitHub
+
+Required Fields:
+
+* Full Name
+* Email
+* Password
+
+After successful signup:
+
+Do NOT send user directly to dashboard.
+
+Instead start onboarding.
+
+---
+
+# Step 2: Welcome Screen
+
+Display:
+
+Welcome to Lunar CMS
+
+Let's set up your first workspace.
+
+Estimated time:
+
+2-3 minutes
+
+Button:
+
+Continue
+
+---
+
+# Step 3: Website Creation (Critical Step)
+
+Ask:
+
+What website would you like to manage?
+
+Input:
+
+Website URL
+
+Examples:
+
+```text
+https://yourcompany.com
+
+https://yourstore.com
+
+https://yourblog.com
+```
+
+Validation:
+
+* Valid URL
+* Reachable website
+* Remove trailing slash
+* Store canonical URL
+
+Examples:
+
+```text
+https://example.com
+```
+
+Stored as:
+
+```text
+example.com
+```
+
+---
+
+# Step 4: Website Analysis
+
+Once submitted:
+
+Launch AI Website Analysis.using firecrawl or serp,api keys are in supabase so you need to create an edge function for this 
+
+The system should automatically crawl and analyze:
+
+Homepage
+
+About Page
+
+Services
+
+Products
+
+Public Blog Posts
+
+Meta Information
+
+SEO Metadata
+
+Structured Data
+
+Navigation
+
+Brand Messaging
+
+---
+
+# Extract Website Intelligence
+
+Generate:
+
+Website Name
+
+Company Name
+
+Industry
+
+Description
+
+Target Audience
+
+Business Model
+
+Services
+
+Products
+
+Brand Voice
+
+Primary Topics
+
+Keywords
+
+Location (if available)
+
+Social Links
+
+Language
+
+Domain Authority Indicators
+
+---
+
+# Competitor Discovery
+
+AI should identify:
+
+Direct Competitors
+
+Indirect Competitors
+
+Alternative Solutions
+
+Industry Leaders
+
+---
+
+Generate:
+
+Competitor Name
+
+Website
+
+Description
+
+Strengths
+
+Weaknesses
+
+Content Strategy Summary
+
+---
+
+# Content Opportunity Analysis
+
+AI should determine:
+
+Top Keywords
+
+Content Gaps
+
+Frequently Asked Questions
+
+Blog Opportunities
+
+SEO Opportunities
+
+Low Competition Topics
+
+High Value Topics
+
+---
+
+# Display Analysis Screen
+
+Show:
+
+Website Detected
+
+Industry
+
+Audience
+
+Competitors
+
+Content Opportunities
+
+Brand Summary
+
+Button:
+
+Looks Good
+
+Edit Details
+
+---
+
+# Step 5: Workspace Creation
+
+Generate workspace automatically.
+
+Example:
+
+Website:
+
+```text
+www.lunaragency.com
+```
+
+Workspace Name:
+
+```text
+Lunar Agency
+```
+
+Workspace Slug:
+
+```text
+lunar-agency
+```
+
+Store:
+
+Workspace Name
+
+Website URL
+
+Industry
+
+Brand Summary
+
+Competitors
+
+Keywords
+
+AI Context
+
+---
+
+# Workspace Database Structure
+
+Store:
+
+Workspace
+
+↓
+
+Website
+
+↓
+
+AI Context
+
+↓
+
+Content Intelligence
+
+↓
+
+Competitors
+
+↓
+
+Keywords
+
+↓
+
+Brand Voice
+
+This context will power future AI generations.
+
+---
+
+# Step 6: Collection Setup
+
+Do NOT ask users to create collections manually.
+
+Instead ask:
+
+What would you like to manage?
+
+Options:
+
+Blogs
+
+Documentation
+
+Products
+
+Pages
+
+FAQs
+
+Knowledge Base
+
+Case Studies
+
+Testimonials
+
+Team Members
+
+Events
+
+Portfolio
+
+Services
+
+---
+
+Recommended:
+
+Blogs
+
+Pages
+
+Media
+
+Automatically enabled.
+
+---
+
+# Step 7: AI Workspace Preparation
+
+Behind the scenes:
+
+Create default collections.
+
+Generate:
+
+Categories
+
+Tags
+
+SEO Categories
+
+Suggested Topics
+
+Suggested Content Calendar
+
+Suggested Content Pillars
+
+---
+
+Example:
+
+Business:
+
+Digital Marketing Agency
+
+Generated Content Pillars:
+
+SEO
+
+Google Ads
+
+Web Design
+
+Social Media
+
+Analytics
+
+AI Automation
+
+---
+
+# Step 8: workspace Dashboard Welcome
+
+First dashboard should not be empty.
+
+Display:
+
+Welcome
+
+Workspace Overview
+
+Suggested Actions
+
+AI Recommendations
+
+Competitors
+
+Content Opportunities
+
+Quick Start Guide
+
+---
+
+Example:
+
+Recommended First Articles
+
+How to Improve Local SEO
+
+10 Google Ads Mistakes
+
+Website Design Trends
+
+AI Tools for Businesses
+
+---
+
+# Step 9: Create First Blog
+
+Display onboarding checklist.
+
+Step:
+
+Create Your First Blog
+
+Click:
+
+Generate Blog
+
+---
+
+# AI Blog Creation Wizard
+
+Ask:
+
+What would you like to write about?
+
+Options:
+
+Suggested Topics
+
+Custom Topic
+
+Competitor-Based Topic
+
+Keyword-Based Topic
+
+---
+
+Example:
+
+Topic:
+
+How to Improve Local SEO
+
+---
+
+AI generates:
+
+Title
+
+Outline
+
+SEO Title
+
+Meta Description
+
+Categories
+
+Tags
+
+Article Draft
+
+Featured Image Prompt
+
+Reading Time
+
+FAQ Section
+
+Internal Linking Suggestions
+
+---
+
+# Blog Review Screen
+
+User can:
+
+Edit Content
+
+Regenerate Sections
+
+Expand
+
+Rewrite
+
+Translate
+
+Optimize SEO
+
+Generate Featured Image
+
+---
+
+# Step 10: Publish First Blog
+
+Click:
+
+Publish
+
+System:
+
+Save Article
+
+Generate Slug
+
+Generate Metadata
+
+Update Sitemap
+
+Create Canonical URL
+
+Mark onboarding step complete
+
+---
+
+# Success Celebration
+
+Display:
+
+🎉 Congratulations!
+
+Your first blog post is live.
+
+Show:
+
+Blog URL
+
+Preview
+
+Share Buttons
+
+Next Recommended Actions
+
+---
+
+# Onboarding Progress System
+
+Display progress throughout onboarding.
+
+Example:
+
+Account Created ✅
+
+Website Connected ✅
+
+Workspace Created ✅
+
+Collections Ready ✅
+
+First Blog Created ✅
+
+First Blog Published ✅
+
+---
+
+# AI Context Engine
+
+Critical Requirement
+
+Every workspace should maintain an AI memory/context profile.
+
+Stored Information:
+
+Website URL
+
+Website Summary
+
+Industry
+
+Target Audience
+
+Competitors
+
+Brand Voice
+
+Keywords
+
+Content Pillars
+
+Published Content
+
+Content Performance
+
+This information should automatically be injected into future AI prompts.
+
+Example:
+
+When user clicks:
+
+Generate Blog
+
+AI already knows:
+
+* Industry
+* Competitors
+* Audience
+* Brand Voice
+* Existing Content
+
+without asking again.
+
+---
+
+# Empty State Experience
+
+Never show blank screens.
+
+Always show:
+
+Recommendations
+
+Templates
+
+Examples
+
+AI Suggestions
+
+Quick Actions
+
+---
+
+# Future Enhancements
+
+Website Re-Analysis
+
+Monthly Competitor Updates
+
+SEO Health Score
+
+Keyword Tracking
+
+Content Gap Monitoring
+
+AI Content Calendar
+
+AI Strategy Assistant
+
+Automatic Internal Linking
+
+Content Performance Insights
+
+---
+
+# Success Metrics
+
+* User creates workspace in under 3 minutes.
+* Website analysis completed in under 60 seconds.
+* First blog generated in under 2 minutes.
+* First blog published in under 10 minutes.
+* Onboarding completion rate above 70%.
+* Users never encounter a blank dashboard.
+* AI-generated recommendations visible within first session.
+
+---
+
+# Final Goal
+
+The onboarding experience should feel like hiring a content strategist rather than setting up a CMS. By the time users enter the dashboard, the platform should already understand their business, website, competitors, audience, and content opportunities. The user should immediately see value and be able to publish their first blog post with minimal effort while the AI handles the research, context gathering, and content recommendations automatically.

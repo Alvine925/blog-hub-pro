@@ -9,10 +9,20 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as SignupRouteImport } from './routes/signup'
+import { Route as OnboardingRouteImport } from './routes/onboarding'
+import { Route as LoginRouteImport } from './routes/login'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as OnboardingIndexRouteImport } from './routes/onboarding.index'
 import { Route as BlogsIndexRouteImport } from './routes/blogs.index'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
+import { Route as OnboardingWelcomeRouteImport } from './routes/onboarding.welcome'
+import { Route as OnboardingWebsiteRouteImport } from './routes/onboarding.website'
+import { Route as OnboardingPreparingRouteImport } from './routes/onboarding.preparing'
+import { Route as OnboardingCompleteRouteImport } from './routes/onboarding.complete'
+import { Route as OnboardingCollectionsRouteImport } from './routes/onboarding.collections'
+import { Route as OnboardingAnalyzingRouteImport } from './routes/onboarding.analyzing'
 import { Route as BlogsSlugRouteImport } from './routes/blogs.$slug'
 import { Route as AdminWorkspacesRouteImport } from './routes/admin.workspaces'
 import { Route as AdminWebhooksRouteImport } from './routes/admin.webhooks'
@@ -34,6 +44,21 @@ import { Route as AdminCollectionsIdRouteImport } from './routes/admin.collectio
 import { Route as AdminBlogsNewRouteImport } from './routes/admin.blogs.new'
 import { Route as AdminBlogsIdRouteImport } from './routes/admin.blogs.$id'
 
+const SignupRoute = SignupRouteImport.update({
+  id: '/signup',
+  path: '/signup',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OnboardingRoute = OnboardingRouteImport.update({
+  id: '/onboarding',
+  path: '/onboarding',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdminRoute = AdminRouteImport.update({
   id: '/admin',
   path: '/admin',
@@ -44,6 +69,11 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const OnboardingIndexRoute = OnboardingIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => OnboardingRoute,
+} as any)
 const BlogsIndexRoute = BlogsIndexRouteImport.update({
   id: '/blogs/',
   path: '/blogs/',
@@ -53,6 +83,36 @@ const AdminIndexRoute = AdminIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => AdminRoute,
+} as any)
+const OnboardingWelcomeRoute = OnboardingWelcomeRouteImport.update({
+  id: '/welcome',
+  path: '/welcome',
+  getParentRoute: () => OnboardingRoute,
+} as any)
+const OnboardingWebsiteRoute = OnboardingWebsiteRouteImport.update({
+  id: '/website',
+  path: '/website',
+  getParentRoute: () => OnboardingRoute,
+} as any)
+const OnboardingPreparingRoute = OnboardingPreparingRouteImport.update({
+  id: '/preparing',
+  path: '/preparing',
+  getParentRoute: () => OnboardingRoute,
+} as any)
+const OnboardingCompleteRoute = OnboardingCompleteRouteImport.update({
+  id: '/complete',
+  path: '/complete',
+  getParentRoute: () => OnboardingRoute,
+} as any)
+const OnboardingCollectionsRoute = OnboardingCollectionsRouteImport.update({
+  id: '/collections',
+  path: '/collections',
+  getParentRoute: () => OnboardingRoute,
+} as any)
+const OnboardingAnalyzingRoute = OnboardingAnalyzingRouteImport.update({
+  id: '/analyzing',
+  path: '/analyzing',
+  getParentRoute: () => OnboardingRoute,
 } as any)
 const BlogsSlugRoute = BlogsSlugRouteImport.update({
   id: '/blogs/$slug',
@@ -158,6 +218,9 @@ const AdminBlogsIdRoute = AdminBlogsIdRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
+  '/login': typeof LoginRoute
+  '/onboarding': typeof OnboardingRouteWithChildren
+  '/signup': typeof SignupRoute
   '/admin/ai-assistant': typeof AdminAiAssistantRoute
   '/admin/analytics': typeof AdminAnalyticsRoute
   '/admin/api-explorer': typeof AdminApiExplorerRoute
@@ -173,8 +236,15 @@ export interface FileRoutesByFullPath {
   '/admin/webhooks': typeof AdminWebhooksRoute
   '/admin/workspaces': typeof AdminWorkspacesRouteWithChildren
   '/blogs/$slug': typeof BlogsSlugRoute
+  '/onboarding/analyzing': typeof OnboardingAnalyzingRoute
+  '/onboarding/collections': typeof OnboardingCollectionsRoute
+  '/onboarding/complete': typeof OnboardingCompleteRoute
+  '/onboarding/preparing': typeof OnboardingPreparingRoute
+  '/onboarding/website': typeof OnboardingWebsiteRoute
+  '/onboarding/welcome': typeof OnboardingWelcomeRoute
   '/admin/': typeof AdminIndexRoute
   '/blogs/': typeof BlogsIndexRoute
+  '/onboarding/': typeof OnboardingIndexRoute
   '/admin/blogs/$id': typeof AdminBlogsIdRoute
   '/admin/blogs/new': typeof AdminBlogsNewRoute
   '/admin/collections/$id': typeof AdminCollectionsIdRoute
@@ -183,6 +253,8 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/login': typeof LoginRoute
+  '/signup': typeof SignupRoute
   '/admin/ai-assistant': typeof AdminAiAssistantRoute
   '/admin/analytics': typeof AdminAnalyticsRoute
   '/admin/api-explorer': typeof AdminApiExplorerRoute
@@ -198,8 +270,15 @@ export interface FileRoutesByTo {
   '/admin/webhooks': typeof AdminWebhooksRoute
   '/admin/workspaces': typeof AdminWorkspacesRouteWithChildren
   '/blogs/$slug': typeof BlogsSlugRoute
+  '/onboarding/analyzing': typeof OnboardingAnalyzingRoute
+  '/onboarding/collections': typeof OnboardingCollectionsRoute
+  '/onboarding/complete': typeof OnboardingCompleteRoute
+  '/onboarding/preparing': typeof OnboardingPreparingRoute
+  '/onboarding/website': typeof OnboardingWebsiteRoute
+  '/onboarding/welcome': typeof OnboardingWelcomeRoute
   '/admin': typeof AdminIndexRoute
   '/blogs': typeof BlogsIndexRoute
+  '/onboarding': typeof OnboardingIndexRoute
   '/admin/blogs/$id': typeof AdminBlogsIdRoute
   '/admin/blogs/new': typeof AdminBlogsNewRoute
   '/admin/collections/$id': typeof AdminCollectionsIdRoute
@@ -210,6 +289,9 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
+  '/login': typeof LoginRoute
+  '/onboarding': typeof OnboardingRouteWithChildren
+  '/signup': typeof SignupRoute
   '/admin/ai-assistant': typeof AdminAiAssistantRoute
   '/admin/analytics': typeof AdminAnalyticsRoute
   '/admin/api-explorer': typeof AdminApiExplorerRoute
@@ -225,8 +307,15 @@ export interface FileRoutesById {
   '/admin/webhooks': typeof AdminWebhooksRoute
   '/admin/workspaces': typeof AdminWorkspacesRouteWithChildren
   '/blogs/$slug': typeof BlogsSlugRoute
+  '/onboarding/analyzing': typeof OnboardingAnalyzingRoute
+  '/onboarding/collections': typeof OnboardingCollectionsRoute
+  '/onboarding/complete': typeof OnboardingCompleteRoute
+  '/onboarding/preparing': typeof OnboardingPreparingRoute
+  '/onboarding/website': typeof OnboardingWebsiteRoute
+  '/onboarding/welcome': typeof OnboardingWelcomeRoute
   '/admin/': typeof AdminIndexRoute
   '/blogs/': typeof BlogsIndexRoute
+  '/onboarding/': typeof OnboardingIndexRoute
   '/admin/blogs/$id': typeof AdminBlogsIdRoute
   '/admin/blogs/new': typeof AdminBlogsNewRoute
   '/admin/collections/$id': typeof AdminCollectionsIdRoute
@@ -238,6 +327,9 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/admin'
+    | '/login'
+    | '/onboarding'
+    | '/signup'
     | '/admin/ai-assistant'
     | '/admin/analytics'
     | '/admin/api-explorer'
@@ -253,8 +345,15 @@ export interface FileRouteTypes {
     | '/admin/webhooks'
     | '/admin/workspaces'
     | '/blogs/$slug'
+    | '/onboarding/analyzing'
+    | '/onboarding/collections'
+    | '/onboarding/complete'
+    | '/onboarding/preparing'
+    | '/onboarding/website'
+    | '/onboarding/welcome'
     | '/admin/'
     | '/blogs/'
+    | '/onboarding/'
     | '/admin/blogs/$id'
     | '/admin/blogs/new'
     | '/admin/collections/$id'
@@ -263,6 +362,8 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/login'
+    | '/signup'
     | '/admin/ai-assistant'
     | '/admin/analytics'
     | '/admin/api-explorer'
@@ -278,8 +379,15 @@ export interface FileRouteTypes {
     | '/admin/webhooks'
     | '/admin/workspaces'
     | '/blogs/$slug'
+    | '/onboarding/analyzing'
+    | '/onboarding/collections'
+    | '/onboarding/complete'
+    | '/onboarding/preparing'
+    | '/onboarding/website'
+    | '/onboarding/welcome'
     | '/admin'
     | '/blogs'
+    | '/onboarding'
     | '/admin/blogs/$id'
     | '/admin/blogs/new'
     | '/admin/collections/$id'
@@ -289,6 +397,9 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/admin'
+    | '/login'
+    | '/onboarding'
+    | '/signup'
     | '/admin/ai-assistant'
     | '/admin/analytics'
     | '/admin/api-explorer'
@@ -304,8 +415,15 @@ export interface FileRouteTypes {
     | '/admin/webhooks'
     | '/admin/workspaces'
     | '/blogs/$slug'
+    | '/onboarding/analyzing'
+    | '/onboarding/collections'
+    | '/onboarding/complete'
+    | '/onboarding/preparing'
+    | '/onboarding/website'
+    | '/onboarding/welcome'
     | '/admin/'
     | '/blogs/'
+    | '/onboarding/'
     | '/admin/blogs/$id'
     | '/admin/blogs/new'
     | '/admin/collections/$id'
@@ -316,12 +434,36 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRoute: typeof AdminRouteWithChildren
+  LoginRoute: typeof LoginRoute
+  OnboardingRoute: typeof OnboardingRouteWithChildren
+  SignupRoute: typeof SignupRoute
   BlogsSlugRoute: typeof BlogsSlugRoute
   BlogsIndexRoute: typeof BlogsIndexRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/signup': {
+      id: '/signup'
+      path: '/signup'
+      fullPath: '/signup'
+      preLoaderRoute: typeof SignupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/onboarding': {
+      id: '/onboarding'
+      path: '/onboarding'
+      fullPath: '/onboarding'
+      preLoaderRoute: typeof OnboardingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin': {
       id: '/admin'
       path: '/admin'
@@ -336,6 +478,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/onboarding/': {
+      id: '/onboarding/'
+      path: '/'
+      fullPath: '/onboarding/'
+      preLoaderRoute: typeof OnboardingIndexRouteImport
+      parentRoute: typeof OnboardingRoute
+    }
     '/blogs/': {
       id: '/blogs/'
       path: '/blogs'
@@ -349,6 +498,48 @@ declare module '@tanstack/react-router' {
       fullPath: '/admin/'
       preLoaderRoute: typeof AdminIndexRouteImport
       parentRoute: typeof AdminRoute
+    }
+    '/onboarding/welcome': {
+      id: '/onboarding/welcome'
+      path: '/welcome'
+      fullPath: '/onboarding/welcome'
+      preLoaderRoute: typeof OnboardingWelcomeRouteImport
+      parentRoute: typeof OnboardingRoute
+    }
+    '/onboarding/website': {
+      id: '/onboarding/website'
+      path: '/website'
+      fullPath: '/onboarding/website'
+      preLoaderRoute: typeof OnboardingWebsiteRouteImport
+      parentRoute: typeof OnboardingRoute
+    }
+    '/onboarding/preparing': {
+      id: '/onboarding/preparing'
+      path: '/preparing'
+      fullPath: '/onboarding/preparing'
+      preLoaderRoute: typeof OnboardingPreparingRouteImport
+      parentRoute: typeof OnboardingRoute
+    }
+    '/onboarding/complete': {
+      id: '/onboarding/complete'
+      path: '/complete'
+      fullPath: '/onboarding/complete'
+      preLoaderRoute: typeof OnboardingCompleteRouteImport
+      parentRoute: typeof OnboardingRoute
+    }
+    '/onboarding/collections': {
+      id: '/onboarding/collections'
+      path: '/collections'
+      fullPath: '/onboarding/collections'
+      preLoaderRoute: typeof OnboardingCollectionsRouteImport
+      parentRoute: typeof OnboardingRoute
+    }
+    '/onboarding/analyzing': {
+      id: '/onboarding/analyzing'
+      path: '/analyzing'
+      fullPath: '/onboarding/analyzing'
+      preLoaderRoute: typeof OnboardingAnalyzingRouteImport
+      parentRoute: typeof OnboardingRoute
     }
     '/blogs/$slug': {
       id: '/blogs/$slug'
@@ -560,9 +751,36 @@ const AdminRouteChildren: AdminRouteChildren = {
 
 const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
 
+interface OnboardingRouteChildren {
+  OnboardingAnalyzingRoute: typeof OnboardingAnalyzingRoute
+  OnboardingCollectionsRoute: typeof OnboardingCollectionsRoute
+  OnboardingCompleteRoute: typeof OnboardingCompleteRoute
+  OnboardingPreparingRoute: typeof OnboardingPreparingRoute
+  OnboardingWebsiteRoute: typeof OnboardingWebsiteRoute
+  OnboardingWelcomeRoute: typeof OnboardingWelcomeRoute
+  OnboardingIndexRoute: typeof OnboardingIndexRoute
+}
+
+const OnboardingRouteChildren: OnboardingRouteChildren = {
+  OnboardingAnalyzingRoute: OnboardingAnalyzingRoute,
+  OnboardingCollectionsRoute: OnboardingCollectionsRoute,
+  OnboardingCompleteRoute: OnboardingCompleteRoute,
+  OnboardingPreparingRoute: OnboardingPreparingRoute,
+  OnboardingWebsiteRoute: OnboardingWebsiteRoute,
+  OnboardingWelcomeRoute: OnboardingWelcomeRoute,
+  OnboardingIndexRoute: OnboardingIndexRoute,
+}
+
+const OnboardingRouteWithChildren = OnboardingRoute._addFileChildren(
+  OnboardingRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRouteWithChildren,
+  LoginRoute: LoginRoute,
+  OnboardingRoute: OnboardingRouteWithChildren,
+  SignupRoute: SignupRoute,
   BlogsSlugRoute: BlogsSlugRoute,
   BlogsIndexRoute: BlogsIndexRoute,
 }
