@@ -1,22 +1,18 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { queryOptions, useSuspenseQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
 import {
-  Plus, Trash2, Loader2, FolderOpen, ChevronDown, ChevronUp,
-  ArrowRight, Settings, Clock,
+  Plus, Trash2, Loader2, FolderOpen, Clock, ArrowRight,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { listWorkspaces, createWorkspace, deleteWorkspace, type Workspace } from "@/lib/workspace.functions";
-import { formatBlogDate } from "@/lib/blog-types";
 
 const wsQuery = queryOptions({
   queryKey: ["admin", "workspaces"],
@@ -32,74 +28,33 @@ export const Route = createFileRoute("/admin/workspaces")({
   ),
 });
 
-const WS_COLORS = [
-  "bg-red-500", "bg-orange-500", "bg-amber-500", "bg-green-500",
-  "bg-teal-500", "bg-blue-500", "bg-violet-500", "bg-pink-500",
+const WS_GRADIENTS = [
+  "from-red-500 to-rose-600",
+  "from-orange-500 to-amber-600",
+  "from-violet-500 to-purple-600",
+  "from-blue-500 to-cyan-600",
+  "from-emerald-500 to-teal-600",
+  "from-pink-500 to-fuchsia-600",
+  "from-indigo-500 to-blue-600",
+  "from-green-500 to-emerald-600",
 ];
 
-function wsColor(name: string) {
-  let hash = 0;
-  for (const c of name) hash = (hash * 31 + c.charCodeAt(0)) & 0xffffffff;
-  return WS_COLORS[Math.abs(hash) % WS_COLORS.length];
+function wsGradient(name: string) {
+  let h = 0;
+  for (const c of name) h = (h * 31 + c.charCodeAt(0)) & 0xffffffff;
+  return WS_GRADIENTS[Math.abs(h) % WS_GRADIENTS.length];
 }
 
-function WorkspaceCard({
-  ws,
-  onDelete,
-}: {
-  ws: Workspace;
-  onDelete: (ws: Workspace) => void;
-}) {
-  const initial = ws.name.slice(0, 2).toUpperCase();
-  const color = wsColor(ws.name);
-
-  return (
-    <div className="group flex items-start gap-4 rounded-xl border border-border bg-background p-5 shadow-sm transition-all hover:shadow-md hover:border-primary/30">
-      {/* Avatar */}
-      <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-sm font-bold text-white ${color}`}>
-        {initial}
-      </div>
-
-      {/* Info */}
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 flex-wrap">
-          <span className="font-semibold">{ws.name}</span>
-          {ws.slug === "default" && (
-            <Badge variant="secondary" className="text-[10px]">Default</Badge>
-          )}
-          <code className="text-xs text-muted-foreground font-mono bg-muted/60 px-1.5 py-0.5 rounded">
-            {ws.slug}
-          </code>
-        </div>
-        {ws.description && (
-          <p className="mt-0.5 text-sm text-muted-foreground line-clamp-1">{ws.description}</p>
-        )}
-        <div className="mt-2 flex items-center gap-3 text-xs text-muted-foreground">
-          <span className="flex items-center gap-1">
-            <Clock className="h-3 w-3" /> Created {formatBlogDate(ws.created_at)}
-          </span>
-        </div>
-      </div>
-
-      {/* Actions */}
-      <div className="flex shrink-0 items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-        {ws.slug !== "default" && (
-          <Button
-            size="icon"
-            variant="ghost"
-            className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
-            onClick={() => onDelete(ws)}
-            title="Delete workspace"
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
-        )}
-        <Button size="icon" variant="ghost" className="h-8 w-8 text-muted-foreground" title="Workspace settings">
-          <Settings className="h-4 w-4" />
-        </Button>
-      </div>
-    </div>
-  );
+function fmtDate(d: string) {
+  const ms = Date.now() - new Date(d).getTime();
+  const m = Math.floor(ms / 60000);
+  if (m < 1) return "just now";
+  if (m < 60) return `${m}m ago`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h ago`;
+  const days = Math.floor(h / 24);
+  if (days < 7) return `${days}d ago`;
+  return new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
 
 function WorkspacesPage() {
@@ -149,52 +104,35 @@ function WorkspacesPage() {
   }
 
   return (
-    <div className="space-y-10">
+    <div className="min-h-full px-8 py-8 space-y-8">
+
+      {/* ── Header ── */}
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold">Workspaces</h1>
-          <p className="text-sm text-muted-foreground">
-            Organise content into separate projects. Each workspace is an isolated namespace for collections and posts.
+          <h1 className="text-2xl font-bold tracking-tight">Workspaces</h1>
+          <p className="mt-0.5 text-sm text-muted-foreground">
+            Each workspace is an isolated namespace for your collections and content.
           </p>
         </div>
-        <Button onClick={() => setFormOpen(true)} className="shrink-0">
-          <Plus className="mr-2 h-4 w-4" /> New Workspace
-        </Button>
+        <button
+          type="button"
+          onClick={() => setFormOpen(true)}
+          className="flex shrink-0 items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary/90 transition-colors"
+        >
+          <Plus className="h-4 w-4" /> New Workspace
+        </button>
       </div>
 
-      {workspaces.length === 0 ? (
-        <div className="flex flex-col items-center gap-3 py-24 text-center rounded-xl border border-dashed border-border">
-          <FolderOpen className="h-10 w-10 text-muted-foreground" />
-          <p className="font-medium">No workspaces yet</p>
-          <p className="text-sm text-muted-foreground">Create your first workspace to get started.</p>
-          <Button onClick={() => setFormOpen(true)} className="mt-2">
-            <Plus className="mr-2 h-4 w-4" /> Create Workspace
-          </Button>
-        </div>
-      ) : (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {workspaces.map((ws) => (
-            <WorkspaceCard key={ws.id} ws={ws} onDelete={setPendingDelete} />
-          ))}
-
-          {/* "Create new" card */}
-          <button
-            type="button"
-            onClick={() => setFormOpen((v) => !v)}
-            className="flex items-center gap-3 rounded-xl border border-dashed border-border bg-background p-5 text-sm text-muted-foreground hover:border-primary/40 hover:text-foreground transition-colors"
-          >
-            <Plus className="h-5 w-5" />
-            <span>New Workspace</span>
-          </button>
-        </div>
-      )}
-
-      {/* Create form */}
+      {/* ── Create form ── */}
       {formOpen && (
-        <div className="rounded-xl border border-border bg-background p-6 shadow-sm space-y-5">
+        <div className="rounded-xl border border-primary/20 bg-primary/5 p-6 shadow-sm space-y-5">
           <div className="flex items-center justify-between">
-            <h2 className="text-sm font-semibold">New Workspace</h2>
-            <button type="button" onClick={() => setFormOpen(false)} className="text-xs text-muted-foreground hover:text-foreground">
+            <h2 className="text-sm font-semibold">Create Workspace</h2>
+            <button
+              type="button"
+              onClick={() => { setFormOpen(false); setName(""); setDescription(""); }}
+              className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+            >
               Cancel
             </button>
           </div>
@@ -212,7 +150,7 @@ function WorkspacesPage() {
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="ws-desc">
-                Description <span className="text-muted-foreground font-normal">(optional)</span>
+                Description <span className="font-normal text-muted-foreground">(optional)</span>
               </Label>
               <Input
                 id="ws-desc"
@@ -222,13 +160,109 @@ function WorkspacesPage() {
               />
             </div>
           </div>
-          <Button onClick={handleCreate} disabled={busy}>
-            {busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />}
+          <button
+            type="button"
+            onClick={handleCreate}
+            disabled={busy}
+            className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary/90 transition-colors disabled:opacity-60"
+          >
+            {busy
+              ? <Loader2 className="h-4 w-4 animate-spin" />
+              : <Plus className="h-4 w-4" />}
             Create Workspace
-          </Button>
+          </button>
         </div>
       )}
 
+      {/* ── Workspace list ── */}
+      {workspaces.length === 0 ? (
+        <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-border py-24 text-center">
+          <FolderOpen className="h-10 w-10 text-muted-foreground/30" />
+          <p className="text-sm font-medium">No workspaces yet</p>
+          <p className="text-xs text-muted-foreground">Create your first workspace to get started.</p>
+          <button
+            type="button"
+            onClick={() => setFormOpen(true)}
+            className="mt-1 flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary/90 transition-colors"
+          >
+            <Plus className="h-4 w-4" /> Create Workspace
+          </button>
+        </div>
+      ) : (
+        <div className="rounded-xl border border-border bg-white shadow-sm overflow-hidden">
+          {/* Table header */}
+          <div className="grid grid-cols-[1fr_auto] items-center border-b border-border bg-muted/40 px-5 py-2.5">
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">Workspace</p>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">Action</p>
+          </div>
+
+          {/* Rows */}
+          <div className="divide-y divide-border">
+            {workspaces.map((ws) => {
+              const gradient = wsGradient(ws.name);
+              const initials = ws.name.slice(0, 2).toUpperCase();
+
+              return (
+                <div
+                  key={ws.id}
+                  className="group flex items-center gap-4 px-5 py-4 hover:bg-muted/20 transition-colors"
+                >
+                  {/* Avatar */}
+                  <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br text-xs font-bold text-white shadow-sm ${gradient}`}>
+                    {initials}
+                  </div>
+
+                  {/* Info — this is the "background" content */}
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium text-foreground">{ws.name}</span>
+                      {ws.slug === "default" && (
+                        <span className="rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+                          default
+                        </span>
+                      )}
+                      <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">
+                        {ws.slug}
+                      </code>
+                    </div>
+                    {ws.description && (
+                      <p className="mt-0.5 truncate text-xs text-muted-foreground">{ws.description}</p>
+                    )}
+                    <p className="mt-0.5 flex items-center gap-1 text-[11px] text-muted-foreground/60">
+                      <Clock className="h-2.5 w-2.5" />
+                      Updated {fmtDate(ws.updated_at)}
+                    </p>
+                  </div>
+
+                  {/* Delete — subtle, appears on hover */}
+                  {ws.slug !== "default" && (
+                    <button
+                      type="button"
+                      onClick={() => setPendingDelete(ws)}
+                      title="Delete workspace"
+                      className="opacity-0 group-hover:opacity-100 flex h-7 w-7 items-center justify-center rounded-lg text-muted-foreground/40 hover:bg-red-50 hover:text-red-500 transition-all"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  )}
+
+                  {/* ── Main CTA: Open Dashboard ── */}
+                  <Link
+                    to="/admin/workspaces/$id"
+                    params={{ id: ws.id }}
+                    className="flex shrink-0 items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary/90 transition-colors"
+                  >
+                    Open Dashboard
+                    <ArrowRight className="h-3.5 w-3.5" />
+                  </Link>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* ── Delete confirmation ── */}
       <AlertDialog open={Boolean(pendingDelete)} onOpenChange={(o) => !o && setPendingDelete(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -244,6 +278,7 @@ function WorkspacesPage() {
               disabled={busy}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
+              {busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
               Delete
             </AlertDialogAction>
           </AlertDialogFooter>
