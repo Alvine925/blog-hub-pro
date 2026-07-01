@@ -13,7 +13,7 @@ const searchAdminPosts = createServerFn({ method: "GET" })
     z.object({ q: z.string().max(200) }).parse(input),
   )
   .handler(async ({ data }): Promise<BlogPostSummary[]> => {
-    const { getAdminClient } = await import("../lib/supabase.server");
+    const { getAdminClient } = await import("@/lib/supabase.server");
     const supabase = await getAdminClient();
     const q = data.q.trim();
     if (!q) return [];

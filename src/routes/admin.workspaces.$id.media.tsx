@@ -25,7 +25,7 @@ interface MediaFile {
 const listMedia = createServerFn({ method: "GET" })
   .validator((input: { workspaceId: string }) => input)
   .handler(async ({ data }): Promise<MediaFile[]> => {
-    const { getAdminClient } = await import("../../lib/supabase.server");
+    const { getAdminClient } = await import("@/lib/supabase.server");
     const db = getAdminClient() as any;
     const { data: files, error } = await db
       .from("media_files")
@@ -43,7 +43,7 @@ const listMedia = createServerFn({ method: "GET" })
 const deleteMedia = createServerFn({ method: "POST" })
   .validator((input: { id: string }) => input)
   .handler(async ({ data }) => {
-    const { getAdminClient } = await import("../../lib/supabase.server");
+    const { getAdminClient } = await import("@/lib/supabase.server");
     const db = getAdminClient() as any;
     const { error } = await db.from("media_files").delete().eq("id", data.id);
     if (error) throw new Error(error.message);

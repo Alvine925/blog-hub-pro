@@ -14,7 +14,7 @@ interface AnalyticsData {
 const getAnalytics = createServerFn({ method: "GET" })
   .validator((input: { workspaceId: string }) => input)
   .handler(async ({ data }): Promise<AnalyticsData> => {
-    const { getAdminClient } = await import("../../lib/supabase.server");
+    const { getAdminClient } = await import("@/lib/supabase.server");
     const db = getAdminClient() as any;
 
     const [viewsRes, apiRes, storageRes, topPostsRes, dailyRes] = await Promise.all([

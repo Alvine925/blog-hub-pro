@@ -35,7 +35,7 @@ async function getDefaultWorkspaceId(supabase: any): Promise<string | null> {
 
 const listNotifications = createServerFn({ method: "GET" }).handler(
   async (): Promise<Notification[]> => {
-    const { getAdminClient } = await import("../lib/supabase.server");
+    const { getAdminClient } = await import("@/lib/supabase.server");
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const supabase = (await getAdminClient()) as any;
     const wsId = await getDefaultWorkspaceId(supabase);
@@ -58,7 +58,7 @@ const listNotifications = createServerFn({ method: "GET" }).handler(
 );
 
 const markAllRead = createServerFn({ method: "POST" }).handler(async () => {
-  const { getAdminClient } = await import("../lib/supabase.server");
+  const { getAdminClient } = await import("@/lib/supabase.server");
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const supabase = (await getAdminClient()) as any;
   const wsId = await getDefaultWorkspaceId(supabase);
@@ -79,7 +79,7 @@ const markAllRead = createServerFn({ method: "POST" }).handler(async () => {
 const markOneRead = createServerFn({ method: "POST" })
   .validator((d: { id: string }) => d)
   .handler(async ({ data }) => {
-    const { getAdminClient } = await import("../lib/supabase.server");
+    const { getAdminClient } = await import("@/lib/supabase.server");
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const supabase = (await getAdminClient()) as any;
     const wsId = await getDefaultWorkspaceId(supabase);
@@ -101,7 +101,7 @@ const markOneRead = createServerFn({ method: "POST" })
 const dismissNotification = createServerFn({ method: "POST" })
   .validator((d: { id: string }) => d)
   .handler(async ({ data }) => {
-    const { getAdminClient } = await import("../lib/supabase.server");
+    const { getAdminClient } = await import("@/lib/supabase.server");
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const supabase = (await getAdminClient()) as any;
     const wsId = await getDefaultWorkspaceId(supabase);

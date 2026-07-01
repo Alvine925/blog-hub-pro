@@ -30,7 +30,7 @@ interface AiGeneration {
 
 const listGenerations = createServerFn({ method: "GET" }).handler(
   async (): Promise<AiGeneration[]> => {
-    const { getAdminClient } = await import("../lib/supabase.server");
+    const { getAdminClient } = await import("@/lib/supabase.server");
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const supabase = (await getAdminClient()) as any;
 

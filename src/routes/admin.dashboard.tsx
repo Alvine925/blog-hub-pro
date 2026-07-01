@@ -32,7 +32,7 @@ interface GlobalStats {
 // ── Server fn ─────────────────────────────────────────────────────────────────
 const getGlobalStats = createServerFn({ method: "GET" }).handler(
   async (): Promise<GlobalStats> => {
-    const { getAdminClient } = await import("../lib/supabase.server");
+    const { getAdminClient } = await import("@/lib/supabase.server");
     const db = getAdminClient() as any;
 
     const [wsRes, postsRes, pubRes, draftRes, schedRes, mediaRes, aiRes, keysRes, actRes] =

@@ -29,7 +29,7 @@ interface Overview {
 const getOverview = createServerFn({ method: "GET" })
   .validator((input: { id: string }) => input)
   .handler(async ({ data }): Promise<Overview> => {
-    const { getAdminClient } = await import("../../lib/supabase.server");
+    const { getAdminClient } = await import("@/lib/supabase.server");
     const db = getAdminClient() as any;
 
     const [pubRes, draftRes, schedRes, collRes, mediaRes, aiRes, postsRes, actRes] = await Promise.all([

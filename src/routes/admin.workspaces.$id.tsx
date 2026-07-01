@@ -16,7 +16,7 @@ import { toast } from "sonner";
 const getWorkspaceById = createServerFn({ method: "GET" })
   .validator((input: { id: string }) => input)
   .handler(async ({ data }): Promise<Workspace> => {
-    const { getAdminClient } = await import("../lib/supabase.server");
+    const { getAdminClient } = await import("@/lib/supabase.server");
     const db = getAdminClient() as any;
     const { data: ws, error } = await db
       .from("workspaces")

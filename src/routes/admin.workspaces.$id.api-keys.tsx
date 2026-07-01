@@ -17,7 +17,7 @@ import {
 const createApiKey = createServerFn({ method: "POST" })
   .validator((input: { name: string }) => input)
   .handler(async ({ data }) => {
-    const { getAdminClient } = await import("../../lib/supabase.server");
+    const { getAdminClient } = await import("@/lib/supabase.server");
     const db = getAdminClient() as any;
     const prefix = "lck_" + Math.random().toString(36).slice(2, 10);
     const raw = prefix + "_" + Array.from({ length: 32 }, () => Math.random().toString(36)[2]).join("");

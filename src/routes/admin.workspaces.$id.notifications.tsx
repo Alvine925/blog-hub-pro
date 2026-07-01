@@ -16,7 +16,7 @@ interface Notification {
 const listNotifications = createServerFn({ method: "GET" })
   .validator((input: { workspaceId: string }) => input)
   .handler(async ({ data }): Promise<Notification[]> => {
-    const { getAdminClient } = await import("../../lib/supabase.server");
+    const { getAdminClient } = await import("@/lib/supabase.server");
     const db = getAdminClient() as any;
     const { data: rows, error } = await db
       .from("notifications")
@@ -32,7 +32,7 @@ const listNotifications = createServerFn({ method: "GET" })
 const markRead = createServerFn({ method: "POST" })
   .validator((input: { id: string }) => input)
   .handler(async ({ data }) => {
-    const { getAdminClient } = await import("../../lib/supabase.server");
+    const { getAdminClient } = await import("@/lib/supabase.server");
     const db = getAdminClient() as any;
     await db.from("notifications").update({ read_at: new Date().toISOString() }).eq("id", data.id);
     return { ok: true };
@@ -41,7 +41,7 @@ const markRead = createServerFn({ method: "POST" })
 const markAllRead = createServerFn({ method: "POST" })
   .validator((input: { workspaceId: string }) => input)
   .handler(async ({ data }) => {
-    const { getAdminClient } = await import("../../lib/supabase.server");
+    const { getAdminClient } = await import("@/lib/supabase.server");
     const db = getAdminClient() as any;
     await db.from("notifications")
       .update({ read_at: new Date().toISOString() })
@@ -53,7 +53,7 @@ const markAllRead = createServerFn({ method: "POST" })
 const dismissNotification = createServerFn({ method: "POST" })
   .validator((input: { id: string }) => input)
   .handler(async ({ data }) => {
-    const { getAdminClient } = await import("../../lib/supabase.server");
+    const { getAdminClient } = await import("@/lib/supabase.server");
     const db = getAdminClient() as any;
     await db.from("notifications").update({ dismissed_at: new Date().toISOString() }).eq("id", data.id);
     return { ok: true };

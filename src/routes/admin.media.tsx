@@ -26,7 +26,7 @@ interface MediaItem {
 
 const listMedia = createServerFn({ method: "GET" }).handler(
   async (): Promise<MediaItem[]> => {
-    const { getAdminClient, BLOG_BUCKET } = await import("../lib/supabase.server");
+    const { getAdminClient, BLOG_BUCKET } = await import("@/lib/supabase.server");
     const supabase = await getAdminClient();
 
     const { data, error } = await supabase.storage
@@ -60,7 +60,7 @@ const listMedia = createServerFn({ method: "GET" }).handler(
 const deleteMedia = createServerFn({ method: "POST" })
   .validator((input: { path: string }) => input)
   .handler(async ({ data }): Promise<{ ok: true }> => {
-    const { getAdminClient, BLOG_BUCKET } = await import("../lib/supabase.server");
+    const { getAdminClient, BLOG_BUCKET } = await import("@/lib/supabase.server");
     const supabase = await getAdminClient();
     const { error } = await supabase.storage.from(BLOG_BUCKET).remove([data.path]);
     if (error) throw new Error(error.message);
