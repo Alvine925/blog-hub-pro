@@ -1,29 +1,18 @@
-import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 /**
  * Server-only Supabase admin client (service role — bypasses RLS).
  * NEVER import this file from client/route/component code at module scope.
  * Import it INSIDE a server-function handler via `await import(...)`.
+ *
+ * Delegates to the generated integration client, which correctly supports
+ * both legacy JWT keys and new-format `sb_secret_*` keys.
  */
-let cached: SupabaseClient | null = null;
-
-export function getAdminClient(): SupabaseClient {
-  if (cached) return cached;
-
-  const url = process.env.SUPABASE_URL;
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-  if (!url || !serviceKey) {
-    throw new Error(
-      "Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY environment variables.",
-    );
-  }
-
-  cached = createClient(url, serviceKey, {
-    auth: { persistSession: false, autoRefreshToken: false },
-  });
-
-  return cached;
+export async function getAdminClient(): Promise<SupabaseClient> {
+  const { supabaseAdmin } = await import(
+    "@/integrations/supabase/client.server"
+  );
+  return supabaseAdmin as unknown as SupabaseClient;
 }
 
 export const BLOG_BUCKET = "blog-images";
