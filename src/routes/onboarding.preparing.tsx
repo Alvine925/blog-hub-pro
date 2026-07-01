@@ -55,7 +55,8 @@ function PreparingStep() {
         if (!session) throw new Error("Not authenticated. Please sign in again.");
 
         const userId = session.user.id;
-        const state  = await getOnboardingState({ data: { userId } });
+        const accessToken = session.access_token;
+        const state  = await getOnboardingState({ data: { userId, accessToken } });
 
         let workspaceId: string;
 
@@ -65,6 +66,7 @@ function PreparingStep() {
           const result = await createOnboardingWorkspace({
             data: {
               userId,
+              accessToken,
               name,
               websiteUrl: state?.website_url ?? "",
               intelligence: {
@@ -99,6 +101,7 @@ function PreparingStep() {
           const result = await createOnboardingWorkspace({
             data: {
               userId,
+              accessToken,
               name,
               websiteUrl: state.website_url,
               intelligence: intel,
@@ -111,6 +114,7 @@ function PreparingStep() {
         await upsertOnboardingState({
           data: {
             userId,
+            accessToken,
             step: "complete",
             workspace_id: workspaceId,
             completed_at: new Date().toISOString(),

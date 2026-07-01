@@ -66,9 +66,9 @@ export interface WebsiteIntelligence {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyClient = any;
 
-async function getDb(): Promise<AnyClient> {
-  const { getAdminClient } = await import("./supabase.server");
-  return getAdminClient();
+async function getDb(accessToken: string): Promise<AnyClient> {
+  const { getAuthenticatedClient } = await import("./supabase.server");
+  return getAuthenticatedClient(accessToken);
 }
 
 // ── Zod schemas ───────────────────────────────────────────────────────────────
@@ -116,9 +116,9 @@ const websiteIntelligenceSchema = z.object({
 // ── getOnboardingState ────────────────────────────────────────────────────────
 
 export const getOnboardingState = createServerFn({ method: "POST" })
-  .validator(z.object({ userId: z.string().min(1) }).parse)
+  .validator(z.object({ userId: z.string().min(1), accessToken: z.string().min(1) }).parse)
   .handler(async ({ data }): Promise<OnboardingState | null> => {
-    const db: AnyClient = await getDb();
+    const db: AnyClient = await getDb(data.accessToken);
 
     const { data: row, error } = await db
       .from("user_onboarding")
@@ -137,6 +137,7 @@ export const getOnboardingState = createServerFn({ method: "POST" })
 
 const upsertOnboardingSchema = z.object({
   userId: z.string().min(1),
+  accessToken: z.string().min(1),
   step: z.enum(["welcome", "website", "analyzing", "collections", "preparing", "complete"]),
   website_url: z.string().optional(),
   workspace_id: z.string().optional(),
@@ -147,7 +148,7 @@ const upsertOnboardingSchema = z.object({
 export const upsertOnboardingState = createServerFn({ method: "POST" })
   .validator(upsertOnboardingSchema.parse)
   .handler(async ({ data }): Promise<OnboardingState | null> => {
-    const db: AnyClient = await getDb();
+    const db: AnyClient = await getDb(data.accessToken);
 
     const payload: Record<string, unknown> = {
       user_id:    data.userId,
@@ -176,6 +177,7 @@ export const upsertOnboardingState = createServerFn({ method: "POST" })
 
 const createWorkspaceSchema = z.object({
   userId: z.string().min(1),
+  accessToken: z.string().min(1),
   name: z.string(),
   websiteUrl: z.string(),
   intelligence: websiteIntelligenceSchema,
@@ -185,7 +187,7 @@ const createWorkspaceSchema = z.object({
 export const createOnboardingWorkspace = createServerFn({ method: "POST" })
   .validator(createWorkspaceSchema.parse)
   .handler(async ({ data }): Promise<{ workspaceId: string }> => {
-    const db: AnyClient = await getDb();
+    const db: AnyClient = await getDb(data.accessToken);
 
     function slugify(s: string): string {
       return s.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
@@ -283,7 +285,7 @@ export const createOnboardingWorkspace = createServerFn({ method: "POST" })
 // ── getWorkspaceIntelligence ──────────────────────────────────────────────────
 
 export const getWorkspaceIntelligence = createServerFn({ method: "POST" })
-  .validator(z.object({ userId: z.string().min(1) }).parse)
+  .validator(z.object({ userId: z.string().min(1), accessToken: z.string().min(1) }).parse)
   .handler(
     async ({ data }): Promise<{
       workspace: Record<string, unknown> | null;
@@ -291,7 +293,7 @@ export const getWorkspaceIntelligence = createServerFn({ method: "POST" })
       keywords: unknown[];
       opportunities: unknown[];
     }> => {
-      const db: AnyClient = await getDb();
+      const db: AnyClient = await getDb(data.accessToken);
 
       const { data: workspaces } = await db
         .from("workspaces")

@@ -49,7 +49,8 @@ function CollectionsStep() {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const userId = session?.user?.id;
-      if (userId) await upsertOnboardingState({ data: { userId, step: "preparing" } });
+      const accessToken = session?.access_token;
+      if (userId && accessToken) await upsertOnboardingState({ data: { userId, accessToken, step: "preparing" } });
       navigate({ to: "/onboarding/preparing", search: { collections: [...selected].join(",") } });
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to continue");

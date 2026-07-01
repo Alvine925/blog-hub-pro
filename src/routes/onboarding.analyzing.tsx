@@ -43,6 +43,7 @@ function AnalyzingStep() {
 
     supabase.auth.getSession().then(({ data: { session } }) => {
       const userId = session?.user?.id ?? null;
+      const accessToken = session?.access_token ?? null;
 
       supabase.functions
         .invoke("analyze-website", { body: { url: targetUrl } })
@@ -54,7 +55,7 @@ function AnalyzingStep() {
           const intel = data.intelligence as WebsiteIntelligence;
           setIntelligence(intel);
           setSavedUrl(targetUrl);
-          if (userId) await upsertOnboardingState({ data: { userId, step: "analyzing", website_url: targetUrl, analysis_data: intel } });
+          if (userId && accessToken) await upsertOnboardingState({ data: { userId, accessToken, step: "analyzing", website_url: targetUrl, analysis_data: intel } });
           setStatus("done");
         })
         .catch((err) => {
@@ -71,7 +72,8 @@ function AnalyzingStep() {
   const handleContinue = async () => {
     const { data: { session } } = await supabase.auth.getSession();
     const userId = session?.user?.id;
-    if (userId) await upsertOnboardingState({ data: { userId, step: "collections" } }).catch(() => {});
+    const accessToken = session?.access_token;
+    if (userId && accessToken) await upsertOnboardingState({ data: { userId, accessToken, step: "collections" } }).catch(() => {});
     navigate({ to: "/onboarding/collections" });
   };
 
@@ -143,7 +145,7 @@ function AnalyzingStep() {
             ← Try another URL
           </button>
           <button
-            onClick={async () => { const { data: { session } } = await supabase.auth.getSession(); if (session?.user?.id) await upsertOnboardingState({ data: { userId: session.user.id, step: "collections" } }).catch(() => {}); navigate({ to: "/onboarding/collections" }); }}
+            onClick={async () => { const { data: { session } } = await supabase.auth.getSession(); if (session?.user?.id && session?.access_token) await upsertOnboardingState({ data: { userId: session.user.id, accessToken: session.access_token, step: "collections" } }).catch(() => {}); navigate({ to: "/onboarding/collections" }); }}
             className="group flex items-center gap-2 rounded-lg bg-zinc-900 px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-zinc-700"
           >
             Skip <ArrowRight className="h-4 w-4" />

@@ -47,7 +47,8 @@ function WebsiteStep() {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const userId = session?.user?.id;
-      if (userId) await upsertOnboardingState({ data: { userId, step: "analyzing", website_url: normalized } });
+      const accessToken = session?.access_token;
+      if (userId && accessToken) await upsertOnboardingState({ data: { userId, accessToken, step: "analyzing", website_url: normalized } });
       navigate({ to: "/onboarding/analyzing", search: { url: normalized } });
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Something went wrong. Please try again.";

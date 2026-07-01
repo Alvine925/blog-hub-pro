@@ -23,8 +23,8 @@ function CompleteStep() {
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!session?.user?.id) return;
-      getOnboardingState({ data: { userId: session.user.id } })
+      if (!session?.user?.id || !session?.access_token) return;
+      getOnboardingState({ data: { userId: session.user.id, accessToken: session.access_token } })
         .then((s) => { if (s?.analysis_data) setIntel(s.analysis_data); })
         .catch(() => {});
     });

@@ -22,8 +22,8 @@ const intelligenceQuery = queryOptions({
   queryKey: ["workspace", "intelligence"],
   queryFn: async () => {
     const { data: { session } } = await supabase.auth.getSession();
-    if (!session?.user?.id) return { workspace: null, competitors: [], keywords: [], opportunities: [] };
-    return getWorkspaceIntelligence({ data: { userId: session.user.id } });
+    if (!session?.user?.id || !session?.access_token) return { workspace: null, competitors: [], keywords: [], opportunities: [] };
+    return getWorkspaceIntelligence({ data: { userId: session.user.id, accessToken: session.access_token } });
   },
   staleTime: 5 * 60 * 1000,
 });
