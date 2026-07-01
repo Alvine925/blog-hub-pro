@@ -105,6 +105,17 @@ export function BlogPostForm({ initial }: BlogPostFormProps) {
     }
   }
 
+  function handleMarkdownFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = ""; // allow re-selecting the same file
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => setMarkdownText(String(reader.result ?? ""));
+    reader.onerror = () => toast.error("Could not read the file");
+    reader.readAsText(file);
+  }
+
+
   async function refineWithAI(
     mode: "improve" | "grammar" | "shorten" | "expand" | "seo",
   ) {
