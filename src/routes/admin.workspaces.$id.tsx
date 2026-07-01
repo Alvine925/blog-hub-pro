@@ -1,16 +1,18 @@
-import { createFileRoute, Link, Outlet, useRouterState, useNavigate } from "@tanstack/react-router";
+import {
+  createFileRoute, Link, Outlet, useRouterState, useNavigate,
+} from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import {
   LayoutDashboard, FileText, Layers, ImageIcon, Key, Webhook,
   BarChart2, Bell, Users, Settings, Code2, Moon, Sparkles,
-  ChevronLeft, ExternalLink, LogOut,
+  ChevronLeft, ExternalLink, LogOut, Plus, Search, ChevronRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Workspace } from "@/lib/workspace.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
-// ── Server fn ───────────────────────────────────────────────────────────────
+// ── Server fn ─────────────────────────────────────────────────────────────────
 const getWorkspaceById = createServerFn({ method: "GET" })
   .validator((input: { id: string }) => input)
   .handler(async ({ data }): Promise<Workspace> => {
@@ -25,83 +27,115 @@ const getWorkspaceById = createServerFn({ method: "GET" })
     return ws as Workspace;
   });
 
-// ── Route ────────────────────────────────────────────────────────────────────
+// ── Route ─────────────────────────────────────────────────────────────────────
 export const Route = createFileRoute("/admin/workspaces/$id")({
   loader: async ({ params }) => {
     const workspace = await getWorkspaceById({ data: { id: params.id } });
     return { workspace };
   },
   component: WorkspaceShell,
-  errorComponent: ({ error }) => (
-    <div className="flex min-h-screen flex-col items-center justify-center gap-3">
-      <p className="text-sm text-red-600 font-medium">{error.message}</p>
-      <Link to="/admin/workspaces" className="text-sm text-muted-foreground hover:text-foreground underline">
-        ← Back to all workspaces
-      </Link>
-    </div>
-  ),
+  errorComponent: WorkspaceError,
 });
 
-// ── Color helper ─────────────────────────────────────────────────────────────
-const COLORS = ["bg-red-500","bg-orange-500","bg-violet-500","bg-blue-500","bg-emerald-500","bg-pink-500"];
-function wsColor(name: string) {
+// ── Color helpers ─────────────────────────────────────────────────────────────
+const WS_GRADIENTS = [
+  "from-red-500 to-rose-600",
+  "from-orange-500 to-amber-600",
+  "from-violet-500 to-purple-600",
+  "from-blue-500 to-cyan-600",
+  "from-emerald-500 to-teal-600",
+  "from-pink-500 to-fuchsia-600",
+  "from-indigo-500 to-blue-600",
+  "from-green-500 to-emerald-600",
+];
+function wsGradient(name: string) {
   let h = 0;
   for (const c of name) h = (h * 31 + c.charCodeAt(0)) & 0xffffffff;
-  return COLORS[Math.abs(h) % COLORS.length];
+  return WS_GRADIENTS[Math.abs(h) % WS_GRADIENTS.length];
 }
 
-// ── Nav definition ───────────────────────────────────────────────────────────
-type NavItem = { label: string; to: string; icon: React.ComponentType<{className?: string}> };
+// ── Nav groups ────────────────────────────────────────────────────────────────
+type NavItem  = { label: string; to: string; icon: React.ComponentType<{ className?: string }> };
 type NavGroup = { group: string; items: NavItem[] };
 
 function buildNav(id: string): NavGroup[] {
   const base = `/admin/workspaces/${id}`;
   return [
     {
-      group: "",
-      items: [{ label: "Overview", to: base, icon: LayoutDashboard }],
+      group: "Overview",
+      items: [
+        { label: "Dashboard", to: base, icon: LayoutDashboard },
+      ],
     },
     {
       group: "Content",
       items: [
-        { label: "Blogs", to: `${base}/blogs`, icon: FileText },
-        { label: "Collections", to: `${base}/collections`, icon: Layers },
-        { label: "Media Library", to: `${base}/media`, icon: ImageIcon },
+        { label: "Blog Posts",    to: `${base}/blogs`,        icon: FileText   },
+        { label: "Collections",   to: `${base}/collections`,  icon: Layers     },
+        { label: "Media Library", to: `${base}/media`,        icon: ImageIcon  },
       ],
     },
     {
       group: "Tools",
       items: [
-        { label: "AI Assistant", to: `${base}/ai-assistant`, icon: Sparkles },
-        { label: "API Keys", to: `${base}/api-keys`, icon: Key },
-        { label: "Webhooks", to: `${base}/webhooks`, icon: Webhook },
-        { label: "API Explorer", to: `${base}/api-explorer`, icon: Code2 },
+        { label: "AI Assistant",  to: `${base}/ai-assistant`, icon: Sparkles   },
+        { label: "API Keys",      to: `${base}/api-keys`,     icon: Key        },
+        { label: "Webhooks",      to: `${base}/webhooks`,     icon: Webhook    },
+        { label: "API Explorer",  to: `${base}/api-explorer`, icon: Code2      },
       ],
     },
     {
       group: "Insights",
       items: [
-        { label: "Analytics", to: `${base}/analytics`, icon: BarChart2 },
-        { label: "Notifications", to: `${base}/notifications`, icon: Bell },
+        { label: "Analytics",     to: `${base}/analytics`,    icon: BarChart2  },
+        { label: "Notifications", to: `${base}/notifications`, icon: Bell      },
       ],
     },
     {
       group: "Team",
-      items: [{ label: "Users", to: `${base}/users`, icon: Users }],
+      items: [
+        { label: "Users",         to: `${base}/users`,        icon: Users      },
+      ],
     },
     {
       group: "System",
-      items: [{ label: "Settings", to: `${base}/settings`, icon: Settings }],
+      items: [
+        { label: "Settings",      to: `${base}/settings`,     icon: Settings   },
+      ],
     },
   ];
+}
+
+// ── Error component (keeps minimal nav) ───────────────────────────────────────
+function WorkspaceError({ error }: { error: Error }) {
+  return (
+    <div className="flex h-screen items-center justify-center bg-background">
+      <div className="text-center space-y-4">
+        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-red-100 mx-auto">
+          <span className="text-xl">⚠</span>
+        </div>
+        <div>
+          <p className="font-semibold text-foreground">Failed to load workspace</p>
+          <p className="mt-1 text-sm text-muted-foreground">{error.message}</p>
+        </div>
+        <Link
+          to="/admin/workspaces"
+          className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary/90 transition-colors"
+        >
+          <ChevronLeft className="h-4 w-4" /> Back to Workspaces
+        </Link>
+      </div>
+    </div>
+  );
 }
 
 // ── Sidebar ───────────────────────────────────────────────────────────────────
 function WorkspaceSidebar({ workspace }: { workspace: Workspace }) {
   const { id } = Route.useParams();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const navigate = useNavigate();
-  const groups = buildNav(id);
+  const navigate  = useNavigate();
+  const groups    = buildNav(id);
+  const gradient  = wsGradient(workspace.name);
 
   function isActive(to: string) {
     const base = `/admin/workspaces/${id}`;
@@ -116,62 +150,61 @@ function WorkspaceSidebar({ workspace }: { workspace: Workspace }) {
   }
 
   return (
-    <aside className="flex h-screen w-56 shrink-0 flex-col border-r border-border bg-background overflow-y-auto">
-      {/* Brand */}
+    <aside className="flex h-screen w-60 shrink-0 flex-col border-r border-border bg-white">
+
+      {/* ── Lunar brand ── */}
       <div className="flex h-14 items-center gap-2.5 border-b border-border px-4 shrink-0">
-        <div className="flex h-6 w-6 items-center justify-center rounded-md bg-primary">
-          <Moon className="h-3.5 w-3.5 text-primary-foreground" />
+        <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary shadow-sm">
+          <Moon className="h-4 w-4 text-white" />
         </div>
-        <span className="text-sm font-semibold tracking-tight">Lunar CMS</span>
+        <span className="text-sm font-bold tracking-tight">Lunar CMS</span>
       </div>
 
-      {/* Workspace identity */}
-      <div className="border-b border-border px-4 py-3 shrink-0">
+      {/* ── Workspace identity ── */}
+      <div className="shrink-0 border-b border-border px-4 py-3">
         <Link
           to="/admin/workspaces"
-          className="mb-2 flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+          className="mb-3 flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-primary transition-colors"
         >
-          <ChevronLeft className="h-3 w-3" />
-          All workspaces
+          <ChevronLeft className="h-3 w-3" /> All workspaces
         </Link>
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-center gap-3">
           <div className={cn(
-            "flex h-7 w-7 shrink-0 items-center justify-center rounded text-[11px] font-bold text-white",
-            wsColor(workspace.name),
+            "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br text-sm font-bold text-white shadow-sm",
+            gradient,
           )}>
             {workspace.name.slice(0, 2).toUpperCase()}
           </div>
           <div className="min-w-0">
-            <p className="truncate text-sm font-semibold leading-tight">{workspace.name}</p>
+            <p className="truncate text-sm font-semibold leading-snug">{workspace.name}</p>
             <p className="font-mono text-[10px] text-muted-foreground truncate">{workspace.slug}</p>
           </div>
         </div>
       </div>
 
-      {/* Navigation */}
-      <nav className="flex-1 py-2">
+      {/* ── Navigation ── */}
+      <nav className="flex-1 overflow-y-auto py-3 px-2">
         {groups.map((g) => (
-          <div key={g.group} className={cn(g.group && "mt-3")}>
-            {g.group && (
-              <p className="mx-4 mb-0.5 text-[9px] font-bold uppercase tracking-widest text-muted-foreground/40">
-                {g.group}
-              </p>
-            )}
+          <div key={g.group} className="mb-4">
+            <p className="mb-1 px-2 text-[9px] font-bold uppercase tracking-widest text-muted-foreground/50">
+              {g.group}
+            </p>
             {g.items.map((item) => {
               const active = isActive(item.to);
               return (
                 <Link
-                  key={item.to}
+                  key={item.label}
                   to={item.to}
                   className={cn(
-                    "flex items-center gap-2.5 border-l-2 px-4 py-[5px] text-sm transition-colors",
+                    "flex items-center gap-2.5 rounded-md px-2.5 py-2 text-sm font-medium transition-colors",
                     active
-                      ? "border-primary text-foreground font-medium"
-                      : "border-transparent text-muted-foreground hover:border-border hover:text-foreground",
+                      ? "bg-primary/10 text-primary"
+                      : "text-muted-foreground hover:bg-muted hover:text-foreground",
                   )}
                 >
-                  <item.icon className="h-3.5 w-3.5 shrink-0" />
+                  <item.icon className={cn("h-4 w-4 shrink-0", active && "text-primary")} />
                   {item.label}
+                  {active && <ChevronRight className="ml-auto h-3 w-3 opacity-60" />}
                 </Link>
               );
             })}
@@ -179,21 +212,21 @@ function WorkspaceSidebar({ workspace }: { workspace: Workspace }) {
         ))}
       </nav>
 
-      {/* Footer */}
-      <div className="shrink-0 border-t border-border py-1">
+      {/* ── Footer ── */}
+      <div className="shrink-0 border-t border-border px-2 py-2 space-y-0.5">
         <Link
           to="/blogs"
-          className="flex items-center gap-2.5 border-l-2 border-transparent px-4 py-[5px] text-sm text-muted-foreground hover:border-border hover:text-foreground transition-colors"
+          className="flex items-center gap-2.5 rounded-md px-2.5 py-2 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
         >
-          <ExternalLink className="h-3.5 w-3.5 shrink-0" />
+          <ExternalLink className="h-4 w-4 shrink-0" />
           Public blog
         </Link>
         <button
           type="button"
           onClick={handleSignOut}
-          className="flex w-full items-center gap-2.5 border-l-2 border-transparent px-4 py-[5px] text-sm text-muted-foreground hover:border-border hover:text-foreground transition-colors"
+          className="flex w-full items-center gap-2.5 rounded-md px-2.5 py-2 text-sm font-medium text-muted-foreground hover:bg-red-50 hover:text-red-600 transition-colors"
         >
-          <LogOut className="h-3.5 w-3.5 shrink-0" />
+          <LogOut className="h-4 w-4 shrink-0" />
           Sign out
         </button>
       </div>
@@ -201,14 +234,75 @@ function WorkspaceSidebar({ workspace }: { workspace: Workspace }) {
   );
 }
 
-// ── Shell ────────────────────────────────────────────────────────────────────
+// ── Top header inside workspace ───────────────────────────────────────────────
+function WorkspaceHeader({ workspace }: { workspace: Workspace }) {
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const { id } = Route.useParams();
+
+  // Derive page label from current path
+  const base = `/admin/workspaces/${id}`;
+  const groups = buildNav(id);
+  const allItems = groups.flatMap((g) => g.items);
+  const active = allItems.find((item) => {
+    if (item.to === base) return pathname === base || pathname === `${base}/`;
+    return pathname.startsWith(item.to);
+  });
+  const pageLabel = active?.label ?? "Overview";
+
+  return (
+    <header className="flex h-14 shrink-0 items-center justify-between border-b border-border bg-white px-6">
+      {/* Breadcrumb */}
+      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+        <span className="font-medium text-foreground">{workspace.name}</span>
+        <span>/</span>
+        <span>{pageLabel}</span>
+      </div>
+
+      {/* Actions */}
+      <div className="flex items-center gap-2">
+        {/* Search */}
+        <button className="flex items-center gap-2 rounded-lg border border-border bg-muted/50 px-3 py-1.5 text-xs text-muted-foreground hover:bg-muted transition-colors">
+          <Search className="h-3.5 w-3.5" />
+          <span className="hidden sm:inline">Search...</span>
+          <kbd className="hidden sm:inline ml-1 rounded bg-white border border-border px-1 font-mono text-[10px]">⌘K</kbd>
+        </button>
+
+        {/* Notifications */}
+        <Link
+          to={`${base}/notifications`}
+          className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+        >
+          <Bell className="h-4 w-4" />
+        </Link>
+
+        {/* Create button */}
+        <Link
+          to="/admin/blogs/new"
+          className="flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-sm font-semibold text-white hover:bg-primary/90 transition-colors shadow-sm"
+        >
+          <Plus className="h-3.5 w-3.5" />
+          <span className="hidden sm:inline">Create</span>
+        </Link>
+      </div>
+    </header>
+  );
+}
+
+// ── Shell ─────────────────────────────────────────────────────────────────────
 function WorkspaceShell() {
   const { workspace } = Route.useLoaderData();
+
   return (
     <div className="flex h-screen overflow-hidden bg-background">
+      {/* Left sidebar — always visible */}
       <WorkspaceSidebar workspace={workspace} />
-      <div className="flex min-w-0 flex-1 flex-col overflow-auto">
-        <Outlet />
+
+      {/* Right: header + page content */}
+      <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+        <WorkspaceHeader workspace={workspace} />
+        <main className="flex-1 overflow-auto">
+          <Outlet />
+        </main>
       </div>
     </div>
   );
