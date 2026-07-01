@@ -1,12 +1,5 @@
-/**
- * Onboarding helpers.
- *
- * All functions are server functions using the admin (service-role) client so
- * they bypass RLS and work even if table-level GRANTs haven't been applied yet.
- * The caller must pass userId (obtained client-side from supabase.auth.getSession).
- */
-
 import { createServerFn } from "@tanstack/react-start";
+import { z } from "zod";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -78,10 +71,52 @@ async function getDb(): Promise<AnyClient> {
   return getAdminClient();
 }
 
+// ── Zod schemas ───────────────────────────────────────────────────────────────
+
+const competitorSchema = z.object({
+  name: z.string(),
+  website: z.string().default(""),
+  description: z.string().default(""),
+  strengths: z.array(z.string()).default([]),
+  weaknesses: z.array(z.string()).default([]),
+  contentStrategy: z.string().default(""),
+});
+
+const contentOpportunitySchema = z.object({
+  title: z.string(),
+  type: z.string().default("blog"),
+  topic: z.string().default(""),
+  reason: z.string().default(""),
+  priority: z.enum(["high", "medium", "low"]).default("medium"),
+});
+
+const websiteIntelligenceSchema = z.object({
+  websiteName: z.string().default(""),
+  companyName: z.string().default(""),
+  industry: z.string().default(""),
+  description: z.string().default(""),
+  targetAudience: z.string().default(""),
+  businessModel: z.string().default(""),
+  services: z.array(z.string()).default([]),
+  products: z.array(z.string()).default([]),
+  brandVoice: z.string().default("Professional"),
+  primaryTopics: z.array(z.string()).default([]),
+  keywords: z.array(z.string()).default([]),
+  location: z.string().nullable().default(null),
+  language: z.string().default("en"),
+  socialLinks: z.record(z.string()).default({}),
+  competitors: z.array(competitorSchema).default([]),
+  contentOpportunities: z.array(contentOpportunitySchema).default([]),
+  contentPillars: z.array(z.string()).default([]),
+  suggestedTags: z.array(z.string()).default([]),
+  suggestedCategories: z.array(z.string()).default([]),
+  brandSummary: z.string().default(""),
+});
+
 // ── getOnboardingState ────────────────────────────────────────────────────────
 
 export const getOnboardingState = createServerFn({ method: "POST" })
-  .validator((input: { userId: string }) => input)
+  .validator(z.object({ userId: z.string().min(1) }).parse)
   .handler(async ({ data }): Promise<OnboardingState | null> => {
     const db: AnyClient = await getDb();
 
@@ -100,17 +135,17 @@ export const getOnboardingState = createServerFn({ method: "POST" })
 
 // ── upsertOnboardingState ─────────────────────────────────────────────────────
 
+const upsertOnboardingSchema = z.object({
+  userId: z.string().min(1),
+  step: z.enum(["welcome", "website", "analyzing", "collections", "preparing", "complete"]),
+  website_url: z.string().optional(),
+  workspace_id: z.string().optional(),
+  analysis_data: websiteIntelligenceSchema.optional(),
+  completed_at: z.string().optional(),
+});
+
 export const upsertOnboardingState = createServerFn({ method: "POST" })
-  .validator(
-    (input: {
-      userId: string;
-      step: OnboardingStep;
-      website_url?: string;
-      workspace_id?: string;
-      analysis_data?: WebsiteIntelligence;
-      completed_at?: string;
-    }) => input,
-  )
+  .validator(upsertOnboardingSchema.parse)
   .handler(async ({ data }): Promise<OnboardingState | null> => {
     const db: AnyClient = await getDb();
 
@@ -132,7 +167,6 @@ export const upsertOnboardingState = createServerFn({ method: "POST" })
 
     if (error) {
       console.warn("[onboarding] upsertOnboardingState error:", error.message);
-      // Don't throw — let the flow continue even if persistence fails
       return null;
     }
     return row as OnboardingState;
@@ -140,16 +174,16 @@ export const upsertOnboardingState = createServerFn({ method: "POST" })
 
 // ── createOnboardingWorkspace ─────────────────────────────────────────────────
 
+const createWorkspaceSchema = z.object({
+  userId: z.string().min(1),
+  name: z.string(),
+  websiteUrl: z.string(),
+  intelligence: websiteIntelligenceSchema,
+  selectedCollections: z.array(z.string()),
+});
+
 export const createOnboardingWorkspace = createServerFn({ method: "POST" })
-  .validator(
-    (input: {
-      userId: string;
-      name: string;
-      websiteUrl: string;
-      intelligence: WebsiteIntelligence;
-      selectedCollections: string[];
-    }) => input,
-  )
+  .validator(createWorkspaceSchema.parse)
   .handler(async ({ data }): Promise<{ workspaceId: string }> => {
     const db: AnyClient = await getDb();
 
@@ -206,7 +240,6 @@ export const createOnboardingWorkspace = createServerFn({ method: "POST" })
     if (wsError) throw new Error(wsError.message);
     const workspaceId = (workspace as { id: string }).id;
 
-    // Insert competitors
     if (intel.competitors?.length) {
       await db.from("workspace_competitors").insert(
         intel.competitors.slice(0, 6).map((c: Competitor) => ({
@@ -221,7 +254,6 @@ export const createOnboardingWorkspace = createServerFn({ method: "POST" })
       );
     }
 
-    // Insert keywords
     if (intel.keywords?.length) {
       await db.from("workspace_keywords").insert(
         intel.keywords.slice(0, 20).map((kw: string) => ({
@@ -232,7 +264,6 @@ export const createOnboardingWorkspace = createServerFn({ method: "POST" })
       );
     }
 
-    // Insert content opportunities
     if (intel.contentOpportunities?.length) {
       await db.from("workspace_content_opportunities").insert(
         intel.contentOpportunities.slice(0, 10).map((co: ContentOpportunity) => ({
@@ -252,7 +283,7 @@ export const createOnboardingWorkspace = createServerFn({ method: "POST" })
 // ── getWorkspaceIntelligence ──────────────────────────────────────────────────
 
 export const getWorkspaceIntelligence = createServerFn({ method: "POST" })
-  .validator((input: { userId: string }) => input)
+  .validator(z.object({ userId: z.string().min(1) }).parse)
   .handler(
     async ({ data }): Promise<{
       workspace: Record<string, unknown> | null;
