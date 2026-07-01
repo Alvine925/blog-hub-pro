@@ -3,7 +3,7 @@ import { queryOptions, useSuspenseQuery, useQuery } from "@tanstack/react-query"
 import {
   FileText, Eye, Send, FilePen, ArrowRight, Clock, Plus, ImageIcon,
   Layers, Key, BarChart2, Settings, TrendingUp, Users,
-  Activity, Globe, Target, Lightbulb, Building2,
+  Activity, Globe, Target, Lightbulb, Building2, Sparkles,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { getDashboardStats } from "@/lib/apikey.functions";
