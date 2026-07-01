@@ -150,7 +150,7 @@ function BlogDetail() {
         {post.tags.length > 0 && (
           <div className="mt-10 flex flex-wrap items-center gap-2 border-t border-border pt-6">
             <Tag className="h-4 w-4 text-muted-foreground" />
-            {post.tags.map((tag) => (
+            {post.tags.map((tag: string) => (
               <Link
                 key={tag}
                 to="/blogs"
