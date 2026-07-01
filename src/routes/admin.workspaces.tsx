@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { queryOptions, useSuspenseQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
@@ -247,14 +247,13 @@ function WorkspacesPage() {
                   )}
 
                   {/* ── Main CTA: Open Dashboard ── */}
-                  <Link
-                    to="/admin/workspaces/$id"
-                    params={{ id: ws.id }}
+                  <a
+                    href={`/admin/workspaces/${ws.id}`}
                     className="flex shrink-0 items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary/90 transition-colors"
                   >
                     Open Dashboard
                     <ArrowRight className="h-3.5 w-3.5" />
-                  </Link>
+                  </a>
                 </div>
               );
             })}
