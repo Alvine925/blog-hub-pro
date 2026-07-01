@@ -1,0 +1,440 @@
+# Task: Implement a Database-Driven Blog System Without Affecting the Existing Blog Functionality
+
+## Objective
+
+Implement a new database-driven blog system for the project.
+
+**Important constraints:**
+
+* Do **NOT** modify or break the existing blog functionality.
+* Do **NOT** replace the existing blog pages.
+* Do **NOT** remove any current routes.
+* This should be implemented as a completely separate feature with its own routes and components.
+* Existing code should continue working exactly as it does today.
+
+---
+
+# Overall Architecture
+
+There are two applications in this project:
+
+### 1. Admin Application
+
+This is where administrators manage content.
+
+Add a brand-new sidebar/menu item called:
+
+**Blogs**
+
+Administrators should be able to:
+
+* View blog posts
+* Create blog posts
+* Edit blog posts
+* Delete blog posts
+* Save drafts
+* Publish posts
+* Schedule posts (optional if easy to implement)
+
+The admin should save all blog posts into Supabase.
+
+---
+
+### 2. Landing Application
+
+The Landing folder is a Next.js application.
+
+It should fetch published blog posts from Supabase and display them.
+
+This should be implemented as **new routes only**.
+
+Do not modify the existing blog implementation.
+
+---
+
+# Required Database
+
+Create a new table named:
+
+blog_posts
+
+Recommended columns:
+
+```sql
+id UUID PRIMARY KEY
+
+title TEXT
+
+slug TEXT UNIQUE
+
+excerpt TEXT
+
+content TEXT
+
+cover_image TEXT
+
+category TEXT
+
+tags JSONB
+
+author_name TEXT
+
+seo_title TEXT
+
+meta_description TEXT
+
+featured BOOLEAN DEFAULT FALSE
+
+status TEXT
+
+published_at TIMESTAMP
+
+reading_time INTEGER
+
+views INTEGER DEFAULT 0
+
+created_at TIMESTAMP
+
+updated_at TIMESTAMP
+```
+
+Status values:
+
+* draft
+* published
+
+---
+
+# Admin Features
+
+Create a complete Blog Management section.
+
+## Blog List
+
+Display:
+
+* Cover Image
+* Title
+* Category
+* Status
+* Published Date
+* Views
+* Actions
+
+Actions:
+
+* Edit
+* Delete
+* Preview
+* Publish
+* Unpublish
+
+---
+
+## Create Blog
+
+Fields:
+
+Title
+
+Slug
+
+Excerpt
+
+Category
+
+Tags
+
+Cover Image
+
+Content
+
+SEO Title
+
+Meta Description
+
+Featured Toggle
+
+Publish Toggle
+
+---
+
+Slug Requirements
+
+Automatically generate the slug from the title.
+
+Example:
+
+How to Plan a Wedding
+
+↓
+
+how-to-plan-a-wedding
+
+Allow manual editing.
+
+Validate uniqueness.
+
+---
+
+Content Editor
+
+Implement a rich text editor.
+
+It should support:
+
+* Headings
+* Paragraphs
+* Bold
+* Italic
+* Lists
+* Images
+* Tables
+* Quotes
+* Links
+* Code blocks (optional)
+
+Store the resulting HTML (or a structured JSON format if that matches the existing stack).
+
+---
+
+Cover Image
+
+Allow:
+
+* Upload to Supabase Storage
+
+OR
+
+* Paste image URL
+
+Store the final URL.
+
+---
+
+SEO Fields
+
+Provide dedicated inputs for:
+
+SEO Title
+
+Meta Description
+
+These should not overwrite the main title.
+
+---
+
+Preview
+
+Allow admins to preview the article before publishing.
+
+---
+
+Publish
+
+When status becomes "published":
+
+Save the published_at timestamp automatically.
+
+---
+
+# Landing Application
+
+Create a completely new blog section.
+
+New routes only.
+
+Do not alter existing blog routes.
+
+Example:
+
+/blogs
+
+Displays all published posts.
+
+Each card should contain:
+
+* Cover Image
+* Category
+* Title
+* Excerpt
+* Reading Time
+* Published Date
+
+---
+
+Blog Details
+
+Route:
+
+/blogs/[slug]
+
+Load the blog using the slug.
+
+Display:
+
+Hero Image
+
+Title
+
+Category
+
+Published Date
+
+Reading Time
+
+Author
+
+Article Content
+
+Related Articles
+
+---
+
+# SEO Requirements
+
+Each article page must generate dynamic metadata.
+
+Include:
+
+Title
+
+Meta Description
+
+Canonical URL
+
+Open Graph Tags
+
+Twitter Cards
+
+Robots Tags
+
+Structured Data (BlogPosting schema)
+
+Example structured data:
+
+* BlogPosting
+* headline
+* author
+* datePublished
+* image
+* description
+
+Generate metadata dynamically from the database.
+
+---
+
+# Internal Linking
+
+At the end of every article display:
+
+Related Articles
+
+Based on:
+
+* Same category
+* Shared tags
+
+---
+
+# Reading Time
+
+Automatically calculate reading time based on word count.
+
+Store or calculate dynamically.
+
+---
+
+# Search
+
+Implement a blog search.
+
+Search by:
+
+* Title
+* Tags
+* Category
+* Content
+
+---
+
+# Categories
+
+Allow filtering by category.
+
+Example:
+
+Wedding
+
+Birthday
+
+Graduation
+
+Baby Shower
+
+Corporate
+
+General
+
+---
+
+# Tags
+
+Store tags as JSON.
+
+Display clickable tag links.
+
+---
+
+# Performance
+
+Landing pages should:
+
+* Use Next.js Server Components where appropriate.
+* Use server-side rendering or static rendering where beneficial for SEO.
+* Fetch only published posts.
+* Optimize images using the existing Next.js image configuration if applicable.
+
+---
+
+# Security
+
+Do not expose drafts.
+
+Only published articles should be publicly accessible.
+
+Admin authentication should continue using the existing authentication system.
+
+---
+
+# Existing Functionality
+
+This implementation must NOT interfere with:
+
+* Existing blog pages
+* Existing routing
+* Existing components
+* Existing API endpoints
+
+Everything currently working must remain unchanged.
+
+The new system should exist alongside the current implementation.
+
+---
+
+# Code Quality
+
+* Follow the existing project architecture.
+* Reuse existing UI components where appropriate.
+* Keep components modular.
+* Keep database access centralized.
+* Use TypeScript best practices.
+* Handle loading and error states gracefully.
+* Validate all forms.
+* Ensure responsive layouts.
+
+---
+
+# Final Goal
+
+The result should be a fully functional CMS-style blog system powered by Supabase, managed entirely from the Admin application, and rendered through new SEO-friendly Next.js routes in the Landing application. It should support creating, editing, publishing, and displaying blog posts without affecting any existing blog functionality or routes.
