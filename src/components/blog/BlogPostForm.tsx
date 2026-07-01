@@ -105,6 +105,17 @@ export function BlogPostForm({ initial }: BlogPostFormProps) {
     }
   }
 
+  function handleMarkdownFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = ""; // allow re-selecting the same file
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => setMarkdownText(String(reader.result ?? ""));
+    reader.onerror = () => toast.error("Could not read the file");
+    reader.readAsText(file);
+  }
+
+
   async function refineWithAI(
     mode: "improve" | "grammar" | "shorten" | "expand" | "seo",
   ) {
@@ -535,16 +546,25 @@ export function BlogPostForm({ initial }: BlogPostFormProps) {
             <DialogTitle>Import Markdown</DialogTitle>
           </DialogHeader>
           <p className="text-sm text-muted-foreground">
-            Paste Markdown below. It will be converted to rich text and replace
-            the current editor content.
+            Upload a <code>.md</code> file or paste Markdown below. It will be
+            converted to rich text and replace the current editor content.
           </p>
+          <div>
+            <input
+              type="file"
+              accept=".md,.markdown,text/markdown,text/plain"
+              onChange={handleMarkdownFile}
+              className="block w-full text-sm text-muted-foreground file:mr-3 file:rounded-md file:border-0 file:bg-primary file:px-3 file:py-2 file:text-sm file:font-medium file:text-primary-foreground hover:file:bg-primary/90"
+            />
+          </div>
           <Textarea
             value={markdownText}
             onChange={(e) => setMarkdownText(e.target.value)}
-            rows={14}
+            rows={12}
             placeholder={"# My heading\n\nWrite your post in **markdown**…"}
             className="font-mono text-sm"
           />
+
           <div className="flex justify-end gap-2">
             <Button variant="outline" type="button" onClick={() => setMarkdownOpen(false)}>
               Cancel
