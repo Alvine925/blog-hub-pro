@@ -55,7 +55,7 @@ function PreparingStep() {
         if (!session) throw new Error("Not authenticated. Please sign in again.");
 
         const userId = session.user.id;
-        const state  = await getOnboardingState({ userId });
+        const state  = await getOnboardingState({ data: { userId } });
 
         let workspaceId: string;
 
@@ -63,52 +63,58 @@ function PreparingStep() {
           // No analysis data — create a minimal workspace
           const name = "My Workspace";
           const result = await createOnboardingWorkspace({
-            userId,
-            name,
-            websiteUrl: state?.website_url ?? "",
-            intelligence: {
-              websiteName: name,
-              companyName: name,
-              industry: "",
-              description: "",
-              targetAudience: "",
-              businessModel: "",
-              services: [],
-              products: [],
-              brandVoice: "Professional",
-              primaryTopics: [],
-              keywords: [],
-              location: null,
-              language: "en",
-              socialLinks: {},
-              competitors: [],
-              contentOpportunities: [],
-              contentPillars: [],
-              suggestedTags: [],
-              suggestedCategories: [],
-              brandSummary: "",
+            data: {
+              userId,
+              name,
+              websiteUrl: state?.website_url ?? "",
+              intelligence: {
+                websiteName: name,
+                companyName: name,
+                industry: "",
+                description: "",
+                targetAudience: "",
+                businessModel: "",
+                services: [],
+                products: [],
+                brandVoice: "Professional",
+                primaryTopics: [],
+                keywords: [],
+                location: null,
+                language: "en",
+                socialLinks: {},
+                competitors: [],
+                contentOpportunities: [],
+                contentPillars: [],
+                suggestedTags: [],
+                suggestedCategories: [],
+                brandSummary: "",
+              },
+              selectedCollections,
             },
-            selectedCollections,
           });
           workspaceId = result.workspaceId;
         } else {
           const intel = state.analysis_data;
           const name  = intel.companyName || intel.websiteName || "My Workspace";
           const result = await createOnboardingWorkspace({
-            userId,
-            name,
-            websiteUrl: state.website_url,
-            intelligence: intel,
-            selectedCollections,
+            data: {
+              userId,
+              name,
+              websiteUrl: state.website_url,
+              intelligence: intel,
+              selectedCollections,
+            },
           });
           workspaceId = result.workspaceId;
         }
 
         await upsertOnboardingState({
-          userId,
-          step: "complete",
-          workspace_id: workspaceId,
-          completed_at: new Date().toISOString(),
+          data: {
+            userId,
+            step: "complete",
+            workspace_id: workspaceId,
+            completed_at: new Date().toISOString(),
+          },
         });
 
         clearInterval(timer);

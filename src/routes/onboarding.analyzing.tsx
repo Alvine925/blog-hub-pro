@@ -54,7 +54,7 @@ function AnalyzingStep() {
           const intel = data.intelligence as WebsiteIntelligence;
           setIntelligence(intel);
           setSavedUrl(targetUrl);
-          if (userId) await upsertOnboardingState({ userId, step: "analyzing", website_url: targetUrl, analysis_data: intel });
+          if (userId) await upsertOnboardingState({ data: { userId, step: "analyzing", website_url: targetUrl, analysis_data: intel } });
           setStatus("done");
         })
         .catch((err) => {
@@ -71,7 +71,7 @@ function AnalyzingStep() {
   const handleContinue = async () => {
     const { data: { session } } = await supabase.auth.getSession();
     const userId = session?.user?.id;
-    if (userId) await upsertOnboardingState({ userId, step: "collections" }).catch(() => {});
+    if (userId) await upsertOnboardingState({ data: { userId, step: "collections" } }).catch(() => {});
     navigate({ to: "/onboarding/collections" });
   };
 
@@ -143,7 +143,7 @@ function AnalyzingStep() {
             ← Try another URL
           </button>
           <button
-            onClick={async () => { const { data: { session } } = await supabase.auth.getSession(); if (session?.user?.id) await upsertOnboardingState({ userId: session.user.id, step: "collections" }).catch(() => {}); navigate({ to: "/onboarding/collections" }); }}
+            onClick={async () => { const { data: { session } } = await supabase.auth.getSession(); if (session?.user?.id) await upsertOnboardingState({ data: { userId: session.user.id, step: "collections" } }).catch(() => {}); navigate({ to: "/onboarding/collections" }); }}
             className="group flex items-center gap-2 rounded-lg bg-zinc-900 px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-zinc-700"
           >
             Skip <ArrowRight className="h-4 w-4" />

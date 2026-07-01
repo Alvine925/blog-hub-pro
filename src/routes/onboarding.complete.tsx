@@ -24,7 +24,7 @@ function CompleteStep() {
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (!session?.user?.id) return;
-      getOnboardingState({ userId: session.user.id })
+      getOnboardingState({ data: { userId: session.user.id } })
         .then((s) => { if (s?.analysis_data) setIntel(s.analysis_data); })
         .catch(() => {});
     });
