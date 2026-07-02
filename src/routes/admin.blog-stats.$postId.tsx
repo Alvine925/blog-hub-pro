@@ -4,6 +4,7 @@ import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
 import {
   ArrowLeft, Eye, Clock, BarChart2, Globe, Smartphone, Monitor, Tablet,
   Activity, ExternalLink, Pencil, Tag, User, Calendar, BookOpen, TrendingUp,
+  Heart, MessageSquare, Share2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -59,6 +60,7 @@ interface ActivityRow {
 
 interface BlogStatsData {
   post: PostDetails;
+  engagement: { likes: number; comments: number; shares: number };
   pageViews: {
     total: number;
     byDevice: Record<string, number>;
@@ -90,8 +92,8 @@ const getBlogStats = createServerFn({ method: "GET" })
       .single();
     if (postError || !post) throw new Error("Post not found");
 
-    // Fetch page views, API requests, and activity in parallel
-    const [pvRes, apiRes, actRes] = await Promise.all([
+    // Fetch page views, API requests, activity, and engagement counts in parallel
+    const [pvRes, apiRes, actRes, likesRes, commentsRes, sharesRes] = await Promise.all([
       db.from("page_views")
         .select("id,referrer,country,device,browser,duration_sec,viewed_at")
         .eq("post_id", data.postId)
@@ -107,6 +109,16 @@ const getBlogStats = createServerFn({ method: "GET" })
         .eq("entity_id", data.postId)
         .order("occurred_at", { ascending: false })
         .limit(20),
+      db.from("blog_likes")
+        .select("id", { count: "exact", head: true })
+        .eq("blog_post_id", data.postId),
+      db.from("blog_comments")
+        .select("id", { count: "exact", head: true })
+        .eq("blog_post_id", data.postId)
+        .eq("status", "approved"),
+      db.from("blog_shares")
+        .select("id", { count: "exact", head: true })
+        .eq("blog_post_id", data.postId),
     ]);
 
     const views: PageViewRow[] = pvRes.data ?? [];
@@ -155,6 +167,11 @@ const getBlogStats = createServerFn({ method: "GET" })
         ...post,
         tags: Array.isArray(post.tags) ? post.tags : [],
       } as PostDetails,
+      engagement: {
+        likes: likesRes.count ?? 0,
+        comments: commentsRes.count ?? 0,
+        shares: sharesRes.count ?? 0,
+      },
       pageViews: {
         total: views.length,
         byDevice: deviceCount,
@@ -221,7 +238,7 @@ const STATUS_STYLE: Record<string, string> = {
 function BlogStatsPage() {
   const { postId } = Route.useParams();
   const { data } = useSuspenseQuery(statsQuery(postId));
-  const { post, pageViews, apiRequests, activity } = data;
+  const { post, engagement, pageViews, apiRequests, activity } = data;
 
   const totalPageViews = pageViews.total;
   const maxDevice = Math.max(...Object.values(pageViews.byDevice), 1);
@@ -316,8 +333,8 @@ function BlogStatsPage() {
         </div>
       </div>
 
-      {/* Stats bar */}
-      <div className="mb-10 flex divide-x divide-border border-y border-border">
+      {/* Stats bar — row 1: views & performance */}
+      <div className="mb-4 flex divide-x divide-border border border-border rounded-lg overflow-hidden">
         {[
           { label: "Total Views", value: post.views.toLocaleString(), icon: Eye },
           { label: "Tracked Page Views", value: totalPageViews.toLocaleString(), icon: TrendingUp },
@@ -337,6 +354,42 @@ function BlogStatsPage() {
             )}
           </div>
         ))}
+      </div>
+
+      {/* Stats bar — row 2: engagement */}
+      <div className="mb-10 flex divide-x divide-border border border-border rounded-lg overflow-hidden">
+        <div className="flex-1 px-5 py-4 min-w-0">
+          <div className="flex items-center gap-1.5 mb-1">
+            <Heart className="h-3.5 w-3.5 text-rose-400 shrink-0" />
+            <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Likes</p>
+          </div>
+          <p className="text-2xl font-bold tabular-nums">{engagement.likes.toLocaleString()}</p>
+        </div>
+        <div className="flex-1 px-5 py-4 min-w-0">
+          <div className="flex items-center gap-1.5 mb-1">
+            <MessageSquare className="h-3.5 w-3.5 text-blue-400 shrink-0" />
+            <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Approved Comments</p>
+          </div>
+          <p className="text-2xl font-bold tabular-nums">{engagement.comments.toLocaleString()}</p>
+        </div>
+        <div className="flex-1 px-5 py-4 min-w-0">
+          <div className="flex items-center gap-1.5 mb-1">
+            <Share2 className="h-3.5 w-3.5 text-violet-400 shrink-0" />
+            <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Shares</p>
+          </div>
+          <p className="text-2xl font-bold tabular-nums">{engagement.shares.toLocaleString()}</p>
+        </div>
+        <div className="flex-1 px-5 py-4 min-w-0">
+          <div className="flex items-center gap-1.5 mb-1">
+            <BarChart2 className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+            <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Engagement Rate</p>
+          </div>
+          <p className="text-2xl font-bold tabular-nums">
+            {post.views > 0
+              ? `${(((engagement.likes + engagement.comments + engagement.shares) / post.views) * 100).toFixed(1)}%`
+              : "—"}
+          </p>
+        </div>
       </div>
 
       <div className="grid gap-10 lg:grid-cols-2">
