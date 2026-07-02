@@ -3,7 +3,7 @@ import { queryOptions, useSuspenseQuery, useQuery } from "@tanstack/react-query"
 import {
   FileText, Eye, Send, FilePen, ArrowRight, Clock, Plus,
   BarChart2, Sparkles, Activity, TrendingUp, Globe, Target, Lightbulb,
-  Key, Zap, AlertCircle,
+  Key, Zap, AlertCircle, ScrollText,
 } from "lucide-react";
 import { getDashboardStats } from "@/lib/apikey.functions";
 import { publishScheduledPosts } from "@/lib/schedule.functions";

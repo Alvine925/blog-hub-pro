@@ -103,6 +103,86 @@ export async function validateApiKey(raw: string): Promise<boolean> {
   return true;
 }
 
+// ── API request log viewer ───────────────────────────────────────────────────
+
+export interface ApiRequestLog {
+  id: string;
+  workspace_id: string | null;
+  api_key_id: string | null;
+  method: string;
+  path: string;
+  status_code: number | null;
+  duration_ms: number | null;
+  ip_address: string | null;
+  user_agent: string | null;
+  error: string | null;
+  requested_at: string;
+  // joined
+  key_prefix: string | null;
+  key_name: string | null;
+}
+
+export const listApiRequestLogs = createServerFn({ method: "GET" })
+  .validator(
+    (input: { limit?: number; offset?: number; status_class?: "2xx" | "4xx" | "5xx" | "all"; path_filter?: string }) =>
+      input,
+  )
+  .handler(async ({ data }): Promise<{ rows: ApiRequestLog[]; total: number }> => {
+    const { getAdminClient } = await import("./supabase.server");
+    const supabase = await getAdminClient();
+
+    const limit = Math.min(data?.limit ?? 50, 200);
+    const offset = data?.offset ?? 0;
+    const status_class = data?.status_class ?? "all";
+    const path_filter = data?.path_filter ?? "";
+
+    let query = (supabase as any)
+      .from("api_request_logs")
+      .select(
+        `id, workspace_id, api_key_id, method, path, status_code, duration_ms,
+         ip_address, user_agent, error, requested_at,
+         api_keys!api_request_logs_api_key_id_fkey(key_prefix, name)`,
+        { count: "exact" },
+      )
+      .order("requested_at", { ascending: false })
+      .range(offset, offset + limit - 1);
+
+    if (status_class === "2xx") query = query.gte("status_code", 200).lt("status_code", 300);
+    else if (status_class === "4xx") query = query.gte("status_code", 400).lt("status_code", 500);
+    else if (status_class === "5xx") query = query.gte("status_code", 500).lt("status_code", 600);
+
+    if (path_filter.trim()) query = query.ilike("path", `%${path_filter.trim()}%`);
+
+    const { data: rows, count, error } = await query;
+    if (error) {
+      if (error.message?.includes("schema cache") || error.code === "PGRST204") {
+        return { rows: [], total: 0 };
+      }
+      throw new Error(error.message);
+    }
+
+    const mapped: ApiRequestLog[] = (rows ?? []).map((r: Record<string, unknown>) => {
+      const key = r["api_keys"] as { key_prefix?: string; name?: string } | null;
+      return {
+        id: r.id as string,
+        workspace_id: (r.workspace_id ?? null) as string | null,
+        api_key_id: (r.api_key_id ?? null) as string | null,
+        method: (r.method as string) ?? "GET",
+        path: r.path as string,
+        status_code: (r.status_code ?? null) as number | null,
+        duration_ms: (r.duration_ms ?? null) as number | null,
+        ip_address: (r.ip_address ?? null) as string | null,
+        user_agent: (r.user_agent ?? null) as string | null,
+        error: (r.error ?? null) as string | null,
+        requested_at: r.requested_at as string,
+        key_prefix: key?.key_prefix ?? null,
+        key_name: key?.name ?? null,
+      };
+    });
+
+    return { rows: mapped, total: count ?? 0 };
+  });
+
 // ── Dashboard & analytics stats ───────────────────────────────────────────────
 
 export const getDashboardStats = createServerFn({ method: "GET" }).handler(

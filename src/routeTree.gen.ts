@@ -34,6 +34,7 @@ import { Route as AdminMediaRouteImport } from './routes/admin.media'
 import { Route as AdminDashboardRouteImport } from './routes/admin.dashboard'
 import { Route as AdminCollectionsRouteImport } from './routes/admin.collections'
 import { Route as AdminBillingRouteImport } from './routes/admin.billing'
+import { Route as AdminApiLogsRouteImport } from './routes/admin.api-logs'
 import { Route as AdminApiKeysRouteImport } from './routes/admin.api-keys'
 import { Route as AdminApiExplorerRouteImport } from './routes/admin.api-explorer'
 import { Route as AdminAnalyticsRouteImport } from './routes/admin.analytics'
@@ -183,6 +184,11 @@ const AdminBillingRoute = AdminBillingRouteImport.update({
   path: '/billing',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminApiLogsRoute = AdminApiLogsRouteImport.update({
+  id: '/api-logs',
+  path: '/api-logs',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminApiKeysRoute = AdminApiKeysRouteImport.update({
   id: '/api-keys',
   path: '/api-keys',
@@ -317,6 +323,7 @@ export interface FileRoutesByFullPath {
   '/admin/analytics': typeof AdminAnalyticsRoute
   '/admin/api-explorer': typeof AdminApiExplorerRoute
   '/admin/api-keys': typeof AdminApiKeysRoute
+  '/admin/api-logs': typeof AdminApiLogsRoute
   '/admin/billing': typeof AdminBillingRoute
   '/admin/collections': typeof AdminCollectionsRouteWithChildren
   '/admin/dashboard': typeof AdminDashboardRoute
@@ -365,6 +372,7 @@ export interface FileRoutesByTo {
   '/admin/analytics': typeof AdminAnalyticsRoute
   '/admin/api-explorer': typeof AdminApiExplorerRoute
   '/admin/api-keys': typeof AdminApiKeysRoute
+  '/admin/api-logs': typeof AdminApiLogsRoute
   '/admin/billing': typeof AdminBillingRoute
   '/admin/collections': typeof AdminCollectionsRouteWithChildren
   '/admin/dashboard': typeof AdminDashboardRoute
@@ -415,6 +423,7 @@ export interface FileRoutesById {
   '/admin/analytics': typeof AdminAnalyticsRoute
   '/admin/api-explorer': typeof AdminApiExplorerRoute
   '/admin/api-keys': typeof AdminApiKeysRoute
+  '/admin/api-logs': typeof AdminApiLogsRoute
   '/admin/billing': typeof AdminBillingRoute
   '/admin/collections': typeof AdminCollectionsRouteWithChildren
   '/admin/dashboard': typeof AdminDashboardRoute
@@ -467,6 +476,7 @@ export interface FileRouteTypes {
     | '/admin/analytics'
     | '/admin/api-explorer'
     | '/admin/api-keys'
+    | '/admin/api-logs'
     | '/admin/billing'
     | '/admin/collections'
     | '/admin/dashboard'
@@ -515,6 +525,7 @@ export interface FileRouteTypes {
     | '/admin/analytics'
     | '/admin/api-explorer'
     | '/admin/api-keys'
+    | '/admin/api-logs'
     | '/admin/billing'
     | '/admin/collections'
     | '/admin/dashboard'
@@ -564,6 +575,7 @@ export interface FileRouteTypes {
     | '/admin/analytics'
     | '/admin/api-explorer'
     | '/admin/api-keys'
+    | '/admin/api-logs'
     | '/admin/billing'
     | '/admin/collections'
     | '/admin/dashboard'
@@ -790,6 +802,13 @@ declare module '@tanstack/react-router' {
       path: '/billing'
       fullPath: '/admin/billing'
       preLoaderRoute: typeof AdminBillingRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/api-logs': {
+      id: '/admin/api-logs'
+      path: '/api-logs'
+      fullPath: '/admin/api-logs'
+      preLoaderRoute: typeof AdminApiLogsRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/api-keys': {
@@ -1019,6 +1038,7 @@ interface AdminRouteChildren {
   AdminAnalyticsRoute: typeof AdminAnalyticsRoute
   AdminApiExplorerRoute: typeof AdminApiExplorerRoute
   AdminApiKeysRoute: typeof AdminApiKeysRoute
+  AdminApiLogsRoute: typeof AdminApiLogsRoute
   AdminBillingRoute: typeof AdminBillingRoute
   AdminCollectionsRoute: typeof AdminCollectionsRouteWithChildren
   AdminDashboardRoute: typeof AdminDashboardRoute
@@ -1041,6 +1061,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminAnalyticsRoute: AdminAnalyticsRoute,
   AdminApiExplorerRoute: AdminApiExplorerRoute,
   AdminApiKeysRoute: AdminApiKeysRoute,
+  AdminApiLogsRoute: AdminApiLogsRoute,
   AdminBillingRoute: AdminBillingRoute,
   AdminCollectionsRoute: AdminCollectionsRouteWithChildren,
   AdminDashboardRoute: AdminDashboardRoute,
