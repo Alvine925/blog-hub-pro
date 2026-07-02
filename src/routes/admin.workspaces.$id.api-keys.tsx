@@ -22,13 +22,16 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
 
-const keysQuery = queryOptions({
-  queryKey: ["admin", "api_keys"],
-  queryFn: () => listApiKeys(),
-});
+// Query is keyed by workspace ID so different workspaces never share a cache entry.
+const keysQuery = (workspaceId: string) =>
+  queryOptions({
+    queryKey: ["admin", "api_keys", workspaceId],
+    queryFn: () => listApiKeys({ data: { workspaceId } }),
+  });
 
 export const Route = createFileRoute("/admin/workspaces/$id/api-keys")({
-  loader: ({ context }) => context.queryClient.ensureQueryData(keysQuery),
+  loader: ({ context, params }) =>
+    context.queryClient.ensureQueryData(keysQuery(params.id)),
   component: WorkspaceApiKeys,
   errorComponent: ({ error }) => <p className="p-8 text-sm text-red-600">{error.message}</p>,
 });
@@ -245,7 +248,7 @@ function CacheInvalidationBanner() {
 // ---------------------------------------------------------------------------
 function WorkspaceApiKeys() {
   const { id: workspaceId } = useParams({ from: "/admin/workspaces/$id/api-keys" });
-  const { data: keys } = useSuspenseQuery(keysQuery);
+  const { data: keys } = useSuspenseQuery(keysQuery(workspaceId));
   const queryClient = useQueryClient();
   const doRevoke = useServerFn(revokeApiKey);
   const doDelete = useServerFn(deleteApiKey);
@@ -273,7 +276,7 @@ function WorkspaceApiKeys() {
       setName(""); setShowForm(false);
       setNewKeyDialog({ key: data.data.key });
       setShowKey(false);
-      await queryClient.invalidateQueries({ queryKey: ["admin", "api_keys"] });
+      await queryClient.invalidateQueries({ queryKey: ["admin", "api_keys", workspaceId] });
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to create key");
     } finally {
@@ -288,7 +291,7 @@ function WorkspaceApiKeys() {
       await doRevoke({ data: { id: pendingRevoke.id } });
       toast.success("Key revoked");
       setPendingRevoke(null);
-      await queryClient.invalidateQueries({ queryKey: ["admin", "api_keys"] });
+      await queryClient.invalidateQueries({ queryKey: ["admin", "api_keys", workspaceId] });
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed");
     } finally {
@@ -303,7 +306,7 @@ function WorkspaceApiKeys() {
       await doDelete({ data: { id: pendingDelete.id } });
       toast.success("Key deleted");
       setPendingDelete(null);
-      await queryClient.invalidateQueries({ queryKey: ["admin", "api_keys"] });
+      await queryClient.invalidateQueries({ queryKey: ["admin", "api_keys", workspaceId] });
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed");
     } finally {

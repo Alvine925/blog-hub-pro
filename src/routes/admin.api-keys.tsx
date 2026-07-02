@@ -30,9 +30,10 @@ import {
 import { formatBlogDate } from "@/lib/blog-types";
 import { cn } from "@/lib/utils";
 
+// null workspaceId → listApiKeys resolves the default workspace server-side
 const keysQuery = queryOptions({
-  queryKey: ["admin", "api_keys"],
-  queryFn: () => listApiKeys(),
+  queryKey: ["admin", "api_keys", "default"],
+  queryFn: () => listApiKeys({ data: { workspaceId: null } }),
 });
 
 export const Route = createFileRoute("/admin/api-keys")({
@@ -519,7 +520,7 @@ function ApiKeysPage() {
   const [busyId, setBusyId] = useState<string | null>(null);
 
   async function refresh() {
-    await queryClient.invalidateQueries({ queryKey: ["admin", "api_keys"] });
+    await queryClient.invalidateQueries({ queryKey: ["admin", "api_keys", "default"] });
   }
 
   function handleCreated(key: string) {

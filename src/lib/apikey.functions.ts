@@ -15,16 +15,37 @@ export interface ApiKey {
   revoked_at: string | null;
 }
 
-export const listApiKeys = createServerFn({ method: "GET" }).handler(
-  async (): Promise<ApiKey[]> => {
+export const listApiKeys = createServerFn({ method: "GET" })
+  .validator((input?: { workspaceId?: string | null }) => input ?? {})
+  .handler(
+  async ({ data: params }): Promise<ApiKey[]> => {
     const { getAdminClient } = await import("./supabase.server");
     const supabase = await getAdminClient();
-    const { data, error } = await supabase
+
+    // Resolve workspace: prefer the caller-supplied ID; fall back to default workspace.
+    // We always scope to one workspace so keys from other tenants are never returned.
+    let workspaceId = params?.workspaceId ?? null;
+    if (!workspaceId) {
+      const { data: ws } = await supabase
+        .from("workspaces")
+        .select("id")
+        .eq("slug", "default")
+        .single();
+      workspaceId = ws?.id ?? null;
+    }
+
+    let query = supabase
       .from("api_keys")
       .select(
         "id, name, description, key_prefix, key_type, permissions, status, expires_at, created_at, last_used_at, revoked_at",
       )
       .order("created_at", { ascending: false });
+
+    if (workspaceId) {
+      query = query.eq("workspace_id", workspaceId);
+    }
+
+    const { data, error } = await query;
     if (error) {
       if (error.message.includes("schema cache") || error.code === "PGRST204") return [];
       throw new Error(error.message);
