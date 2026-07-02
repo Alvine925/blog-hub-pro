@@ -291,17 +291,20 @@ export const upsertPost = createServerFn({ method: "POST" })
         .from("blog_posts")
         .update(record)
         .eq("id", data.id)
-        .select("id, slug, status, title, category, published_at")
+        .select("id, slug, status, title, category, published_at, workspace_id")
         .single();
       if (error) throw new Error(error.message);
       if (data.status === "published") {
-        import("./webhook.functions").then(({ dispatchWebhooks }) => {
+        import("./webhook.functions").then(({ dispatchWebhooks, fireCacheInvalidation }) => {
           const payload = {
             id: row.id, slug: row.slug, title: data.title,
             status: "published", category: data.category, author_name: data.author_name,
           };
           dispatchWebhooks("post.updated", payload).catch(() => {});
           dispatchWebhooks("cache.invalidate", { ...payload, reason: "post.updated" }).catch(() => {});
+          if (row.workspace_id) {
+            fireCacheInvalidation("blog.updated", row.workspace_id, row.slug).catch(() => {});
+          }
         });
       }
       return { id: row.id, slug: row.slug };
@@ -310,17 +313,20 @@ export const upsertPost = createServerFn({ method: "POST" })
     const { data: row, error } = await supabase
       .from("blog_posts")
       .insert(record)
-      .select("id, slug, status, title, category, published_at")
+      .select("id, slug, status, title, category, published_at, workspace_id")
       .single();
     if (error) throw new Error(error.message);
     if (data.status === "published") {
-      import("./webhook.functions").then(({ dispatchWebhooks }) => {
+      import("./webhook.functions").then(({ dispatchWebhooks, fireCacheInvalidation }) => {
         const payload = {
           id: row.id, slug: row.slug, title: data.title,
           status: "published", category: data.category, author_name: data.author_name,
         };
         dispatchWebhooks("post.published", payload).catch(() => {});
         dispatchWebhooks("cache.invalidate", { ...payload, reason: "post.published" }).catch(() => {});
+        if (row.workspace_id) {
+          fireCacheInvalidation("blog.published", row.workspace_id, row.slug).catch(() => {});
+        }
       });
     }
     return { id: row.id, slug: row.slug };
@@ -342,18 +348,22 @@ export const setPostStatus = createServerFn({ method: "POST" })
       .from("blog_posts")
       .update(update)
       .eq("id", data.id)
-      .select("id, slug, title, category, author_name")
+      .select("id, slug, title, category, author_name, workspace_id")
       .single();
     if (error) throw new Error(error.message);
     const webhookEvent =
       data.status === "published" ? "post.published" : "post.unpublished";
-    import("./webhook.functions").then(({ dispatchWebhooks }) => {
+    import("./webhook.functions").then(({ dispatchWebhooks, fireCacheInvalidation }) => {
       const payload = {
         id: row.id, slug: row.slug, title: row.title,
         status: data.status, category: row.category, author_name: row.author_name,
       };
       dispatchWebhooks(webhookEvent, payload).catch(() => {});
       dispatchWebhooks("cache.invalidate", { ...payload, reason: webhookEvent }).catch(() => {});
+      if (row.workspace_id) {
+        const cacheEvent = data.status === "published" ? "blog.published" : "blog.updated";
+        fireCacheInvalidation(cacheEvent, row.workspace_id, row.slug).catch(() => {});
+      }
     });
     return { ok: true };
   });
@@ -367,19 +377,22 @@ export const deletePost = createServerFn({ method: "POST" })
     const supabase = await getAdminClient();
     const { data: post } = await supabase
       .from("blog_posts")
-      .select("id, slug, title, status, category, author_name")
+      .select("id, slug, title, status, category, author_name, workspace_id")
       .eq("id", data.id)
       .maybeSingle();
     const { error } = await supabase.from("blog_posts").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
     if (post) {
-      import("./webhook.functions").then(({ dispatchWebhooks }) => {
+      import("./webhook.functions").then(({ dispatchWebhooks, fireCacheInvalidation }) => {
         const payload = {
           id: post.id, slug: post.slug, title: post.title,
           status: post.status, category: post.category, author_name: post.author_name,
         };
         dispatchWebhooks("post.deleted", payload).catch(() => {});
         dispatchWebhooks("cache.invalidate", { ...payload, reason: "post.deleted" }).catch(() => {});
+        if (post.workspace_id) {
+          fireCacheInvalidation("blog.deleted", post.workspace_id, post.slug).catch(() => {});
+        }
       });
     }
     return { ok: true };

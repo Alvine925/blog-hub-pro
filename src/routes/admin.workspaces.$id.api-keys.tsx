@@ -1,11 +1,12 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useParams } from "@tanstack/react-router";
 import { queryOptions, useSuspenseQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 import { toast } from "sonner";
 import {
   Key, Plus, Copy, Trash2, Eye, EyeOff, Loader2,
-  Globe, Lock, AlertTriangle, Shield,
+  Globe, Lock, AlertTriangle, Shield, CheckCircle2, ChevronDown, ChevronRight,
+  ExternalLink, Zap,
 } from "lucide-react";
 import { listApiKeys, revokeApiKey, deleteApiKey, type ApiKey } from "@/lib/apikey.functions";
 import { supabase } from "@/integrations/supabase/client";
@@ -48,7 +49,202 @@ function KeyTypePill({ type }: { type: "publishable" | "secret" }) {
   );
 }
 
+function CopyButton({ value, className }: { value: string; className?: string }) {
+  const [copied, setCopied] = useState(false);
+  function copy() {
+    navigator.clipboard.writeText(value);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }
+  return (
+    <button
+      type="button"
+      onClick={copy}
+      className={cn(
+        "flex items-center gap-1.5 rounded px-2 py-1 text-xs transition-colors",
+        copied
+          ? "bg-emerald-50 text-emerald-700"
+          : "bg-muted text-muted-foreground hover:text-foreground hover:bg-muted/80",
+        className,
+      )}
+    >
+      {copied ? <CheckCircle2 className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+      {copied ? "Copied" : "Copy"}
+    </button>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// API Base URL + Workspace ID card
+// ---------------------------------------------------------------------------
+function ApiBaseUrlCard({ workspaceId }: { workspaceId: string }) {
+  const [expanded, setExpanded] = useState(false);
+
+  const supabaseUrl =
+    (typeof import.meta !== "undefined" && (import.meta as any).env?.VITE_SUPABASE_URL) ||
+    "";
+  const baseUrl = supabaseUrl ? `${supabaseUrl}/functions/v1/content-router` : "";
+
+  const endpoints = [
+    { method: "GET",  path: "/blogs",                    desc: "List published blog posts (paginated)" },
+    { method: "GET",  path: "/blogs/featured",           desc: "Featured posts" },
+    { method: "GET",  path: "/blogs/latest",             desc: "Most recent posts" },
+    { method: "GET",  path: "/blogs/:slug",              desc: "Single post by slug" },
+    { method: "GET",  path: "/blogs/:slug/related",      desc: "Related posts" },
+    { method: "POST", path: "/blogs/:slug/view",         desc: "Increment view counter" },
+    { method: "GET",  path: "/pages",                    desc: "List published pages" },
+    { method: "GET",  path: "/pages/:slug",              desc: "Single page by slug" },
+    { method: "GET",  path: "/categories",               desc: "All categories" },
+    { method: "GET",  path: "/tags",                     desc: "All tags" },
+    { method: "GET",  path: "/search",                   desc: "Full-text search across content" },
+    { method: "GET",  path: "/sitemap",                  desc: "XML sitemap feed" },
+    { method: "GET",  path: "/rss",                      desc: "RSS feed" },
+  ];
+
+  return (
+    <div className="rounded-lg border border-border overflow-hidden">
+      {/* Header */}
+      <div className="px-5 py-4 bg-muted/30 border-b border-border">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Globe className="h-4 w-4 text-muted-foreground" />
+            <h2 className="text-sm font-semibold">API Base URL</h2>
+            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-1.5 py-0.5 text-[9px] font-bold uppercase text-emerald-700">
+              Live
+            </span>
+          </div>
+          {baseUrl && (
+            <a
+              href={baseUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <ExternalLink className="h-3 w-3" /> Open
+            </a>
+          )}
+        </div>
+        <p className="mt-1 text-xs text-muted-foreground">
+          Use this URL in your app to query content for this workspace.
+        </p>
+      </div>
+
+      <div className="p-5 space-y-4">
+        {/* Base URL */}
+        <div>
+          <p className="mb-1.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">
+            Endpoint
+          </p>
+          {baseUrl ? (
+            <div className="flex items-center gap-2 rounded-md border border-border bg-muted/40 px-3 py-2">
+              <code className="flex-1 min-w-0 truncate font-mono text-xs text-foreground">
+                {baseUrl}
+              </code>
+              <CopyButton value={baseUrl} />
+            </div>
+          ) : (
+            <p className="text-xs text-amber-600">
+              VITE_SUPABASE_URL not set — add it to your environment secrets.
+            </p>
+          )}
+        </div>
+
+        {/* Workspace ID */}
+        <div>
+          <p className="mb-1.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">
+            Workspace ID
+          </p>
+          <div className="flex items-center gap-2 rounded-md border border-border bg-muted/40 px-3 py-2">
+            <code className="flex-1 min-w-0 truncate font-mono text-xs text-foreground">
+              {workspaceId}
+            </code>
+            <CopyButton value={workspaceId} />
+          </div>
+          <p className="mt-1.5 text-[11px] text-muted-foreground">
+            All blog posts belong to this workspace. Your API key automatically resolves it — you don't need to send this ID in requests.
+          </p>
+        </div>
+
+        {/* Quick-start snippet */}
+        {baseUrl && (
+          <div>
+            <p className="mb-1.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">
+              Quick start
+            </p>
+            <div className="relative rounded-md border border-border bg-[hsl(var(--muted)/0.5)] overflow-hidden">
+              <pre className="overflow-x-auto p-3 text-[11px] leading-relaxed font-mono text-foreground">
+{`const res = await fetch("${baseUrl}/blogs", {
+  headers: { "Authorization": "Bearer pk_live_..." }
+});
+const { data, meta } = await res.json();`}
+              </pre>
+              <div className="absolute top-2 right-2">
+                <CopyButton
+                  value={`const res = await fetch("${baseUrl}/blogs", {\n  headers: { "Authorization": "Bearer pk_live_..." }\n});\nconst { data, meta } = await res.json();`}
+                />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Collapsible endpoint list */}
+        <button
+          type="button"
+          onClick={() => setExpanded((v) => !v)}
+          className="flex w-full items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors pt-1"
+        >
+          {expanded ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
+          {expanded ? "Hide" : "Show"} all {endpoints.length} endpoints
+        </button>
+
+        {expanded && (
+          <div className="rounded-md border border-border overflow-hidden divide-y divide-border">
+            {endpoints.map((ep) => (
+              <div key={ep.path} className="flex items-center gap-3 px-3 py-2 bg-background hover:bg-muted/30 transition-colors">
+                <span className={cn(
+                  "shrink-0 rounded px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide",
+                  ep.method === "GET"
+                    ? "bg-blue-50 text-blue-700"
+                    : "bg-amber-50 text-amber-700",
+                )}>
+                  {ep.method}
+                </span>
+                <code className="w-52 shrink-0 font-mono text-[11px] text-foreground">{ep.path}</code>
+                <span className="text-xs text-muted-foreground truncate">{ep.desc}</span>
+                {baseUrl && (
+                  <CopyButton value={`${baseUrl}${ep.path}`} className="ml-auto shrink-0" />
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Cache invalidation info banner
+// ---------------------------------------------------------------------------
+function CacheInvalidationBanner() {
+  return (
+    <div className="flex items-start gap-3 rounded-lg border border-emerald-200 bg-emerald-50/60 px-4 py-3">
+      <Zap className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
+      <div>
+        <p className="text-xs font-semibold text-emerald-800">Automatic cache invalidation enabled</p>
+        <p className="mt-0.5 text-[11px] text-emerald-700">
+          Publishing or deleting a post automatically fires the <code className="font-mono">cache-invalidation</code> edge function — no manual purge needed.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Main component
+// ---------------------------------------------------------------------------
 function WorkspaceApiKeys() {
+  const { id: workspaceId } = useParams({ from: "/admin/workspaces/$id/api-keys" });
   const { data: keys } = useSuspenseQuery(keysQuery);
   const queryClient = useQueryClient();
   const doRevoke = useServerFn(revokeApiKey);
@@ -115,32 +311,37 @@ function WorkspaceApiKeys() {
     }
   }
 
-  const active = keys.filter((k) => k.status === "active" && !k.revoked_at);
+  const active   = keys.filter((k) => k.status === "active" && !k.revoked_at);
   const inactive = keys.filter((k) => k.status !== "active" || k.revoked_at);
 
   return (
-    <div className="min-h-full px-8 py-8 max-w-4xl">
-      <div className="mb-8 flex items-center justify-between">
+    <div className="min-h-full px-8 py-8 max-w-4xl space-y-8">
+      {/* Page header */}
+      <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-semibold">API Keys</h1>
-          <p className="mt-0.5 text-sm text-muted-foreground">Manage access tokens for the Content API.</p>
+          <p className="mt-0.5 text-sm text-muted-foreground">
+            Manage access tokens and view the Content API endpoint for this workspace.
+          </p>
         </div>
-        <Button
-          onClick={() => setShowForm((v) => !v)}
-          size="sm"
-        >
+        <Button onClick={() => setShowForm((v) => !v)} size="sm">
           <Plus className="mr-1.5 h-3.5 w-3.5" /> New Key
         </Button>
       </div>
 
+      {/* API Base URL + workspace ID */}
+      <ApiBaseUrlCard workspaceId={workspaceId} />
+
+      {/* Cache invalidation status */}
+      <CacheInvalidationBanner />
+
       {/* Create form */}
       {showForm && (
-        <form onSubmit={handleCreate} className="mb-8 rounded-lg border border-border p-5 space-y-4">
+        <form onSubmit={handleCreate} className="rounded-lg border border-border p-5 space-y-4">
           <h2 className="text-sm font-medium flex items-center gap-2">
             <Key className="h-4 w-4 text-muted-foreground" /> New API Key
           </h2>
 
-          {/* Key type selector */}
           <div className="grid grid-cols-2 gap-3">
             {(["publishable", "secret"] as const).map((type) => (
               <button
@@ -161,7 +362,7 @@ function WorkspaceApiKeys() {
                 <div>
                   <p className="text-xs font-semibold capitalize">{type}</p>
                   <p className="text-[10px] text-muted-foreground mt-0.5">
-                    {type === "publishable" ? "Read-only • client-safe • pk_live_" : "Full access • server only • sk_live_"}
+                    {type === "publishable" ? "Read-only · client-safe · pk_live_" : "Full access · server only · sk_live_"}
                   </p>
                 </div>
               </button>
@@ -201,7 +402,6 @@ function WorkspaceApiKeys() {
         </div>
       ) : (
         <div className="space-y-6">
-          {/* Active */}
           {active.length > 0 && (
             <div>
               <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">
@@ -215,7 +415,6 @@ function WorkspaceApiKeys() {
             </div>
           )}
 
-          {/* Inactive */}
           {inactive.length > 0 && (
             <div className="opacity-60">
               <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">

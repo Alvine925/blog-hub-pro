@@ -363,6 +363,48 @@ export const retryWebhookDelivery = createServerFn({ method: "POST" })
   });
 
 // ---------------------------------------------------------------------------
+// AUTOMATIC CACHE INVALIDATION (internal — no user config required)
+// ---------------------------------------------------------------------------
+
+/**
+ * Directly call the cache-invalidation Supabase Edge Function.
+ *
+ * This fires automatically whenever a post is published, updated, or deleted —
+ * completely independently of any user-configured webhooks.
+ * Never throws: cache invalidation must never break a content save.
+ */
+export async function fireCacheInvalidation(
+  event:
+    | "blog.published"
+    | "blog.updated"
+    | "blog.deleted"
+    | "page.published"
+    | "page.updated"
+    | "collection.updated"
+    | "media.updated",
+  workspaceId: string,
+  slug?: string,
+): Promise<void> {
+  try {
+    const supabaseUrl  = process.env.SUPABASE_URL;
+    const serviceKey   = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (!supabaseUrl || !serviceKey) return;
+
+    await fetch(`${supabaseUrl}/functions/v1/cache-invalidation`, {
+      method: "POST",
+      headers: {
+        "Content-Type":  "application/json",
+        "Authorization": `Bearer ${serviceKey}`,
+      },
+      body: JSON.stringify({ event, workspaceId, slug }),
+      signal: AbortSignal.timeout(5_000),
+    });
+  } catch {
+    // Never crash the caller
+  }
+}
+
+// ---------------------------------------------------------------------------
 // DISPATCHER (server-side only)
 // ---------------------------------------------------------------------------
 
