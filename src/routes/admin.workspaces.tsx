@@ -83,16 +83,25 @@ function getFaviconUrl(websiteUrl: string | null | undefined): string | null {
   }
 }
 
-/** Pick the best preview image for a workspace */
-function getPreviewImage(ws: Workspace): { type: "image"; url: string } | { type: "favicon"; url: string } | null {
-  // 1. Logo from AI context
-  const logo = ws.ai_context?.logoUrl;
-  if (logo) return { type: "image", url: logo };
-  // 2. First site image from AI context
+/** Pick the best preview image for a workspace.
+ *  cover  → real site screenshot/hero, used as full object-cover background
+ *  logo   → brand logo (often transparent PNG), shown large & centred on gradient
+ *  favicon → tiny icon, shown centred on gradient
+ */
+function getPreviewImage(ws: Workspace):
+  | { type: "cover";   url: string }
+  | { type: "logo";    url: string; favicon?: string }
+  | { type: "favicon"; url: string }
+  | null {
   const siteImg = ws.ai_context?.siteImages?.[0];
-  if (siteImg) return { type: "image", url: siteImg };
-  // 3. Favicon derived from website_url
+  const logo    = ws.ai_context?.logoUrl;
   const favicon = getFaviconUrl(ws.website_url);
+
+  // A real site screenshot makes the best cover
+  if (siteImg) return { type: "cover", url: siteImg };
+  // Logo gets its own centred treatment; pass favicon along for the bg tint
+  if (logo) return { type: "logo", url: logo, favicon: favicon ?? undefined };
+  // Just the favicon
   if (favicon) return { type: "favicon", url: favicon };
   return null;
 }
@@ -120,11 +129,11 @@ function WorkspaceCard({
         tabIndex={-1}
         aria-hidden
       >
-        {/* Gradient background — always the base layer */}
+        {/* Gradient — always the base */}
         <div className={`absolute inset-0 bg-gradient-to-br ${gradient}`} />
 
-        {/* Full-cover image for logos / site screenshots */}
-        {preview?.type === "image" && !imgError && (
+        {/* ── COVER: real site screenshot fills the whole area ── */}
+        {preview?.type === "cover" && !imgError && (
           <img
             src={preview.url}
             alt={ws.name}
@@ -133,29 +142,62 @@ function WorkspaceCard({
           />
         )}
 
-        {/* Favicon: centered large on the gradient — favicons are icons, not photos */}
-        {preview?.type === "favicon" && !imgError && (
-          <div className="absolute inset-0 flex items-center justify-center">
-            <img
-              src={preview.url}
-              alt={ws.name}
-              onError={() => setImgError(true)}
-              className="h-16 w-16 object-contain drop-shadow-xl"
-            />
-          </div>
+        {/* ── LOGO: blurred favicon as soft bg tint + logo large & centred ── */}
+        {preview?.type === "logo" && !imgError && (
+          <>
+            {/* optional favicon softly blurred into the gradient bg */}
+            {preview.favicon && (
+              <img
+                src={preview.favicon}
+                alt=""
+                aria-hidden
+                className="absolute inset-0 h-full w-full object-cover scale-[3] blur-2xl opacity-20"
+              />
+            )}
+            {/* logo itself — fill most of the cover area, contained */}
+            <div className="absolute inset-0 flex items-center justify-center p-6">
+              <img
+                src={preview.url}
+                alt={ws.name}
+                onError={() => setImgError(true)}
+                className="max-h-full max-w-full object-contain drop-shadow-2xl"
+              />
+            </div>
+          </>
         )}
 
-        {/* No image at all — show initials */}
+        {/* ── FAVICON: large & centred on gradient ── */}
+        {preview?.type === "favicon" && !imgError && (
+          <>
+            {/* blurred favicon as soft bg texture */}
+            <img
+              src={preview.url}
+              alt=""
+              aria-hidden
+              className="absolute inset-0 h-full w-full object-cover scale-[3] blur-2xl opacity-25"
+            />
+            <div className="absolute inset-0 flex items-center justify-center">
+              <img
+                src={preview.url}
+                alt={ws.name}
+                onError={() => setImgError(true)}
+                className="h-20 w-20 object-contain drop-shadow-2xl"
+              />
+            </div>
+          </>
+        )}
+
+        {/* ── FALLBACK: initials ── */}
         {(!preview || imgError) && (
           <div className="absolute inset-0 flex items-center justify-center">
-            <span className="text-4xl font-bold text-white/80 tracking-tight drop-shadow-lg">
+            <span className="text-5xl font-bold text-white/70 tracking-tight drop-shadow-lg select-none">
               {initials}
             </span>
           </div>
         )}
 
-        {/* Bottom scrim so card text below stays readable */}
-        <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/30 to-transparent" />
+        {/* Bottom scrim for readability */}
+        <div className="absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-black/25 to-transparent" />
 
         {/* Default badge top-left */}
         {ws.slug === "default" && (
