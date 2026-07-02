@@ -43,6 +43,7 @@ import { Route as AdminWorkspacesIdRouteImport } from './routes/admin.workspaces
 import { Route as AdminCollectionsIdRouteImport } from './routes/admin.collections.$id'
 import { Route as AdminBlogsNewRouteImport } from './routes/admin.blogs.new'
 import { Route as AdminBlogsIdRouteImport } from './routes/admin.blogs.$id'
+import { Route as AdminBlogStatsPostIdRouteImport } from './routes/admin.blog-stats.$postId'
 import { Route as AdminWorkspacesIdIndexRouteImport } from './routes/admin.workspaces.$id.index'
 import { Route as AdminWorkspacesIdWebhooksRouteImport } from './routes/admin.workspaces.$id.webhooks'
 import { Route as AdminWorkspacesIdUsersRouteImport } from './routes/admin.workspaces.$id.users'
@@ -227,6 +228,11 @@ const AdminBlogsIdRoute = AdminBlogsIdRouteImport.update({
   path: '/blogs/$id',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminBlogStatsPostIdRoute = AdminBlogStatsPostIdRouteImport.update({
+  id: '/blog-stats/$postId',
+  path: '/blog-stats/$postId',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminWorkspacesIdIndexRoute = AdminWorkspacesIdIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -331,6 +337,7 @@ export interface FileRoutesByFullPath {
   '/admin/': typeof AdminIndexRoute
   '/blogs/': typeof BlogsIndexRoute
   '/onboarding/': typeof OnboardingIndexRoute
+  '/admin/blog-stats/$postId': typeof AdminBlogStatsPostIdRoute
   '/admin/blogs/$id': typeof AdminBlogsIdRoute
   '/admin/blogs/new': typeof AdminBlogsNewRoute
   '/admin/collections/$id': typeof AdminCollectionsIdRoute
@@ -378,6 +385,7 @@ export interface FileRoutesByTo {
   '/admin': typeof AdminIndexRoute
   '/blogs': typeof BlogsIndexRoute
   '/onboarding': typeof OnboardingIndexRoute
+  '/admin/blog-stats/$postId': typeof AdminBlogStatsPostIdRoute
   '/admin/blogs/$id': typeof AdminBlogsIdRoute
   '/admin/blogs/new': typeof AdminBlogsNewRoute
   '/admin/collections/$id': typeof AdminCollectionsIdRoute
@@ -427,6 +435,7 @@ export interface FileRoutesById {
   '/admin/': typeof AdminIndexRoute
   '/blogs/': typeof BlogsIndexRoute
   '/onboarding/': typeof OnboardingIndexRoute
+  '/admin/blog-stats/$postId': typeof AdminBlogStatsPostIdRoute
   '/admin/blogs/$id': typeof AdminBlogsIdRoute
   '/admin/blogs/new': typeof AdminBlogsNewRoute
   '/admin/collections/$id': typeof AdminCollectionsIdRoute
@@ -478,6 +487,7 @@ export interface FileRouteTypes {
     | '/admin/'
     | '/blogs/'
     | '/onboarding/'
+    | '/admin/blog-stats/$postId'
     | '/admin/blogs/$id'
     | '/admin/blogs/new'
     | '/admin/collections/$id'
@@ -525,6 +535,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/blogs'
     | '/onboarding'
+    | '/admin/blog-stats/$postId'
     | '/admin/blogs/$id'
     | '/admin/blogs/new'
     | '/admin/collections/$id'
@@ -573,6 +584,7 @@ export interface FileRouteTypes {
     | '/admin/'
     | '/blogs/'
     | '/onboarding/'
+    | '/admin/blog-stats/$postId'
     | '/admin/blogs/$id'
     | '/admin/blogs/new'
     | '/admin/collections/$id'
@@ -843,6 +855,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminBlogsIdRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/blog-stats/$postId': {
+      id: '/admin/blog-stats/$postId'
+      path: '/blog-stats/$postId'
+      fullPath: '/admin/blog-stats/$postId'
+      preLoaderRoute: typeof AdminBlogStatsPostIdRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/workspaces/$id/': {
       id: '/admin/workspaces/$id/'
       path: '/'
@@ -1011,6 +1030,7 @@ interface AdminRouteChildren {
   AdminWebhooksRoute: typeof AdminWebhooksRoute
   AdminWorkspacesRoute: typeof AdminWorkspacesRouteWithChildren
   AdminIndexRoute: typeof AdminIndexRoute
+  AdminBlogStatsPostIdRoute: typeof AdminBlogStatsPostIdRoute
   AdminBlogsIdRoute: typeof AdminBlogsIdRoute
   AdminBlogsNewRoute: typeof AdminBlogsNewRoute
   AdminBlogsIndexRoute: typeof AdminBlogsIndexRoute
@@ -1032,6 +1052,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminWebhooksRoute: AdminWebhooksRoute,
   AdminWorkspacesRoute: AdminWorkspacesRouteWithChildren,
   AdminIndexRoute: AdminIndexRoute,
+  AdminBlogStatsPostIdRoute: AdminBlogStatsPostIdRoute,
   AdminBlogsIdRoute: AdminBlogsIdRoute,
   AdminBlogsNewRoute: AdminBlogsNewRoute,
   AdminBlogsIndexRoute: AdminBlogsIndexRoute,

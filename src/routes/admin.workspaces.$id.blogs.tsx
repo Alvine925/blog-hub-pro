@@ -3,7 +3,7 @@ import { queryOptions, useSuspenseQuery, useQueryClient } from "@tanstack/react-
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2, Clock, Eye, Send } from "lucide-react";
+import { Plus, Pencil, Trash2, Clock, Eye, Send, BarChart2 } from "lucide-react";
 import { adminListPosts, deletePost, setPostStatus } from "@/lib/blog.functions";
 import { formatBlogDate, type BlogPostSummary } from "@/lib/blog-types";
 import { cn } from "@/lib/utils";
@@ -129,7 +129,15 @@ function WorkspaceBlogs() {
               </span>
 
               {/* Actions */}
-              <div className="w-16 shrink-0 flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+              <div className="w-24 shrink-0 flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                <Link
+                  to="/admin/blog-stats/$postId"
+                  params={{ postId: post.id }}
+                  className="flex h-7 w-7 items-center justify-center rounded text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
+                  title="View analytics"
+                >
+                  <BarChart2 className="h-3.5 w-3.5" />
+                </Link>
                 <Link
                   to="/admin/blogs/$id"
                   params={{ id: post.id }}
