@@ -1,0 +1,556 @@
+# IMPLEMENTATION PROMPT
+
+# BLOG ENGAGEMENT API & EXTERNAL WEBSITE INTEGRATION
+
+## Objective
+
+Extend the existing Lunar CMS REST API to support **Blog Engagement Features** that can be consumed by any external website connected to Lunar CMS.
+
+This implementation should make Lunar CMS not only a Headless CMS, but also the central source of truth for blog engagement and interaction.
+
+The engagement features must be fully API-driven. External websites will render the UI (buttons, forms, counters, etc.), while Lunar CMS will securely store, process, and expose all engagement data.
+
+---
+
+# IMPORTANT
+
+The following systems already exist.
+
+* Authentication
+* Workspaces
+* API Keys
+* REST API
+* API Gateway
+* Content API
+* Blog Module
+* Permissions
+* API Documentation
+* API Explorer
+* Developer Portal
+
+Do **NOT** rebuild them.
+
+Inspect the existing architecture first and extend it.
+
+Do not duplicate functionality.
+
+---
+
+# CORE PRINCIPLE
+
+Lunar CMS owns the **data**, not the UI.
+
+The external website owns the **presentation**.
+
+Example
+
+```text
+Visitor
+
+↓
+
+External Website
+
+↓
+
+REST API
+
+↓
+
+Lunar CMS
+
+↓
+
+JSON Response
+
+↓
+
+External Website renders UI
+```
+
+No HTML should be returned by the API.
+
+No frontend components should be returned by the API.
+
+Only structured JSON.
+
+---
+
+# FEATURES TO IMPLEMENT
+
+Implement the following engagement modules.
+
+1. Likes
+2. Comments
+3. Social Share Metadata
+4. Blog View Tracking
+5. Related Posts
+6. Reading Statistics
+7. Optional "Powered by Lunar CMS"
+8. Feature Flags
+9. Analytics Dashboard Support
+
+Each feature must be fully database-backed and accessible through the REST API.
+
+---
+
+# MODULE 1 — LIKES
+
+Implement a complete Like system.
+
+Requirements
+
+* Like a blog
+* Remove like
+* Retrieve like count
+* Determine whether the current visitor has already liked the article
+* Prevent duplicate likes from the same visitor
+
+Support anonymous visitors and authenticated users.
+
+Implement a visitor identifier strategy (cookie, anonymous token, or another secure approach) to reduce duplicate likes without requiring user accounts.
+
+### API Endpoints
+
+```http
+POST   /v1/blogs/{slug}/likes
+DELETE /v1/blogs/{slug}/likes
+GET    /v1/blogs/{slug}/likes
+```
+
+Example response
+
+```json
+{
+  "likes": 154,
+  "liked": true
+}
+```
+
+---
+
+# MODULE 2 — COMMENTS
+
+Implement a complete commenting system.
+
+Features
+
+* Create comment
+* Reply to comment
+* Nested comments (configurable depth)
+* Edit (optional)
+* Delete (soft delete)
+* Moderation
+* Approval workflow
+* Spam detection hooks
+* Comment count
+
+Support
+
+* Guest comments
+* Optional authenticated comments
+* Future CAPTCHA integration
+
+### API Endpoints
+
+```http
+GET    /v1/blogs/{slug}/comments
+
+POST   /v1/blogs/{slug}/comments
+
+PUT    /v1/comments/{id}
+
+DELETE /v1/comments/{id}
+```
+
+Each comment should contain
+
+* Name
+* Email (not publicly exposed)
+* Website (optional)
+* Avatar (optional)
+* Content
+* Parent Comment
+* Status
+* Created Date
+
+---
+
+# ADMIN MODERATION
+
+Inside the CMS create
+
+```text
+Content
+
+↓
+
+Comments
+
+Pending
+
+Approved
+
+Rejected
+
+Spam
+
+Trash
+```
+
+Allow administrators to
+
+* Approve
+* Reject
+* Mark Spam
+* Restore
+* Delete
+
+No direct database edits should be required.
+
+---
+
+# MODULE 3 — SOCIAL SHARE
+
+Lunar CMS should generate sharing metadata.
+
+The API should return
+
+```json
+{
+  "share": {
+    "facebook": "...",
+    "linkedin": "...",
+    "x": "...",
+    "whatsapp": "...",
+    "email": "..."
+  }
+}
+```
+
+The external website is responsible for rendering the icons and opening the share URLs.
+
+Do not render UI inside the API.
+
+---
+
+# MODULE 4 — VIEW TRACKING
+
+Implement article view tracking.
+
+### Endpoint
+
+```http
+POST /v1/blogs/{slug}/view
+```
+
+Responsibilities
+
+* Increment views
+* Prevent rapid duplicate counts
+* Ignore obvious bot traffic where possible
+* Store timestamps
+* Store referrer when available
+* Store device type if available
+
+Expose
+
+```http
+GET /v1/blogs/{slug}/stats
+```
+
+Response
+
+```json
+{
+    "views":5230
+}
+```
+
+---
+
+# MODULE 5 — RELATED POSTS
+
+Automatically return related articles.
+
+Support
+
+* Same Category
+* Shared Tags
+* AI Similarity (future-ready)
+* Manual Relationships (future-ready)
+
+API
+
+```http
+GET /v1/blogs/{slug}/related
+```
+
+Also include related articles inside the blog response.
+
+Example
+
+```json
+{
+   "related":[]
+}
+```
+
+---
+
+# MODULE 6 — READING METADATA
+
+Generate
+
+* Reading Time
+* Word Count
+* Estimated Read Duration
+
+Expose
+
+```json
+{
+   "readingTime":8,
+   "wordCount":2145
+}
+```
+
+This should be calculated automatically whenever a blog is created or updated.
+
+---
+
+# MODULE 7 — POWERED BY LUNAR CMS
+
+Create an optional branding system.
+
+Workspace Setting
+
+```text
+Branding
+
+↓
+
+Show Powered by Lunar CMS
+```
+
+If enabled
+
+Return
+
+```json
+{
+    "branding":{
+        "enabled":true,
+        "text":"Powered by Lunar CMS",
+        "url":"https://lunarcms.com"
+    }
+}
+```
+
+If disabled
+
+Return
+
+```json
+{
+    "branding":{
+        "enabled":false
+    }
+}
+```
+
+The external website decides whether to render the footer link.
+
+---
+
+# MODULE 8 — FEATURE FLAGS
+
+The API should expose available features.
+
+Example
+
+```json
+{
+  "features": {
+    "likes": true,
+    "comments": true,
+    "socialShare": true,
+    "relatedPosts": true,
+    "poweredBy": true,
+    "viewTracking": true
+  }
+}
+```
+
+This allows external websites to dynamically render only the enabled functionality.
+
+Feature flags should be configurable per workspace.
+
+---
+
+# MODULE 9 — BLOG RESPONSE ENHANCEMENT
+
+Extend the existing Blog Detail endpoint.
+
+Instead of returning only the article content
+
+Return
+
+```json
+{
+    "blog":{},
+    "stats":{},
+    "features":{},
+    "branding":{},
+    "share":{},
+    "related":[]
+}
+```
+
+Do not break existing API consumers.
+
+Maintain backwards compatibility.
+
+---
+
+# MODULE 10 — ANALYTICS
+
+Store engagement metrics.
+
+Examples
+
+* Views
+* Likes
+* Comments
+* Shares (when reported by the client)
+* Daily activity
+* Weekly activity
+* Monthly activity
+
+These metrics should power future dashboards without requiring schema changes.
+
+---
+
+# MODULE 11 — DATABASE
+
+Review the existing schema before creating anything new.
+
+Create only the tables that are genuinely required.
+
+Examples may include
+
+* blog_likes
+* blog_comments
+* blog_views
+* blog_comment_replies (if not using self-referencing comments)
+* blog_engagement_daily (optional for analytics)
+
+Use proper foreign keys, indexes, timestamps, and workspace isolation.
+
+All engagement data must be scoped to the owning workspace.
+
+---
+
+# MODULE 12 — EDGE FUNCTIONS / API
+
+Inspect existing Edge Functions.
+
+Reuse them where appropriate.
+
+Create new Edge Functions only when needed.
+
+Possible responsibilities
+
+* Like Management
+* Comment Submission
+* Comment Moderation
+* View Tracking
+* Related Post Retrieval
+* Share Metadata Generation
+
+Keep functions modular and reusable.
+
+---
+
+# MODULE 13 — SECURITY
+
+Ensure
+
+* Workspace isolation
+* API Key authentication
+* Permission validation
+* Request validation
+* Input sanitization
+* XSS protection for comments
+* HTML sanitization where applicable
+* Spam prevention hooks
+* Duplicate like prevention
+* Duplicate view prevention
+* Proper error handling
+
+Do not expose internal identifiers unnecessarily.
+
+---
+
+# MODULE 14 — API DOCUMENTATION
+
+Update the Developer Documentation.
+
+Document every new endpoint.
+
+Include
+
+* Request
+* Response
+* Authentication
+* Error Codes
+* Example Payloads
+* Code Examples
+* API Explorer support
+
+The new endpoints must automatically appear in the existing Documentation Engine and API Explorer.
+
+---
+
+# MODULE 15 — PERFORMANCE
+
+Optimise for scale.
+
+* Index frequently queried columns.
+* Cache read-heavy endpoints where appropriate.
+* Invalidate caches intelligently when engagement data changes.
+* Avoid N+1 queries.
+* Paginate comments.
+* Minimise payload sizes.
+
+---
+
+# FINAL VERIFICATION
+
+Do not mark the implementation complete until the following have been verified.
+
+✓ Likes are fully functional via the REST API.
+
+✓ Comments support moderation and are available via the REST API.
+
+✓ Social sharing metadata is generated correctly.
+
+✓ View tracking records and exposes article views.
+
+✓ Related posts are returned automatically.
+
+✓ Reading time and word count are generated automatically.
+
+✓ "Powered by Lunar CMS" branding is configurable and exposed via the API.
+
+✓ Feature flags are returned for every blog.
+
+✓ Analytics data is stored for future dashboards.
+
+✓ Database schema is normalized and workspace-aware.
+
+✓ All endpoints use the existing API Gateway and authentication flow.
+
+✓ API documentation and API Explorer include the new endpoints.
+
+✓ Existing functionality has been reused and no duplicate architecture has been introduced.
