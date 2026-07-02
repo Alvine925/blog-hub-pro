@@ -4,13 +4,12 @@ import { queryOptions, useSuspenseQuery, useQueryClient } from "@tanstack/react-
 import { useState } from "react";
 import { toast } from "sonner";
 import { Plus, Trash2, Loader2, FolderOpen, ArrowRight, Globe, Clock } from "lucide-react";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { listWorkspaces, createWorkspace, deleteWorkspace, type Workspace } from "@/lib/workspace.functions";
+import { listWorkspaces, deleteWorkspace, type Workspace } from "@/lib/workspace.functions";
+import { CreateWorkspaceWizard } from "@/components/workspace/CreateWorkspaceWizard";
 
 const wsQuery = queryOptions({
   queryKey: ["admin", "workspaces"],
@@ -279,32 +278,14 @@ function WorkspaceCard({
 function WorkspacesPage() {
   const { data: workspaces } = useSuspenseQuery(wsQuery);
   const queryClient = useQueryClient();
-  const create = useServerFn(createWorkspace);
   const del = useServerFn(deleteWorkspace);
 
-  const [formOpen, setFormOpen] = useState(false);
-  const [name, setName] = useState("");
-  const [description, setDescription] = useState("");
+  const [wizardOpen, setWizardOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [pendingDelete, setPendingDelete] = useState<Workspace | null>(null);
 
   async function refresh() {
     await queryClient.invalidateQueries({ queryKey: ["admin", "workspaces"] });
-  }
-
-  async function handleCreate() {
-    if (!name.trim()) { toast.error("Enter a workspace name"); return; }
-    setBusy(true);
-    try {
-      await create({ data: { name: name.trim(), description: description.trim() || undefined } });
-      toast.success("Workspace created");
-      setName(""); setDescription(""); setFormOpen(false);
-      await refresh();
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed");
-    } finally {
-      setBusy(false);
-    }
   }
 
   async function handleDelete() {
@@ -335,61 +316,12 @@ function WorkspacesPage() {
         </div>
         <button
           type="button"
-          onClick={() => setFormOpen(true)}
+          onClick={() => setWizardOpen(true)}
           className="flex shrink-0 items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
         >
           <Plus className="h-3.5 w-3.5" /> New Workspace
         </button>
       </div>
-
-      {/* Inline create form */}
-      {formOpen && (
-        <div className="border-b border-border pb-6 space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-sm font-medium">New workspace</h2>
-            <button
-              type="button"
-              onClick={() => { setFormOpen(false); setName(""); setDescription(""); }}
-              className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-            >
-              Cancel
-            </button>
-          </div>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-1.5">
-              <Label htmlFor="ws-name">Name</Label>
-              <Input
-                id="ws-name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleCreate()}
-                placeholder="My Project"
-                autoFocus
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="ws-desc">
-                Description <span className="font-normal text-muted-foreground">(optional)</span>
-              </Label>
-              <Input
-                id="ws-desc"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="What this workspace is for"
-              />
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={handleCreate}
-            disabled={busy}
-            className="flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-60"
-          >
-            {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
-            Create Workspace
-          </button>
-        </div>
-      )}
 
       {/* Grid or empty state */}
       {workspaces.length === 0 ? (
@@ -399,7 +331,7 @@ function WorkspacesPage() {
           <p className="text-xs text-muted-foreground">Create your first workspace to get started.</p>
           <button
             type="button"
-            onClick={() => setFormOpen(true)}
+            onClick={() => setWizardOpen(true)}
             className="mt-1 flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
           >
             <Plus className="h-3.5 w-3.5" /> Create Workspace
@@ -418,7 +350,7 @@ function WorkspacesPage() {
           {/* "Add workspace" ghost card */}
           <button
             type="button"
-            onClick={() => setFormOpen(true)}
+            onClick={() => setWizardOpen(true)}
             className="group flex flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed border-border/60 py-16 text-muted-foreground/40 transition-all duration-200 hover:border-primary/40 hover:text-primary/60 hover:bg-primary/[0.02]"
           >
             <div className="flex h-12 w-12 items-center justify-center rounded-xl border-2 border-dashed border-current transition-all group-hover:scale-110">
@@ -427,6 +359,13 @@ function WorkspacesPage() {
             <span className="text-xs font-medium">New Workspace</span>
           </button>
         </div>
+      )}
+
+      {/* Workspace creation wizard */}
+      {wizardOpen && (
+        <CreateWorkspaceWizard
+          onClose={() => { setWizardOpen(false); refresh(); }}
+        />
       )}
 
       {/* Delete confirmation */}
