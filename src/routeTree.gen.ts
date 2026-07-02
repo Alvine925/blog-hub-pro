@@ -31,6 +31,7 @@ import { Route as AdminSettingsRouteImport } from './routes/admin.settings'
 import { Route as AdminSearchRouteImport } from './routes/admin.search'
 import { Route as AdminNotificationsRouteImport } from './routes/admin.notifications'
 import { Route as AdminMediaRouteImport } from './routes/admin.media'
+import { Route as AdminIntegrationCenterRouteImport } from './routes/admin.integration-center'
 import { Route as AdminDashboardRouteImport } from './routes/admin.dashboard'
 import { Route as AdminCollectionsRouteImport } from './routes/admin.collections'
 import { Route as AdminBillingRouteImport } from './routes/admin.billing'
@@ -169,6 +170,11 @@ const AdminNotificationsRoute = AdminNotificationsRouteImport.update({
 const AdminMediaRoute = AdminMediaRouteImport.update({
   id: '/media',
   path: '/media',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminIntegrationCenterRoute = AdminIntegrationCenterRouteImport.update({
+  id: '/integration-center',
+  path: '/integration-center',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminDashboardRoute = AdminDashboardRouteImport.update({
@@ -341,6 +347,7 @@ export interface FileRoutesByFullPath {
   '/admin/billing': typeof AdminBillingRoute
   '/admin/collections': typeof AdminCollectionsRouteWithChildren
   '/admin/dashboard': typeof AdminDashboardRoute
+  '/admin/integration-center': typeof AdminIntegrationCenterRoute
   '/admin/media': typeof AdminMediaRoute
   '/admin/notifications': typeof AdminNotificationsRoute
   '/admin/search': typeof AdminSearchRoute
@@ -392,6 +399,7 @@ export interface FileRoutesByTo {
   '/admin/billing': typeof AdminBillingRoute
   '/admin/collections': typeof AdminCollectionsRouteWithChildren
   '/admin/dashboard': typeof AdminDashboardRoute
+  '/admin/integration-center': typeof AdminIntegrationCenterRoute
   '/admin/media': typeof AdminMediaRoute
   '/admin/notifications': typeof AdminNotificationsRoute
   '/admin/search': typeof AdminSearchRoute
@@ -445,6 +453,7 @@ export interface FileRoutesById {
   '/admin/billing': typeof AdminBillingRoute
   '/admin/collections': typeof AdminCollectionsRouteWithChildren
   '/admin/dashboard': typeof AdminDashboardRoute
+  '/admin/integration-center': typeof AdminIntegrationCenterRoute
   '/admin/media': typeof AdminMediaRoute
   '/admin/notifications': typeof AdminNotificationsRoute
   '/admin/search': typeof AdminSearchRoute
@@ -500,6 +509,7 @@ export interface FileRouteTypes {
     | '/admin/billing'
     | '/admin/collections'
     | '/admin/dashboard'
+    | '/admin/integration-center'
     | '/admin/media'
     | '/admin/notifications'
     | '/admin/search'
@@ -551,6 +561,7 @@ export interface FileRouteTypes {
     | '/admin/billing'
     | '/admin/collections'
     | '/admin/dashboard'
+    | '/admin/integration-center'
     | '/admin/media'
     | '/admin/notifications'
     | '/admin/search'
@@ -603,6 +614,7 @@ export interface FileRouteTypes {
     | '/admin/billing'
     | '/admin/collections'
     | '/admin/dashboard'
+    | '/admin/integration-center'
     | '/admin/media'
     | '/admin/notifications'
     | '/admin/search'
@@ -807,6 +819,13 @@ declare module '@tanstack/react-router' {
       path: '/media'
       fullPath: '/admin/media'
       preLoaderRoute: typeof AdminMediaRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/integration-center': {
+      id: '/admin/integration-center'
+      path: '/integration-center'
+      fullPath: '/admin/integration-center'
+      preLoaderRoute: typeof AdminIntegrationCenterRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/dashboard': {
@@ -1088,6 +1107,7 @@ interface AdminRouteChildren {
   AdminBillingRoute: typeof AdminBillingRoute
   AdminCollectionsRoute: typeof AdminCollectionsRouteWithChildren
   AdminDashboardRoute: typeof AdminDashboardRoute
+  AdminIntegrationCenterRoute: typeof AdminIntegrationCenterRoute
   AdminMediaRoute: typeof AdminMediaRoute
   AdminNotificationsRoute: typeof AdminNotificationsRoute
   AdminSearchRoute: typeof AdminSearchRoute
@@ -1111,6 +1131,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminBillingRoute: AdminBillingRoute,
   AdminCollectionsRoute: AdminCollectionsRouteWithChildren,
   AdminDashboardRoute: AdminDashboardRoute,
+  AdminIntegrationCenterRoute: AdminIntegrationCenterRoute,
   AdminMediaRoute: AdminMediaRoute,
   AdminNotificationsRoute: AdminNotificationsRoute,
   AdminSearchRoute: AdminSearchRoute,
