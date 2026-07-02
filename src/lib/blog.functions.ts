@@ -131,13 +131,31 @@ export const adminListPosts = createServerFn({ method: "GET" }).handler(
     const { getAdminClient } = await import("./supabase.server");
     const supabase = await getAdminClient();
 
+    // Try with workspace join first (requires migration 20260702000020 to be applied).
+    // Fall back to plain query if the FK doesn't exist yet.
     const { data: rows, error } = await supabase
       .from("blog_posts")
       .select(SUMMARY_COLUMNS + ", workspace_id, workspace:workspaces(name)")
       .order("updated_at", { ascending: false })
       .limit(500);
 
-    if (error) throw new Error(error.message);
+    if (error) {
+      // FK not yet in place — fall back without workspace join
+      if (error.message.includes("relationship") || error.message.includes("schema cache")) {
+        const { data: fallback, error: fallbackError } = await supabase
+          .from("blog_posts")
+          .select(SUMMARY_COLUMNS)
+          .order("updated_at", { ascending: false })
+          .limit(500);
+        if (fallbackError) throw new Error(fallbackError.message);
+        return (fallback ?? []).map((r) => ({
+          ...(r as BlogPostSummary),
+          tags: normalizeTags((r as { tags: unknown }).tags),
+        }));
+      }
+      throw new Error(error.message);
+    }
+
     return (rows ?? []).map((r) => ({
       ...(r as BlogPostSummary),
       tags: normalizeTags((r as { tags: unknown }).tags),
