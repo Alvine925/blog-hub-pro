@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { createServerFn } from "@tanstack/react-start";
 import { queryOptions, useSuspenseQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
@@ -13,13 +14,59 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
+// ── Auto-seed collections from workspace.selected_collections ─────────────────
+// Handles existing workspaces created before onboarding seeded the collections table.
+const COLLECTION_META: Record<string, { label: string; description: string }> = {
+  blogs:          { label: "Blog Posts",    description: "Articles, news, and updates" },
+  pages:          { label: "Pages",         description: "Static website pages" },
+  media:          { label: "Media Library", description: "Images and file uploads" },
+  documentation:  { label: "Documentation", description: "Technical docs and guides" },
+  products:       { label: "Products",      description: "Product catalogue" },
+  faqs:           { label: "FAQs",          description: "Frequently asked questions" },
+  "case-studies": { label: "Case Studies",  description: "Client success stories" },
+  testimonials:   { label: "Testimonials",  description: "Customer reviews" },
+  team:           { label: "Team Members",  description: "Staff profiles" },
+  events:         { label: "Events",        description: "Upcoming events" },
+  portfolio:      { label: "Portfolio",     description: "Work showcase" },
+  services:       { label: "Services",      description: "Service offerings" },
+};
+
+const seedCollectionsFromWorkspace = createServerFn({ method: "POST" })
+  .validator((input: { workspaceId: string }) => input)
+  .handler(async ({ data }) => {
+    const { getAdminClient } = await import("@/lib/supabase.server");
+    const db = getAdminClient() as any;
+
+    // Fetch selected_collections from workspace
+    const { data: ws } = await db
+      .from("workspaces")
+      .select("selected_collections")
+      .eq("id", data.workspaceId)
+      .single();
+
+    const selected: string[] = ws?.selected_collections ?? [];
+    if (!selected.length) return { seeded: 0 };
+
+    const rows = selected.map((slug: string) => {
+      const meta = COLLECTION_META[slug] ?? { label: slug, description: null };
+      return { name: meta.label, slug, description: meta.description, schema: [] };
+    });
+
+    await db.from("collections").upsert(rows, { onConflict: "slug", ignoreDuplicates: true });
+    return { seeded: rows.length };
+  });
+
 const listQuery = queryOptions({
   queryKey: ["admin", "collections"],
   queryFn: () => listCollections(),
 });
 
 export const Route = createFileRoute("/admin/workspaces/$id/collections")({
-  loader: ({ context }) => context.queryClient.ensureQueryData(listQuery),
+  loader: async ({ context, params }) => {
+    // Backfill any selected content types that aren't in the collections table yet
+    await seedCollectionsFromWorkspace({ data: { workspaceId: params.id } });
+    return context.queryClient.ensureQueryData(listQuery);
+  },
   component: WorkspaceCollections,
   errorComponent: ({ error }) => <p className="p-8 text-sm text-red-600">{error.message}</p>,
 });

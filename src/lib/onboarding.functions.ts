@@ -285,6 +285,40 @@ export const createOnboardingWorkspace = createServerFn({ method: "POST" })
       );
     }
 
+    // ── Upsert collections rows for each selected content type ────────────────
+    // The collections table holds global schemas; onboarding selections seed it.
+    const COLLECTION_META: Record<string, { label: string; description: string }> = {
+      blogs:          { label: "Blog Posts",     description: "Articles, news, and updates" },
+      pages:          { label: "Pages",          description: "Static website pages" },
+      media:          { label: "Media Library",  description: "Images and file uploads" },
+      documentation:  { label: "Documentation",  description: "Technical docs and guides" },
+      products:       { label: "Products",       description: "Product catalogue" },
+      faqs:           { label: "FAQs",           description: "Frequently asked questions" },
+      "case-studies": { label: "Case Studies",   description: "Client success stories" },
+      testimonials:   { label: "Testimonials",   description: "Customer reviews" },
+      team:           { label: "Team Members",   description: "Staff profiles" },
+      events:         { label: "Events",         description: "Upcoming events" },
+      portfolio:      { label: "Portfolio",      description: "Work showcase" },
+      services:       { label: "Services",       description: "Service offerings" },
+    };
+
+    if (data.selectedCollections?.length) {
+      const collectionRows = data.selectedCollections.map((slug: string) => {
+        const meta = COLLECTION_META[slug] ?? { label: slug, description: null };
+        return {
+          name:        meta.label,
+          slug,
+          description: meta.description,
+          schema:      [],
+        };
+      });
+      // ignoreDuplicates: true — safe to re-run if workspace is recreated
+      await db.from("collections").upsert(collectionRows, {
+        onConflict:       "slug",
+        ignoreDuplicates: true,
+      });
+    }
+
     return { workspaceId };
   });
 

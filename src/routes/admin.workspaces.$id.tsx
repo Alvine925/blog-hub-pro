@@ -133,10 +133,13 @@ function WorkspaceSidebar({ workspace }: { workspace: Workspace }) {
   const gradient  = wsGradient(workspace.name);
 
   // Derive workspace icon: scraped logo → Google favicon → gradient initials
-  const ws = workspace as any;
-  const logoUrl: string | null = ws.ai_context?.logoUrl ?? null;
-  const faviconUrl: string | null = ws.website_url
-    ? `https://www.google.com/s2/favicons?domain=${(() => { try { return new URL(ws.website_url).hostname; } catch { return ws.website_url; } })()}&sz=64`
+  const logoUrl: string | null = workspace.ai_context?.logoUrl ?? null;
+  const faviconDomain = (() => {
+    try { return workspace.website_url ? new URL(workspace.website_url).hostname : null; }
+    catch { return workspace.website_url ?? null; }
+  })();
+  const faviconUrl: string | null = faviconDomain
+    ? `https://www.google.com/s2/favicons?domain=${faviconDomain}&sz=64`
     : null;
 
   function isActive(to: string) {

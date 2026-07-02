@@ -8,6 +8,27 @@ export interface Workspace {
   description: string | null;
   created_at: string;
   updated_at: string;
+  // Onboarding-populated fields
+  website_url?: string | null;
+  industry?: string | null;
+  target_audience?: string | null;
+  business_model?: string | null;
+  brand_voice?: string | null;
+  language?: string | null;
+  location?: string | null;
+  social_links?: Record<string, string> | null;
+  content_pillars?: string[] | null;
+  selected_collections?: string[] | null;
+  ai_context?: {
+    brandSummary?: string;
+    primaryTopics?: string[];
+    services?: string[];
+    products?: string[];
+    suggestedCategories?: string[];
+    suggestedTags?: string[];
+    logoUrl?: string | null;
+    siteImages?: string[];
+  } | null;
 }
 
 function slugify(s: string): string {
