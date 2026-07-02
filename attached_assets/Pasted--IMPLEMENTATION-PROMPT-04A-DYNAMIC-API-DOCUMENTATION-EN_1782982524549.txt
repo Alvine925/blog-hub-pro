@@ -1,0 +1,639 @@
+# IMPLEMENTATION PROMPT 04A
+
+# DYNAMIC API DOCUMENTATION ENGINE
+
+## Objective
+
+Implement a **Developer Documentation Engine** that automatically generates beautiful, interactive API documentation for every workspace.
+
+This documentation should be similar in quality to:
+
+* Stripe
+* Supabase
+* Clerk
+* Resend
+* Vercel
+* Notion API
+
+The documentation must update automatically whenever new REST endpoints are added.
+
+No endpoint documentation should be hardcoded.
+
+---
+
+# Existing Functionality
+
+The following already exists.
+
+DO NOT rebuild.
+
+* Authentication
+* Workspace
+* REST API
+* API Keys
+* API Gateway
+* Content Endpoints
+* Integration Center
+* Prompt Generator
+* Existing Dashboard
+
+Reuse all existing services.
+
+---
+
+# Goal
+
+Every workspace should have its own documentation.
+
+Example
+
+```text
+Workspace
+
+↓
+
+Developer
+
+↓
+
+Documentation
+
+↓
+
+Overview
+
+Authentication
+
+API Keys
+
+Endpoints
+
+Examples
+
+Errors
+
+Rate Limits
+
+AI Integration Prompts
+
+API Explorer
+```
+
+Everything should be generated automatically.
+
+---
+
+# Documentation Engine
+
+Create
+
+```text
+DocumentationService.ts
+```
+
+Responsibilities
+
+* Discover available endpoints.
+* Read endpoint metadata.
+* Generate documentation.
+* Generate request examples.
+* Generate response examples.
+* Generate code examples.
+* Generate AI prompts.
+* Keep documentation synchronized with API versions.
+
+---
+
+# Endpoint Registry
+
+Create
+
+```text
+EndpointRegistry.ts
+```
+
+Purpose
+
+Every REST endpoint should register itself.
+
+Example
+
+```typescript
+{
+    path:"/v1/blogs",
+    method:"GET",
+    description:"Retrieve published blogs.",
+    authentication:true,
+    pagination:true,
+    search:true,
+    filters:[
+        "category",
+        "tag",
+        "author"
+    ]
+}
+```
+
+The documentation engine should read from this registry.
+
+Never hardcode endpoint documentation.
+
+---
+
+# Documentation Navigation
+
+Generate
+
+```text
+Getting Started
+
+Authentication
+
+API Keys
+
+Making Your First Request
+
+REST Endpoints
+
+Pagination
+
+Filtering
+
+Search
+
+Errors
+
+Rate Limits
+
+Code Examples
+
+Framework Integrations
+
+AI Prompts
+
+API Explorer
+
+Changelog
+```
+
+---
+
+# Getting Started
+
+Automatically generate
+
+Overview
+
+Features
+
+Base URL
+
+Authentication Method
+
+Example Request
+
+Example Response
+
+Supported Formats
+
+---
+
+# Authentication Documentation
+
+Automatically explain
+
+Publishable Keys
+
+Secret Keys
+
+Bearer Authentication
+
+Example
+
+```http
+GET /v1/blogs
+
+Authorization:
+Bearer YOUR_API_KEY
+```
+
+Explain
+
+Workspace IDs are never required.
+
+Collection IDs are never required.
+
+The API Key resolves everything automatically.
+
+---
+
+# Base URL
+
+Automatically generate
+
+```text
+https://api.yourdomain.com/v1
+```
+
+If API version changes
+
+Documentation updates automatically.
+
+---
+
+# Endpoint Pages
+
+Every endpoint should have its own documentation page.
+
+Example
+
+```text
+GET /blogs
+
+Overview
+
+Authentication
+
+Query Parameters
+
+Request Example
+
+Response Example
+
+Possible Errors
+
+Code Samples
+
+Try It
+
+AI Prompt
+```
+
+---
+
+# Query Parameter Documentation
+
+Automatically list
+
+Parameter
+
+Type
+
+Required
+
+Default
+
+Description
+
+Example
+
+Example
+
+```text
+page
+
+integer
+
+No
+
+1
+
+Current page number.
+```
+
+Do not manually maintain parameter documentation.
+
+Generate it from endpoint metadata.
+
+---
+
+# Response Documentation
+
+Generate real response examples.
+
+Example
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "title":"Example Blog",
+      "slug":"example-blog",
+      "excerpt":"..."
+    }
+  ],
+  "meta":{
+      "page":1,
+      "totalPages":5
+  }
+}
+```
+
+Response examples should match actual API contracts.
+
+---
+
+# Error Documentation
+
+Automatically document
+
+400
+
+401
+
+403
+
+404
+
+429
+
+500
+
+Each error should include
+
+Description
+
+Example Response
+
+Resolution
+
+---
+
+# Pagination Documentation
+
+Automatically explain
+
+page
+
+limit
+
+totalPages
+
+totalItems
+
+Example URLs
+
+```text
+/blogs?page=2
+
+/blogs?page=3&limit=20
+```
+
+---
+
+# Filtering Documentation
+
+Generate documentation for every supported filter.
+
+Example
+
+```text
+category
+
+author
+
+featured
+
+tag
+
+created_after
+
+created_before
+```
+
+Only show filters supported by the endpoint.
+
+---
+
+# Search Documentation
+
+Automatically explain
+
+```text
+?q=marketing
+```
+
+Include
+
+Example
+
+Supported Endpoints
+
+Expected Response
+
+---
+
+# Versioning
+
+Support
+
+```text
+v1
+
+v2
+
+v3
+```
+
+Each version should have its own documentation.
+
+Users should be able to switch versions.
+
+---
+
+# Changelog
+
+Automatically generate
+
+Added Endpoints
+
+Updated Endpoints
+
+Deprecated Endpoints
+
+Breaking Changes
+
+Release Date
+
+---
+
+# Code Example Generator
+
+Every endpoint should include
+
+Copy buttons.
+
+Supported languages
+
+JavaScript
+
+TypeScript
+
+Python
+
+PHP
+
+Node.js
+
+cURL
+
+Go
+
+C#
+
+Only generate languages enabled in system settings.
+
+---
+
+# AI Prompt Section
+
+Every endpoint should include
+
+Generate AI Prompt
+
+Example
+
+```text
+Generate Cursor Prompt
+
+Generate Loveable Prompt
+
+Generate Windsurf Prompt
+
+Generate Bolt Prompt
+```
+
+These buttons should use the existing Prompt Generator.
+
+Do not duplicate prompt logic.
+
+---
+
+# Search Documentation
+
+Allow users to search documentation.
+
+Search should index
+
+Endpoints
+
+Parameters
+
+Errors
+
+Examples
+
+Authentication
+
+Framework Guides
+
+AI Prompts
+
+---
+
+# Favorites
+
+Allow users to
+
+Bookmark endpoints.
+
+Bookmarks are stored per workspace.
+
+---
+
+# Recently Viewed
+
+Store
+
+Last Viewed Endpoints.
+
+Show inside Documentation homepage.
+
+---
+
+# Responsive Design
+
+Documentation should work on
+
+Desktop
+
+Tablet
+
+Mobile
+
+---
+
+# Performance
+
+Cache generated documentation.
+
+Invalidate cache automatically when
+
+Endpoints change.
+
+API version changes.
+
+Documentation templates change.
+
+---
+
+# Files To Create
+
+```text
+DocumentationService.ts
+
+EndpointRegistry.ts
+
+DocumentationRenderer.ts
+
+ExampleGenerator.ts
+
+ParameterParser.ts
+
+DocumentationSearch.ts
+```
+
+---
+
+# Files To Update
+
+Reuse existing
+
+Developer Navigation
+
+Routing
+
+Theme
+
+Authentication
+
+API Services
+
+---
+
+# Acceptance Criteria
+
+Implementation is complete when
+
+✓ Documentation is generated automatically.
+
+✓ Endpoints never require manual documentation.
+
+✓ Every endpoint has request examples.
+
+✓ Every endpoint has response examples.
+
+✓ Errors are documented.
+
+✓ Authentication documentation updates automatically.
+
+✓ AI Prompt buttons use the existing Prompt Generator.
+
+✓ Documentation supports multiple API versions.
+
+✓ Documentation is searchable.
+
+✓ Documentation is fully responsive.
+
+✓ Documentation updates automatically as the REST API evolves.
