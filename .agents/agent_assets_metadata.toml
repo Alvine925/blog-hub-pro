@@ -1,0 +1,8 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "gsMDs4ZtDTdOV9ptuw1Vf"
+uri = "file://DEMO_BLOG_PROMPT.md"
+type = "text"
+title = "Demo Blog Prompt (External CMS Consumer)"

@@ -20,14 +20,15 @@
  *   GET /search?q=...               — unified search across all content types
  *
  * Auth: Bearer API key (pk_live_* or sk_live_*)
+ *
+ * Every request passes through the shared middleware pipeline:
+ *   OPTIONS → method guard → auth → rate-limit → route → transform → respond
  */
 
-import { validateApiKey }  from "../_shared/auth.ts";
-import { checkRateLimit }  from "../_shared/rate_limit.ts";
-import { hasPermission }   from "../_shared/permissions.ts";
-import { logRequest }      from "../_shared/logger.ts";
-import { ok, fail, cors, CORS_HEADERS } from "../_shared/response.ts";
-import { ERRORS }          from "../_shared/errors.ts";
+import { runPipeline, finalize } from "../_shared/pipeline.ts";
+import { hasPermission }         from "../_shared/permissions.ts";
+import { ok, fail, buildPaginationLinks } from "../_shared/response.ts";
+import { ERRORS }                from "../_shared/errors.ts";
 
 import { listBlogs, getBlogBySlug, getRelatedBlogs, getFeaturedBlogs, getLatestBlogs } from "./services/BlogService.ts";
 import { listPages, getPageBySlug } from "./services/PageService.ts";
@@ -37,7 +38,7 @@ import { listCategories } from "./services/CategoryService.ts";
 import { listTags } from "./services/TagService.ts";
 import { search } from "./services/SearchService.ts";
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
+// ── Helpers ────────────────────────────────────────────────────────────────────
 
 function segments(url: URL): string[] {
   const parts = url.pathname.split("/").filter(Boolean);
@@ -65,7 +66,6 @@ function boolParam(url: URL, key: string): boolean | undefined {
 function dateParam(url: URL, key: string): string | undefined {
   const v = url.searchParams.get(key);
   if (!v) return undefined;
-  // Basic ISO date validation
   return /^\d{4}-\d{2}-\d{2}/.test(v) ? v : undefined;
 }
 
@@ -84,56 +84,27 @@ function cached(res: Response): Response {
   return res;
 }
 
-// ── Main handler ──────────────────────────────────────────────────────────────
+// ── Main handler ───────────────────────────────────────────────────────────────
 
 Deno.serve(async (req: Request) => {
-  if (req.method === "OPTIONS") return cors();
-  if (req.method !== "GET") {
-    return fail(ERRORS.METHOD_NOT_ALLOWED.code, ERRORS.METHOD_NOT_ALLOWED.message, 405);
-  }
+  // ── Shared pipeline: OPTIONS / method guard / auth / rate-limit ─────────────
+  const pipeline = await runPipeline(req, "content-router");
+  if (!pipeline.ok) return pipeline.response;
 
-  const start = Date.now();
-  const url   = new URL(req.url);
-  const segs  = segments(url);
-  const path  = "/" + segs.join("/");
-  const ip    = req.headers.get("x-forwarded-for")?.split(",")[0].trim() ?? null;
-  const ua    = req.headers.get("user-agent") ?? null;
+  const { ctx } = pipeline;
+  const { keyContext: context } = ctx;
 
-  function log(workspaceId: string | null, keyId: string | null, status: number, error: string | null = null) {
-    logRequest({
-      workspaceId, apiKeyId: keyId, method: req.method,
-      path, statusCode: status, durationMs: Date.now() - start,
-      ipAddress: ip, userAgent: ua, error,
-    });
-  }
+  const url  = new URL(req.url);
+  const segs = segments(url);
+  const ws   = context.workspaceId;
+  const kt   = context.keyType;
 
-  // ── 1. Authenticate ────────────────────────────────────────────────────────
-  const auth = await validateApiKey(req.headers.get("authorization"));
-  if (!auth.ok) {
-    log(null, null, 401, auth.error);
-    return fail(ERRORS.INVALID_KEY.code, ERRORS.INVALID_KEY.message, 401);
-  }
-  const { context } = auth;
-
-  // ── 2. Rate limit ──────────────────────────────────────────────────────────
-  const rate = await checkRateLimit(context.keyId, context.workspaceId);
-  if (!rate.allowed) {
-    log(context.workspaceId, context.keyId, 429, "Rate limit exceeded");
-    const res = fail(ERRORS.RATE_LIMITED.code, ERRORS.RATE_LIMITED.message, 429);
-    res.headers.set("X-RateLimit-Limit", String(rate.limit));
-    res.headers.set("X-RateLimit-Remaining", "0");
-    res.headers.set("X-RateLimit-Reset", rate.resetAt);
-    return res;
-  }
-
-  const ws  = context.workspaceId;
-  const kt  = context.keyType;
   let response: Response;
 
   try {
     const resource = segs[0] ?? "";
 
-    // ── GET /blogs/* ─────────────────────────────────────────────────────────
+    // ── GET /blogs/* ───────────────────────────────────────────────────────────
     if (resource === "blogs") {
       if (!hasPermission(context.permissions, "read:blogs")) {
         response = fail(ERRORS.FORBIDDEN.code, ERRORS.FORBIDDEN.message, 403);
@@ -183,13 +154,12 @@ Deno.serve(async (req: Request) => {
           status:   strParam(url, "status"),
           keyType:  kt,
         });
-        response = cached(ok(rows, {
-          page, limit, total,
-          totalPages: Math.ceil(total / limit),
-        }));
+        const totalPages = Math.ceil(total / limit);
+        const links = buildPaginationLinks(req.url, page, totalPages);
+        response = cached(ok(rows, { page, limit, total, totalPages }, 200, links));
       }
 
-    // ── GET /pages/* ─────────────────────────────────────────────────────────
+    // ── GET /pages/* ───────────────────────────────────────────────────────────
     } else if (resource === "pages") {
       if (!hasPermission(context.permissions, "read:pages")) {
         response = fail(ERRORS.FORBIDDEN.code, ERRORS.FORBIDDEN.message, 403);
@@ -208,13 +178,12 @@ Deno.serve(async (req: Request) => {
         const page  = intParam(url, "page", 1, 1, 10_000);
         const limit = intParam(url, "limit", 20, 1, 100);
         const { rows, total } = await listPages(ws, { page, limit });
-        response = cached(ok(rows, {
-          page, limit, total,
-          totalPages: Math.ceil(total / limit),
-        }));
+        const totalPages = Math.ceil(total / limit);
+        const links = buildPaginationLinks(req.url, page, totalPages);
+        response = cached(ok(rows, { page, limit, total, totalPages }, 200, links));
       }
 
-    // ── GET /collections/* ───────────────────────────────────────────────────
+    // ── GET /collections/* ─────────────────────────────────────────────────────
     } else if (resource === "collections") {
       if (!hasPermission(context.permissions, "read:collections")) {
         response = fail(ERRORS.FORBIDDEN.code, ERRORS.FORBIDDEN.message, 403);
@@ -227,12 +196,14 @@ Deno.serve(async (req: Request) => {
         if (!result) {
           response = fail(ERRORS.NOT_FOUND.code, ERRORS.NOT_FOUND.message, 404);
         } else {
+          const totalPages = Math.ceil(result.total / limit);
+          const links = buildPaginationLinks(req.url, page, totalPages);
           response = cached(ok(result.rows, {
             page, limit,
             total: result.total,
-            totalPages: Math.ceil(result.total / limit),
+            totalPages,
             collection: result.collection,
-          }));
+          }, 200, links));
         }
 
       } else {
@@ -240,53 +211,50 @@ Deno.serve(async (req: Request) => {
         const page  = intParam(url, "page", 1, 1, 10_000);
         const limit = intParam(url, "limit", 20, 1, 100);
         const { rows, total } = await listCollections(ws, { page, limit });
-        response = cached(ok(rows, {
-          page, limit, total,
-          totalPages: Math.ceil(total / limit),
-        }));
+        const totalPages = Math.ceil(total / limit);
+        const links = buildPaginationLinks(req.url, page, totalPages);
+        response = cached(ok(rows, { page, limit, total, totalPages }, 200, links));
       }
 
-    // ── GET /categories ──────────────────────────────────────────────────────
+    // ── GET /categories ────────────────────────────────────────────────────────
     } else if (resource === "categories") {
       if (!hasPermission(context.permissions, "read:blogs")) {
         response = fail(ERRORS.FORBIDDEN.code, ERRORS.FORBIDDEN.message, 403);
       } else {
-        const page  = intParam(url, "page", 1, 1, 10_000);
-        const limit = intParam(url, "limit", 20, 1, 100);
+        const page    = intParam(url, "page", 1, 1, 10_000);
+        const limit   = intParam(url, "limit", 20, 1, 100);
         const rawSort = url.searchParams.get("sort") ?? "name";
-        const sort = rawSort === "post_count" ? "post_count" : "name";
+        const sort    = rawSort === "post_count" ? "post_count" : "name";
         const { rows, total } = await listCategories(ws, {
           page, limit, sort,
           order:  orderParam(url),
           search: strParam(url, "search"),
         });
-        response = cached(ok(rows, {
-          page, limit, total,
-          totalPages: Math.ceil(total / limit),
-        }));
+        const totalPages = Math.ceil(total / limit);
+        const links = buildPaginationLinks(req.url, page, totalPages);
+        response = cached(ok(rows, { page, limit, total, totalPages }, 200, links));
       }
 
-    // ── GET /tags ────────────────────────────────────────────────────────────
+    // ── GET /tags ──────────────────────────────────────────────────────────────
     } else if (resource === "tags") {
       if (!hasPermission(context.permissions, "read:blogs")) {
         response = fail(ERRORS.FORBIDDEN.code, ERRORS.FORBIDDEN.message, 403);
       } else {
-        const page  = intParam(url, "page", 1, 1, 10_000);
-        const limit = intParam(url, "limit", 20, 1, 100);
+        const page    = intParam(url, "page", 1, 1, 10_000);
+        const limit   = intParam(url, "limit", 20, 1, 100);
         const rawSort = url.searchParams.get("sort") ?? "name";
-        const sort = rawSort === "post_count" ? "post_count" : "name";
+        const sort    = rawSort === "post_count" ? "post_count" : "name";
         const { rows, total } = await listTags(ws, {
           page, limit, sort,
           order:  orderParam(url),
           search: strParam(url, "search"),
         });
-        response = cached(ok(rows, {
-          page, limit, total,
-          totalPages: Math.ceil(total / limit),
-        }));
+        const totalPages = Math.ceil(total / limit);
+        const links = buildPaginationLinks(req.url, page, totalPages);
+        response = cached(ok(rows, { page, limit, total, totalPages }, 200, links));
       }
 
-    // ── GET /media ───────────────────────────────────────────────────────────
+    // ── GET /media ─────────────────────────────────────────────────────────────
     } else if (resource === "media") {
       if (!hasPermission(context.permissions, "read:media")) {
         response = fail(ERRORS.FORBIDDEN.code, ERRORS.FORBIDDEN.message, 403);
@@ -301,29 +269,30 @@ Deno.serve(async (req: Request) => {
           mime_type: strParam(url, "mime_type"),
           search:    strParam(url, "search"),
         });
-        response = cached(ok(rows, {
-          page, limit, total,
-          totalPages: Math.ceil(total / limit),
-        }));
+        const totalPages = Math.ceil(total / limit);
+        const links = buildPaginationLinks(req.url, page, totalPages);
+        response = cached(ok(rows, { page, limit, total, totalPages }, 200, links));
       }
 
-    // ── GET /search ──────────────────────────────────────────────────────────
+    // ── GET /search ────────────────────────────────────────────────────────────
     } else if (resource === "search") {
       const q = strParam(url, "q") ?? "";
       if (!q) {
-        response = fail("INVALID_QUERY", "The `q` parameter is required for search.", 400);
+        response = fail(
+          ERRORS.BAD_REQUEST.code,
+          "The `q` parameter is required for search.",
+          400,
+        );
       } else {
         const page  = intParam(url, "page", 1, 1, 10_000);
         const limit = intParam(url, "limit", 20, 1, 100);
         const { rows, total, query } = await search(ws, { q, page, limit });
-        response = cached(ok(rows, {
-          page, limit, total,
-          totalPages: Math.ceil(total / limit),
-          query,
-        }));
+        const totalPages = Math.ceil(total / limit);
+        const links = buildPaginationLinks(req.url, page, totalPages);
+        response = cached(ok(rows, { page, limit, total, totalPages, query }, 200, links));
       }
 
-    // ── Unknown resource ─────────────────────────────────────────────────────
+    // ── Unknown resource ───────────────────────────────────────────────────────
     } else {
       response = fail(
         ERRORS.NOT_FOUND.code,
@@ -332,15 +301,8 @@ Deno.serve(async (req: Request) => {
       );
     }
   } catch (_err) {
-    log(context.workspaceId, context.keyId, 500, "Server error");
-    return fail(ERRORS.SERVER_ERROR.code, ERRORS.SERVER_ERROR.message, 500);
+    response = fail(ERRORS.SERVER_ERROR.code, ERRORS.SERVER_ERROR.message, 500);
   }
 
-  // Rate limit headers on every response
-  response.headers.set("X-RateLimit-Limit", String(rate.limit));
-  response.headers.set("X-RateLimit-Remaining", String(rate.remaining));
-  response.headers.set("X-RateLimit-Reset", rate.resetAt);
-
-  log(context.workspaceId, context.keyId, response.status);
-  return response;
+  return finalize(response, ctx);
 });

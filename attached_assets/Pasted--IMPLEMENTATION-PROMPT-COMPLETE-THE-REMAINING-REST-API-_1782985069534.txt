@@ -1,0 +1,549 @@
+# IMPLEMENTATION PROMPT
+
+# COMPLETE THE REMAINING REST API ARCHITECTURE (EXCLUDING RATE LIMITING & SUBSCRIPTIONS)
+
+## Objective
+
+Perform a complete implementation audit of the remaining REST API architecture and implement **only** the missing functionality listed in this prompt.
+
+The project is already largely complete.
+
+Do **NOT** rebuild existing systems.
+
+Do **NOT** duplicate functionality.
+
+Do **NOT** create parallel implementations.
+
+Inspect the existing architecture first, then extend it where necessary.
+
+---
+
+# IMPORTANT
+
+The following functionality already exists.
+
+Do NOT modify unless absolutely necessary.
+
+* Authentication
+* Workspace Management
+* API Keys
+* REST API
+* API Gateway
+* Endpoint Registry
+* Content Endpoints
+* Documentation Engine
+* API Explorer
+* Code Example Generator
+* AI Prompt Generator
+* Existing Dashboard
+* Existing Edge Functions
+* Existing Database Schema
+
+Reuse all existing services.
+
+---
+
+# DO NOT IMPLEMENT
+
+The following items are intentionally out of scope.
+
+* Rate Limiting Improvements
+* Subscription / Billing Validation
+
+Those will be implemented in a future milestone.
+
+Ignore them completely.
+
+---
+
+# PHASE 1 — AUDIT
+
+Before writing code, inspect the existing project.
+
+Review
+
+* API Gateway
+* Middleware
+* REST Endpoints
+* Edge Functions
+* Database Services
+* Response Builders
+* Content Transformers
+* Cache Services
+* Logging
+* Validation
+
+Determine whether the missing functionality already exists.
+
+If it exists
+
+Reuse it.
+
+If it does not
+
+Implement it.
+
+---
+
+# TASK 1 — REMOVE THE PARALLEL REQUEST PIPELINES
+
+The audit identified two different request pipelines.
+
+Example
+
+```text
+api-gateway
+
+content-router
+```
+
+This creates inconsistent behaviour.
+
+The application must have ONE unified request pipeline.
+
+Every REST endpoint must follow the exact same lifecycle.
+
+```text
+Incoming Request
+
+↓
+
+API Gateway
+
+↓
+
+Authentication
+
+↓
+
+API Key Validation
+
+↓
+
+Workspace Resolution
+
+↓
+
+Permission Validation
+
+↓
+
+Request Validation
+
+↓
+
+Business Logic
+
+↓
+
+Response Transformation
+
+↓
+
+Response Builder
+
+↓
+
+JSON Response
+```
+
+If some endpoints bypass this flow
+
+Refactor them.
+
+Do not duplicate middleware.
+
+Create reusable middleware where necessary.
+
+---
+
+# TASK 2 — FIX THE /api/v1/posts ENDPOINT
+
+The audit identified
+
+```text
+/api/v1/posts
+```
+
+as bypassing the normal authentication pipeline.
+
+Inspect this endpoint.
+
+Verify
+
+* Authentication
+* API Key Validation
+* Workspace Resolution
+* Permission Validation
+* Response Transformation
+
+If any step is missing
+
+Implement it.
+
+This endpoint must behave exactly like every other REST endpoint.
+
+It must never bypass the API Gateway.
+
+---
+
+# TASK 3 — VERIFY WORKSPACE ISOLATION
+
+Audit every database query used by REST endpoints.
+
+Every query must automatically filter by the resolved workspace.
+
+Example
+
+Incorrect
+
+```sql
+SELECT *
+FROM blogs;
+```
+
+Correct
+
+```sql
+SELECT *
+FROM blogs
+WHERE workspace_id = resolved_workspace;
+```
+
+The client must never send
+
+* workspace_id
+* organization_id
+* tenant_id
+
+The API Key must resolve the workspace automatically.
+
+Verify every endpoint.
+
+Fix any violations.
+
+---
+
+# TASK 4 — CENTRALIZE RESPONSE TRANSFORMATION
+
+The audit identified
+
+```text
+stripInternals()
+```
+
+inside the API Gateway.
+
+A centralized
+
+```text
+ContentTransformer
+```
+
+already exists.
+
+All REST endpoints must use the centralized transformer.
+
+There must never be multiple implementations of response sanitization.
+
+Refactor existing code.
+
+Do not duplicate transformation logic.
+
+---
+
+# TASK 5 — RESPONSE SANITIZATION
+
+Before any response leaves the API
+
+Ensure all internal fields are removed.
+
+Never expose
+
+* workspace_id
+* owner_id
+* internal_notes
+* audit_fields
+* deleted_at
+* internal_status
+* private_metadata
+* draft_content
+* internal database identifiers that are not intended for public use
+
+The sanitization process must be centralized.
+
+Every endpoint must use it automatically.
+
+---
+
+# TASK 6 — STANDARDIZE API RESPONSES
+
+Verify that every endpoint returns the same response structure.
+
+Successful responses
+
+```json
+{
+  "success": true,
+  "data": {},
+  "meta": {},
+  "links": {}
+}
+```
+
+Errors
+
+```json
+{
+  "success": false,
+  "error": {
+    "code": "",
+    "message": ""
+  }
+}
+```
+
+If different endpoints use different formats
+
+Standardize them.
+
+Do not break backwards compatibility unless absolutely necessary.
+
+---
+
+# TASK 7 — COMPLETE STANDARD ERROR LIBRARY
+
+The audit identified missing standardized errors.
+
+Verify the shared error definitions.
+
+Ensure support for
+
+* 400 Bad Request
+* 401 Unauthorized
+* 403 Forbidden
+* 404 Not Found
+* 409 Conflict
+* 422 Unprocessable Entity
+* 500 Internal Server Error
+
+Each error should contain
+
+* HTTP Status
+* Internal Error Code
+* Human Readable Message
+
+The response format should remain consistent across the API.
+
+---
+
+# TASK 8 — IMPLEMENT PAGINATION LINKS
+
+Current responses contain
+
+```json
+{
+  "meta": {}
+}
+```
+
+Extend the response builder to include
+
+```json
+{
+  "links": {
+    "first": "",
+    "previous": "",
+    "next": "",
+    "last": ""
+  }
+}
+```
+
+The URLs should be generated automatically using
+
+* Current endpoint
+* Current page
+* Page size
+* Total pages
+* Existing query parameters
+* Existing filters
+
+Do not hardcode URLs.
+
+This should work for every paginated endpoint.
+
+---
+
+# TASK 9 — IMPLEMENT CACHE INVALIDATION
+
+The audit identified missing cache invalidation.
+
+Inspect the existing cache layer.
+
+If caching already exists
+
+Extend it.
+
+Whenever any published content changes
+
+Automatically invalidate affected cache entries.
+
+Examples
+
+Blog Published
+
+↓
+
+Invalidate
+
+* Blog List
+* Blog Detail
+* Homepage
+* Search Results
+* Category Pages
+
+Page Updated
+
+↓
+
+Invalidate
+
+* Page Cache
+* Homepage (if affected)
+
+Event Updated
+
+↓
+
+Invalidate
+
+* Event List
+* Event Detail
+* Calendar
+* Homepage (if applicable)
+
+Do not clear the entire cache.
+
+Only invalidate affected resources.
+
+Support intelligent cache invalidation.
+
+---
+
+# TASK 10 — VERIFY ENDPOINT CONSISTENCY
+
+Audit every REST endpoint.
+
+Ensure every endpoint uses
+
+* Same Middleware
+* Same Authentication
+* Same Response Builder
+* Same Content Transformer
+* Same Validation Pipeline
+
+There should not be endpoint-specific implementations unless there is a justified technical reason.
+
+---
+
+# TASK 11 — PERFORMANCE REVIEW
+
+Inspect
+
+* Duplicate Queries
+* Missing Indexes
+* N+1 Queries
+* Duplicate Response Processing
+* Unnecessary Serialization
+* Repeated Authentication Logic
+
+Optimize where appropriate.
+
+Reuse existing services.
+
+---
+
+# FILES TO REVIEW
+
+Review before creating anything new.
+
+* API Gateway
+* Middleware
+* REST Routes
+* Edge Functions
+* Services
+* Repositories
+* Response Builders
+* Content Transformer
+* Cache Services
+* Validation Utilities
+* Shared Error Library
+
+Only create new files when absolutely necessary.
+
+Prefer extending existing architecture.
+
+---
+
+# CODE QUALITY REQUIREMENTS
+
+The implementation must
+
+* Reuse existing architecture.
+* Avoid duplicate services.
+* Avoid duplicate middleware.
+* Avoid duplicate response builders.
+* Keep the code modular.
+* Keep the code strongly typed.
+* Follow the existing coding style.
+* Preserve backwards compatibility where possible.
+
+---
+
+# FINAL VERIFICATION
+
+Before marking the task complete
+
+Verify
+
+✓ Every REST endpoint passes through the same request pipeline.
+
+✓ `/api/v1/posts` no longer bypasses authentication or workspace resolution.
+
+✓ Workspace isolation is enforced for every query.
+
+✓ Every endpoint uses the centralized `ContentTransformer`.
+
+✓ Internal fields are never exposed.
+
+✓ Successful responses use a consistent structure.
+
+✓ Error responses use a consistent structure.
+
+✓ Standard error definitions include 400, 409 and 422.
+
+✓ Pagination responses include dynamically generated navigation links.
+
+✓ Cache invalidation works automatically when content changes.
+
+✓ Existing architecture has been reused.
+
+✓ No duplicate functionality has been introduced.
+
+---
+
+# DELIVERABLES
+
+After implementation, provide a completion report containing:
+
+1. Files inspected.
+2. Files modified.
+3. Any new files created (with justification).
+4. Components reused.
+5. Endpoints updated.
+6. Cache invalidation strategy implemented.
+7. Response standardization changes.
+8. Security improvements made.
+9. Performance improvements made.
+10. Confirmation that all remaining REST API architecture gaps (excluding rate limiting and subscription validation) have been successfully resolved.

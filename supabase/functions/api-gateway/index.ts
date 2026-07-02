@@ -12,16 +12,25 @@
  *   GET /collections        list collections
  *   GET /collections/:slug  list published entries in a collection
  *
- * Query params (lists):  page, limit, search, category
+ * Query params (lists):  page, limit, search, category, featured
+ *
+ * Every request passes through the shared middleware pipeline:
+ *   OPTIONS → method guard → auth → rate-limit → route → transform → respond
  */
 
 import { createClient } from "jsr:@supabase/supabase-js@2";
-import { validateApiKey } from "../_shared/auth.ts";
-import { checkRateLimit } from "../_shared/rate_limit.ts";
+import { runPipeline, finalize } from "../_shared/pipeline.ts";
 import { hasPermission } from "../_shared/permissions.ts";
-import { logRequest } from "../_shared/logger.ts";
-import { ok, fail, cors } from "../_shared/response.ts";
+import { ok, fail, buildPaginationLinks } from "../_shared/response.ts";
 import { ERRORS } from "../_shared/errors.ts";
+import { parsePaginationParams } from "../_shared/validation.ts";
+import {
+  toBlogSummary,
+  toBlogDetail,
+  toCollection,
+  toCollectionEntry,
+  toMedia,
+} from "../_shared/transformer.ts";
 
 // ── helpers ────────────────────────────────────────────────────────────────
 
@@ -31,94 +40,39 @@ function parseSegments(url: URL): string[] {
   return gwIdx >= 0 ? parts.slice(gwIdx + 1) : parts;
 }
 
-function parsePagination(url: URL): { page: number; limit: number; offset: number } {
-  const page = Math.max(1, parseInt(url.searchParams.get("page") ?? "1", 10) || 1);
-  const limit = Math.min(100, Math.max(1, parseInt(url.searchParams.get("limit") ?? "20", 10) || 20));
-  return { page, limit, offset: (page - 1) * limit };
-}
-
-function stripInternals<T extends Record<string, unknown>>(
-  row: T,
-  ...keys: string[]
-): Omit<T, (typeof keys)[number]> {
-  const out = { ...row };
-  for (const k of keys) delete out[k];
-  return out as Omit<T, (typeof keys)[number]>;
+/** Add 5-minute public cache headers to a successful response. */
+function cached(res: Response): Response {
+  res.headers.set(
+    "Cache-Control",
+    "public, max-age=300, stale-while-revalidate=60",
+  );
+  return res;
 }
 
 // ── main handler ───────────────────────────────────────────────────────────
 
 Deno.serve(async (req: Request) => {
-  if (req.method === "OPTIONS") return cors();
-  if (req.method !== "GET") {
-    return fail(ERRORS.METHOD_NOT_ALLOWED.code, ERRORS.METHOD_NOT_ALLOWED.message, 405);
-  }
+  // ── Shared pipeline: OPTIONS / method guard / auth / rate-limit ───────────
+  const pipeline = await runPipeline(req, "api-gateway");
+  if (!pipeline.ok) return pipeline.response;
 
-  const startTime = Date.now();
+  const { ctx } = pipeline;
+  const { keyContext: context } = ctx;
+
   const url = new URL(req.url);
   const segments = parseSegments(url);
-  const apiPath = "/" + segments.join("/");
-  const ip = req.headers.get("x-forwarded-for")?.split(",")[0].trim() ?? null;
-  const ua = req.headers.get("user-agent") ?? null;
-
-  // Shared log helper — fire-and-forget
-  function log(
-    workspaceId: string | null,
-    apiKeyId: string | null,
-    statusCode: number,
-    error: string | null = null,
-  ) {
-    logRequest({
-      workspaceId,
-      apiKeyId,
-      method: req.method,
-      path: apiPath,
-      statusCode,
-      durationMs: Date.now() - startTime,
-      ipAddress: ip,
-      userAgent: ua,
-      error,
-    });
-  }
-
-  // ── 1. Authenticate ──────────────────────────────────────────────────────
-
-  const authResult = await validateApiKey(req.headers.get("authorization"));
-
-  if (!authResult.ok) {
-    log(null, null, 401, authResult.error);
-    return fail(ERRORS.INVALID_KEY.code, ERRORS.INVALID_KEY.message, 401);
-  }
-
-  const { context } = authResult;
-
-  // ── 2. Rate limit ────────────────────────────────────────────────────────
-
-  const rate = await checkRateLimit(context.keyId, context.workspaceId);
-
-  if (!rate.allowed) {
-    log(context.workspaceId, context.keyId, 429, "Rate limit exceeded");
-    const res = fail(ERRORS.RATE_LIMITED.code, ERRORS.RATE_LIMITED.message, 429);
-    // Add rate limit headers
-    res.headers.set("X-RateLimit-Limit", String(rate.limit));
-    res.headers.set("X-RateLimit-Remaining", "0");
-    res.headers.set("X-RateLimit-Reset", rate.resetAt);
-    return res;
-  }
-
-  // ── 3. Route ─────────────────────────────────────────────────────────────
+  const { page, limit, offset } = parsePaginationParams(url);
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
   const db = createClient(supabaseUrl, serviceKey);
-  const { page, limit, offset } = parsePagination(url);
 
   let response: Response;
 
   try {
     const resource = segments[0] ?? "";
 
-    // ── GET /blogs  or  GET /blogs/:slug ──────────────────────────────────
+    // ── GET /blogs  or  GET /blogs/:slug ────────────────────────────────────
     if (resource === "blogs" || resource === "") {
       if (!hasPermission(context.permissions, "read:blogs")) {
         response = fail(ERRORS.FORBIDDEN.code, ERRORS.FORBIDDEN.message, 403);
@@ -128,7 +82,7 @@ Deno.serve(async (req: Request) => {
           .from("blog_posts")
           .select(
             "id, title, slug, excerpt, content, category, tags, author_name, " +
-              "cover_image, published_at, reading_time, views, seo_title, meta_description, featured",
+              "cover_image, published_at, updated_at, reading_time, views, seo_title, meta_description, featured",
           )
           .eq("status", "published")
           .eq("workspace_id", context.workspaceId)
@@ -138,7 +92,7 @@ Deno.serve(async (req: Request) => {
         if (error || !data) {
           response = fail(ERRORS.NOT_FOUND.code, ERRORS.NOT_FOUND.message, 404);
         } else {
-          response = ok(stripInternals(data as Record<string, unknown>));
+          response = cached(ok(toBlogDetail(data as Record<string, unknown>)));
         }
       } else {
         // List posts
@@ -150,7 +104,7 @@ Deno.serve(async (req: Request) => {
           .from("blog_posts")
           .select(
             "id, title, slug, excerpt, category, tags, author_name, cover_image, " +
-              "published_at, reading_time, views, featured",
+              "published_at, updated_at, reading_time, views, featured",
             { count: "exact" },
           )
           .eq("status", "published")
@@ -170,14 +124,16 @@ Deno.serve(async (req: Request) => {
         if (error) throw new Error(error.message);
 
         const total = count ?? 0;
-        response = ok(data ?? [], {
-          page,
-          limit,
-          total,
-          totalPages: Math.ceil(total / limit),
-        });
+        const totalPages = Math.ceil(total / limit);
+        const links = buildPaginationLinks(req.url, page, totalPages);
+        const rows = (data ?? []).map((r) =>
+          toBlogSummary(r as Record<string, unknown>)
+        );
+
+        response = cached(ok(rows, { page, limit, total, totalPages }, 200, links));
       }
-    // ── GET /media ────────────────────────────────────────────────────────
+
+    // ── GET /media ──────────────────────────────────────────────────────────
     } else if (resource === "media") {
       if (!hasPermission(context.permissions, "read:media")) {
         response = fail(ERRORS.FORBIDDEN.code, ERRORS.FORBIDDEN.message, 403);
@@ -185,7 +141,7 @@ Deno.serve(async (req: Request) => {
         const { data, count, error } = await db
           .from("media_files")
           .select(
-            "id, file_name, storage_path, mime_type, size_bytes, width_px, height_px, " +
+            "id, file_name, storage_path, bucket, mime_type, size_bytes, width_px, height_px, " +
               "alt_text, caption, folder, tags, created_at",
             { count: "exact" },
           )
@@ -194,28 +150,29 @@ Deno.serve(async (req: Request) => {
           .range(offset, offset + limit - 1);
 
         if (error) {
-          // Table may not exist yet — return empty list gracefully
           response = ok([], { page, limit, total: 0, totalPages: 0 });
         } else {
           const total = count ?? 0;
-          response = ok(data ?? [], {
-            page,
-            limit,
-            total,
-            totalPages: Math.ceil(total / limit),
-          });
+          const totalPages = Math.ceil(total / limit);
+          const links = buildPaginationLinks(req.url, page, totalPages);
+          const rows = (data ?? []).map((r) =>
+            toMedia(r as Record<string, unknown>, supabaseUrl)
+          );
+          response = cached(ok(rows, { page, limit, total, totalPages }, 200, links));
         }
       }
-    // ── GET /collections  or  GET /collections/:slug ──────────────────────
+
+    // ── GET /collections  or  GET /collections/:slug ────────────────────────
     } else if (resource === "collections") {
       if (!hasPermission(context.permissions, "read:collections")) {
         response = fail(ERRORS.FORBIDDEN.code, ERRORS.FORBIDDEN.message, 403);
       } else if (segments[1]) {
-        // Entries for a specific collection
+        // Entries for a specific collection — resolve by workspace too
         const { data: col, error: colErr } = await db
           .from("collections")
           .select("id, name, slug")
           .eq("slug", segments[1])
+          .eq("workspace_id", context.workspaceId)
           .single();
 
         if (colErr || !col) {
@@ -232,35 +189,43 @@ Deno.serve(async (req: Request) => {
             .range(offset, offset + limit - 1);
 
           if (error) throw new Error(error.message);
+
           const total = count ?? 0;
-          response = ok(data ?? [], {
-            page,
-            limit,
-            total,
-            totalPages: Math.ceil(total / limit),
-            collection: { id: col.id, name: col.name, slug: col.slug },
-          });
+          const totalPages = Math.ceil(total / limit);
+          const links = buildPaginationLinks(req.url, page, totalPages);
+          const rows = (data ?? []).map((r) =>
+            toCollectionEntry(r as Record<string, unknown>)
+          );
+
+          response = cached(ok(rows, {
+            page, limit, total, totalPages,
+            collection: toCollection(col as Record<string, unknown>),
+          }, 200, links));
         }
       } else {
-        // List all collections
+        // List all collections for this workspace
         const { data, count, error } = await db
           .from("collections")
           .select("id, name, slug, description, created_at", {
             count: "exact",
           })
+          .eq("workspace_id", context.workspaceId)
           .order("name")
           .range(offset, offset + limit - 1);
 
         if (error) throw new Error(error.message);
+
         const total = count ?? 0;
-        response = ok(data ?? [], {
-          page,
-          limit,
-          total,
-          totalPages: Math.ceil(total / limit),
-        });
+        const totalPages = Math.ceil(total / limit);
+        const links = buildPaginationLinks(req.url, page, totalPages);
+        const rows = (data ?? []).map((r) =>
+          toCollection(r as Record<string, unknown>)
+        );
+
+        response = cached(ok(rows, { page, limit, total, totalPages }, 200, links));
       }
-    // ── Unknown route ─────────────────────────────────────────────────────
+
+    // ── Unknown route ───────────────────────────────────────────────────────
     } else {
       response = fail(
         ERRORS.NOT_FOUND.code,
@@ -269,15 +234,12 @@ Deno.serve(async (req: Request) => {
       );
     }
   } catch (_err) {
-    log(context.workspaceId, context.keyId, 500, "Server error");
-    return fail(ERRORS.SERVER_ERROR.code, ERRORS.SERVER_ERROR.message, 500);
+    response = fail(
+      ERRORS.SERVER_ERROR.code,
+      ERRORS.SERVER_ERROR.message,
+      500,
+    );
   }
 
-  // Add rate limit headers to successful responses
-  response.headers.set("X-RateLimit-Limit", String(rate.limit));
-  response.headers.set("X-RateLimit-Remaining", String(rate.remaining));
-  response.headers.set("X-RateLimit-Reset", rate.resetAt);
-
-  log(context.workspaceId, context.keyId, response.status);
-  return response;
+  return finalize(response, ctx);
 });
