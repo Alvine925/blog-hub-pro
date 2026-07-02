@@ -1,6 +1,10 @@
 // Edge Function: generate-blog-post
-// Generates a full blog post from a content opportunity using AI,
-// fetches a real image via SERP API, and generates an AI image via Hugging Face.
+// Generates a full blog post from a content opportunity using AI, then fetches a cover image
+// using a sequential fallback chain:
+//   1. Pollinations AI  — free, no key required
+//   2. SERP API         — real web image (downloaded + stored)
+//   3. Hugging Face     — FLUX AI generation
+// Every successful image is downloaded and uploaded to Supabase Storage (blog-images bucket).
 // Stores the result in blog_posts and returns the new post id.
 
 import { createClient } from "jsr:@supabase/supabase-js@2";
@@ -10,6 +14,13 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
+
+function json(body: unknown, status = 200): Response {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
 
 // ── AI helpers (Lovable → Mistral fallback) ───────────────────────────────────
 interface ChatMessage { role: "system" | "user" | "assistant"; content: string }
@@ -52,7 +63,7 @@ async function callAI(messages: ChatMessage[]): Promise<string> {
   return stripFences(data?.choices?.[0]?.message?.content ?? "");
 }
 
-// ── Image prompt generation engine ────────────────────────────────────────────
+// ── Image prompt generation ───────────────────────────────────────────────────
 async function generateImagePrompt(params: {
   title: string;
   topic: string | null;
@@ -63,9 +74,9 @@ async function generateImagePrompt(params: {
   const { title, topic, excerpt, industry, brandVoice } = params;
   const context = [
     `Blog post title: "${title}"`,
-    topic ? `Topic: ${topic}` : null,
-    excerpt ? `Summary: ${excerpt}` : null,
-    industry ? `Industry: ${industry}` : null,
+    topic      ? `Topic: ${topic}`           : null,
+    excerpt    ? `Summary: ${excerpt}`       : null,
+    industry   ? `Industry: ${industry}`     : null,
     brandVoice ? `Brand voice: ${brandVoice}` : null,
   ].filter(Boolean).join("\n");
 
@@ -75,16 +86,61 @@ The prompt should be rich with visual details: lighting, mood, setting, style, c
 Describe a scene or concept — not text on an image. Avoid abstract art unless the topic is clearly creative.
 Return ONLY the image prompt as a single descriptive paragraph, no commentary.`;
 
-  const user = `Create an image prompt for a blog post with these details:\n${context}`;
-  return callAI([{ role: "system", content: system }, { role: "user", content: user }]);
+  return callAI([
+    { role: "system", content: system },
+    { role: "user", content: `Create an image prompt for a blog post with these details:\n${context}` },
+  ]);
 }
 
-// ── Domains that block hotlinking or serve watermarked/unusable images ────────
-// Matched against the parsed hostname using exact equality or suffix (.domain.com).
+// ── Download image bytes from any URL ────────────────────────────────────────
+async function fetchBytes(url: string, timeoutMs = 30_000): Promise<Uint8Array | null> {
+  try {
+    const res = await fetch(url, {
+      headers: { "User-Agent": "Mozilla/5.0 (compatible; Googlebot/2.1)" },
+      signal: AbortSignal.timeout(timeoutMs),
+    });
+    if (!res.ok) return null;
+    const ct = res.headers.get("content-type") ?? "";
+    if (!ct.startsWith("image/")) return null;
+    const buf = await res.arrayBuffer();
+    return buf.byteLength >= 2000 ? new Uint8Array(buf) : null;
+  } catch { return null; }
+}
+
+// ── 1. Pollinations AI ────────────────────────────────────────────────────────
+// Free image generation — no API key required.
+// URL: https://image.pollinations.ai/prompt/{encoded_prompt}
+async function fetchPollinationsImage(prompt: string): Promise<{ bytes: Uint8Array | null; error?: string }> {
+  try {
+    const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}`;
+    console.log("[Pollinations] Requesting:", url.slice(0, 120));
+    const res = await fetch(url, {
+      headers: { "User-Agent": "Mozilla/5.0" },
+      signal: AbortSignal.timeout(45_000),
+      redirect: "follow",
+    });
+    if (!res.ok) {
+      return { bytes: null, error: `Pollinations HTTP ${res.status}` };
+    }
+    const ct = res.headers.get("content-type") ?? "";
+    if (!ct.startsWith("image/")) {
+      return { bytes: null, error: `Pollinations returned non-image content-type: ${ct}` };
+    }
+    const buf = await res.arrayBuffer();
+    if (buf.byteLength < 2000) {
+      return { bytes: null, error: `Pollinations image too small (${buf.byteLength}B)` };
+    }
+    console.log("[Pollinations] Success:", buf.byteLength, "bytes");
+    return { bytes: new Uint8Array(buf) };
+  } catch (e) {
+    return { bytes: null, error: `Pollinations error: ${e instanceof Error ? e.message : String(e)}` };
+  }
+}
+
+// ── 2. SERP API image search (returns downloaded bytes) ──────────────────────
 const SERP_BLOCKED_DOMAINS = [
   "instagram.com", "cdninstagram.com", "lookaside.instagram.com",
   "facebook.com", "fbcdn.net", "fbsbx.com",
-  // scontent-*.fbcdn.net pattern covered by fbcdn.net suffix match above
   "shutterstock.com", "gettyimages.com", "istockphoto.com", "alamy.com",
   "depositphotos.com", "dreamstime.com", "123rf.com",
   "pinterest.com", "pinimg.com",
@@ -103,7 +159,6 @@ function isSerpUrlUsable(url: string): boolean {
   }
 }
 
-// Probe a URL to confirm it actually serves a 2xx image (no redirects to HTML, no hotlink blocks)
 async function probeImageUrl(url: string): Promise<boolean> {
   try {
     const res = await fetch(url, {
@@ -120,10 +175,9 @@ async function probeImageUrl(url: string): Promise<boolean> {
   }
 }
 
-// ── SERP API image search ─────────────────────────────────────────────────────
-async function fetchWebImage(query: string): Promise<string | null> {
+async function fetchSerpImageBytes(query: string): Promise<{ bytes: Uint8Array | null; error?: string }> {
   const serpKey = Deno.env.get("SERP_API_KEY");
-  if (!serpKey) return null;
+  if (!serpKey) return { bytes: null, error: "SERP_API_KEY not set" };
 
   try {
     const params = new URLSearchParams({
@@ -134,28 +188,32 @@ async function fetchWebImage(query: string): Promise<string | null> {
       safe:    "active",
     });
     const res = await fetch(`https://serpapi.com/search.json?${params}`);
-    if (!res.ok) return null;
+    if (!res.ok) {
+      const detail = await res.text().catch(() => res.status.toString());
+      return { bytes: null, error: `SERP API ${res.status}: ${detail.slice(0, 120)}` };
+    }
     const data = await res.json();
-    if (data?.error) return null;
+    if (data?.error) return { bytes: null, error: `SERP API error: ${data.error}` };
+
     const results: Array<{ original?: string; thumbnail?: string }> = data?.images_results ?? [];
     for (const img of results.slice(0, 20)) {
-      // Try original first, fall back to thumbnail (Google-cached, more reliable)
       for (const candidate of [img.original, img.thumbnail]) {
         if (!candidate || !isSerpUrlUsable(candidate)) continue;
-        if (await probeImageUrl(candidate)) return candidate;
+        if (!(await probeImageUrl(candidate))) continue;
+        const bytes = await fetchBytes(candidate, 20_000);
+        if (bytes) {
+          console.log("[SERP] Downloaded image from:", candidate.slice(0, 80));
+          return { bytes };
+        }
       }
     }
-    return null;
-  } catch {
-    return null;
+    return { bytes: null, error: `SERP returned ${results.length} results but none could be downloaded` };
+  } catch (e) {
+    return { bytes: null, error: `SERP fetch error: ${e instanceof Error ? e.message : String(e)}` };
   }
 }
 
-// ── Hugging Face image generation via HF Router ───────────────────────────────
-// Uses router.huggingface.co — the only HF hostname reachable from Supabase edge.
-// api-inference.huggingface.co is DNS-blocked in the Supabase edge runtime.
-// Secret name: HUGGINGFACE_API_KEY
-
+// ── 3. Hugging Face image generation ─────────────────────────────────────────
 interface HFProvider { label: string; baseUrl: string; model: string }
 
 const HF_PROVIDERS: HFProvider[] = [
@@ -163,15 +221,6 @@ const HF_PROVIDERS: HFProvider[] = [
   { label: "fal-ai",    baseUrl: "https://router.huggingface.co/fal-ai",    model: "black-forest-labs/FLUX.1-dev" },
   { label: "together",  baseUrl: "https://router.huggingface.co/together",  model: "black-forest-labs/FLUX.1-schnell-Free" },
 ];
-
-async function fetchImageBytes(url: string): Promise<Uint8Array | null> {
-  try {
-    const r = await fetch(url, { signal: AbortSignal.timeout(30_000) });
-    if (!r.ok) return null;
-    const buf = await r.arrayBuffer();
-    return buf.byteLength >= 2000 ? new Uint8Array(buf) : null;
-  } catch { return null; }
-}
 
 async function generateHFImage(prompt: string): Promise<{ bytes: Uint8Array | null; error?: string }> {
   const key = Deno.env.get("HUGGINGFACE_API_KEY");
@@ -199,7 +248,6 @@ async function generateHFImage(prompt: string): Promise<{ bytes: Uint8Array | nu
 
       const ct = res.headers.get("content-type") ?? "";
 
-      // Binary image
       if (ct.startsWith("image/")) {
         const buf = await res.arrayBuffer();
         if (buf.byteLength >= 2000) return { bytes: new Uint8Array(buf) };
@@ -207,30 +255,109 @@ async function generateHFImage(prompt: string): Promise<{ bytes: Uint8Array | nu
         continue;
       }
 
-      // JSON (OpenAI images API format)
       if (ct.includes("application/json")) {
-        const data = await res.json();
-        const b64 = data?.data?.[0]?.b64_json ?? data?.image ?? null;
+        const jsonData = await res.json();
+        const b64 = jsonData?.data?.[0]?.b64_json ?? jsonData?.image ?? null;
         if (b64 && typeof b64 === "string") {
           const binary = atob(b64);
           const bytes = new Uint8Array(binary.length);
           for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
           if (bytes.byteLength >= 2000) return { bytes };
         }
-        const imgUrl = data?.data?.[0]?.url ?? data?.images?.[0] ?? null;
+        const imgUrl = jsonData?.data?.[0]?.url ?? jsonData?.images?.[0] ?? null;
         if (imgUrl) {
-          const bytes = await fetchImageBytes(imgUrl);
+          const bytes = await fetchBytes(imgUrl);
           if (bytes) return { bytes };
           errors.push(`${provider.label}: image URL fetch failed`);
           continue;
         }
-        errors.push(`${provider.label}: JSON had no image — ${JSON.stringify(data).slice(0, 80)}`);
+        errors.push(`${provider.label}: JSON had no image — ${JSON.stringify(jsonData).slice(0, 80)}`);
       }
     } catch (e) {
       errors.push(`${provider.label}: ${e instanceof Error ? e.message : String(e)}`);
     }
   }
   return { bytes: null, error: errors.join(" | ") };
+}
+
+// ── Upload to Supabase Storage (blog-images bucket) ───────────────────────────
+const BLOG_BUCKET = "blog-images";
+
+async function uploadToStorage(
+  adminClient: ReturnType<typeof createClient>,
+  bytes: Uint8Array,
+  slug: string,
+): Promise<string | null> {
+  try {
+    const path = `ai-covers/${slug}-${Date.now()}.png`;
+    const { error } = await (adminClient as any).storage
+      .from(BLOG_BUCKET)
+      .upload(path, bytes, { contentType: "image/png", upsert: false });
+    if (error) {
+      console.error("[Storage] Upload error:", error.message);
+      return null;
+    }
+    const { data } = await (adminClient as any).storage
+      .from(BLOG_BUCKET)
+      .createSignedUrl(path, 60 * 60 * 24 * 365 * 10); // 10-year signed URL
+    return data?.signedUrl ?? null;
+  } catch {
+    return null;
+  }
+}
+
+// ── Cover image waterfall: Pollinations → SERP → HF ─────────────────────────
+interface CoverImageResult {
+  url: string | null;
+  source: "pollinations" | "web_search" | "ai_generated" | "none";
+  errors: Record<string, string>;
+}
+
+async function generateCoverImage(
+  imagePrompt: string,
+  serpQuery: string,
+  slug: string,
+  adminClient: ReturnType<typeof createClient>,
+): Promise<CoverImageResult> {
+  const errors: Record<string, string> = {};
+
+  // 1. Pollinations
+  console.log("[cover-image] Trying Pollinations...");
+  const pollinationsResult = await fetchPollinationsImage(imagePrompt);
+  if (pollinationsResult.bytes) {
+    const uploaded = await uploadToStorage(adminClient, pollinationsResult.bytes, slug);
+    if (uploaded) return { url: uploaded, source: "pollinations", errors };
+    errors.pollinations_upload = "Upload to storage failed";
+  } else {
+    errors.pollinations = pollinationsResult.error ?? "Unknown error";
+    console.warn("[cover-image] Pollinations failed:", errors.pollinations);
+  }
+
+  // 2. SERP
+  console.log("[cover-image] Trying SERP...");
+  const serpResult = await fetchSerpImageBytes(serpQuery);
+  if (serpResult.bytes) {
+    const uploaded = await uploadToStorage(adminClient, serpResult.bytes, `serp-${slug}`);
+    if (uploaded) return { url: uploaded, source: "web_search", errors };
+    errors.serp_upload = "Upload to storage failed";
+  } else {
+    errors.serp = serpResult.error ?? "Unknown error";
+    console.warn("[cover-image] SERP failed:", errors.serp);
+  }
+
+  // 3. Hugging Face
+  console.log("[cover-image] Trying Hugging Face...");
+  const hfResult = await generateHFImage(imagePrompt);
+  if (hfResult.bytes) {
+    const uploaded = await uploadToStorage(adminClient, hfResult.bytes, `hf-${slug}`);
+    if (uploaded) return { url: uploaded, source: "ai_generated", errors };
+    errors.hf_upload = "Upload to storage failed";
+  } else {
+    errors.hf = hfResult.error ?? "Unknown error";
+    console.warn("[cover-image] Hugging Face failed:", errors.hf);
+  }
+
+  return { url: null, source: "none", errors };
 }
 
 // ── Slug helper ───────────────────────────────────────────────────────────────
@@ -267,14 +394,14 @@ async function generateBlogContent(params: {
 
   const context = [
     `Opportunity: "${opportunityTitle}"`,
-    topic ? `Topic area: ${topic}` : null,
-    type ? `Content type: ${type}` : null,
-    reason ? `Why this opportunity: ${reason}` : null,
-    industry ? `Industry: ${industry}` : null,
-    brandVoice ? `Brand voice: ${brandVoice}` : null,
-    targetAudience ? `Target audience: ${targetAudience}` : null,
+    topic           ? `Topic area: ${topic}`                             : null,
+    type            ? `Content type: ${type}`                            : null,
+    reason          ? `Why this opportunity: ${reason}`                  : null,
+    industry        ? `Industry: ${industry}`                            : null,
+    brandVoice      ? `Brand voice: ${brandVoice}`                       : null,
+    targetAudience  ? `Target audience: ${targetAudience}`               : null,
     contentPillars.length ? `Content pillars: ${contentPillars.join(", ")}` : null,
-    websiteUrl ? `Website: ${websiteUrl}` : null,
+    websiteUrl      ? `Website: ${websiteUrl}`                           : null,
   ].filter(Boolean).join("\n");
 
   const system = `You are an expert SEO content writer for a modern CMS. 
@@ -314,38 +441,13 @@ Also return metadata. Respond with ONLY a valid JSON object (no fences) with the
   try {
     return JSON.parse(raw) as BlogGenResult;
   } catch {
-    // Attempt to extract JSON if there's surrounding text
     const match = raw.match(/\{[\s\S]*\}/);
     if (match) return JSON.parse(match[0]) as BlogGenResult;
     throw new Error("AI returned invalid JSON for blog content");
   }
 }
 
-// ── Upload raw image bytes to Supabase Storage (blog-images bucket) ──────────
-const BLOG_BUCKET = "blog-images";
-
-async function uploadGeneratedImage(
-  adminClient: ReturnType<typeof createClient>,
-  bytes: Uint8Array,
-  slug: string,
-): Promise<string | null> {
-  try {
-    const path = `ai-covers/${slug}-${Date.now()}.png`;
-    const { error } = await (adminClient as any).storage
-      .from(BLOG_BUCKET)
-      .upload(path, bytes, { contentType: "image/png", upsert: false });
-    if (error) return null;
-    // bucket is private → return a long-lived signed URL
-    const { data } = await (adminClient as any).storage
-      .from(BLOG_BUCKET)
-      .createSignedUrl(path, 60 * 60 * 24 * 365 * 10);
-    return data?.signedUrl ?? null;
-  } catch {
-    return null;
-  }
-}
-
-// ── Main handler ─────────────────────────────────────────────────────────────
+// ── Main handler ──────────────────────────────────────────────────────────────
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return json(null, 200);
 
@@ -377,9 +479,7 @@ Deno.serve(async (req: Request) => {
 
   const adminClient = createClient(supabaseUrl, supabaseServiceKey);
 
-  // ── Auth + workspace authorization (single pass) ──────────────────────────
-  // Service-role callers are trusted (server-to-server calls).
-  // Authenticated users must own the target workspace (workspaces.user_id).
+  // ── Auth + workspace authorization ────────────────────────────────────────
   if (!isServiceRole) {
     const callerClient = createClient(supabaseUrl, supabaseAnonKey, {
       global: { headers: { Authorization: authHeader } },
@@ -411,8 +511,8 @@ Deno.serve(async (req: Request) => {
     .eq("id", workspaceId)
     .maybeSingle();
 
-  const industry       = ws?.industry       ?? null;
-  const brandVoice     = ws?.brand_voice    ?? null;
+  const industry       = ws?.industry        ?? null;
+  const brandVoice     = ws?.brand_voice     ?? null;
   const contentPillars = ws?.content_pillars ?? [];
   const targetAudience = ws?.target_audience ?? null;
   const websiteUrl     = ws?.website_url     ?? null;
@@ -452,23 +552,11 @@ Deno.serve(async (req: Request) => {
       brandVoice,
     });
 
-    // ── 3. Fetch web image (SERP) + generate AI image (HF) in parallel ───
-    const searchQuery = `${blogContent.title} ${opportunityTopic ?? industry ?? ""} professional photography`;
-    const [serpImage, hfResult] = await Promise.all([
-      fetchWebImage(searchQuery),
-      generateHFImage(imagePrompt),
-    ]);
-
-    // Try to upload HF image to storage; fall back to SERP; fall back to null
-    let coverImage: string | null = null;
-    const baseSlug = slugify(blogContent.title);
-
-    if (hfResult.bytes) {
-      const uploaded = await uploadGeneratedImage(adminClient, hfResult.bytes, baseSlug);
-      coverImage = uploaded ?? serpImage;
-    } else {
-      coverImage = serpImage;
-    }
+    // ── 3. Cover image waterfall: Pollinations → SERP → HF ───────────────
+    const baseSlug   = slugify(blogContent.title);
+    const serpQuery  = `${blogContent.title} ${opportunityTopic ?? industry ?? ""} professional photography`;
+    const coverResult = await generateCoverImage(imagePrompt, serpQuery, baseSlug, adminClient);
+    const coverImage  = coverResult.url;
 
     // ── 4. Ensure unique slug ─────────────────────────────────────────────
     let slug = baseSlug || `post-${Date.now()}`;
@@ -480,7 +568,7 @@ Deno.serve(async (req: Request) => {
       slug = `${baseSlug}-${attempt++}`;
     }
 
-    // ── 5. Insert blog post ───────────────────────────────────────────────
+    // ── 5. Insert blog post (cover_image already set) ─────────────────────
     const { data: post, error: insertError } = await (adminClient as any)
       .from("blog_posts")
       .insert({
@@ -515,22 +603,20 @@ Deno.serve(async (req: Request) => {
         completed_at: new Date().toISOString(),
         parameters:   {
           opportunityTitle, opportunityTopic, opportunityType,
-          hf_error:   hfResult.error ?? null,
-          serp_found: serpImage !== null,
-          cover_source: hfResult.bytes ? "ai_generated" : (serpImage ? "web_search" : "none"),
+          cover_source:  coverResult.source,
+          cover_errors:  Object.keys(coverResult.errors).length ? coverResult.errors : null,
         },
       }).eq("id", genId);
     }
 
     return json({
-      post_id:           post.id,
-      post_slug:         post.slug,
-      title:             blogContent.title,
-      cover_image:       coverImage,
-      image_prompt:      imagePrompt,
-      serp_image:        serpImage,
-      hf_image_uploaded: hfResult.bytes !== null,
-      hf_error:          hfResult.error ?? null,
+      post_id:        post.id,
+      post_slug:      post.slug,
+      title:          blogContent.title,
+      cover_image:    coverImage,
+      image_prompt:   imagePrompt,
+      cover_source:   coverResult.source,
+      ...(Object.keys(coverResult.errors).length ? { cover_errors: coverResult.errors } : {}),
     });
 
   } catch (err: unknown) {
@@ -545,10 +631,3 @@ Deno.serve(async (req: Request) => {
     return json({ error: msg }, 500);
   }
 });
-
-function json(body: unknown, status = 200): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
-  });
-}

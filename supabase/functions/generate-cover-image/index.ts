@@ -1,10 +1,10 @@
 // Edge Function: generate-cover-image
-// Generates a cover image for a blog post by:
-//   1. Building an AI image prompt from the post details
-//   2. Fetching a real web image via SERP API (quick fallback)
-//   3. Generating an AI image via Hugging Face FLUX
-//   4. Uploading the best result to Supabase Storage (blog-images bucket)
-//   5. Returning a long-lived signed URL
+// Generates a cover image for a blog post using a waterfall fallback chain:
+//   1. Pollinations AI  — free, no key required, fast
+//   2. SERP API         — real web image (downloaded + stored)
+//   3. Hugging Face     — FLUX AI generation
+// Every successful result is downloaded and uploaded to Supabase Storage (blog-images bucket).
+// Returns a long-lived signed URL and writes cover_image to blog_posts when post_id is supplied.
 
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
@@ -14,22 +14,11 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
 function json(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
     status,
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
-}
-
-// Safely convert a Uint8Array to base64 without hitting call-stack limits
-function uint8ToBase64(bytes: Uint8Array): string {
-  let binary = "";
-  const CHUNK = 8192;
-  for (let i = 0; i < bytes.length; i += CHUNK) {
-    binary += String.fromCharCode(...bytes.subarray(i, i + CHUNK));
-  }
-  return btoa(binary);
 }
 
 // ── AI helpers (Lovable → Mistral fallback) ───────────────────────────────────
@@ -97,12 +86,55 @@ async function buildImagePrompt(params: {
   return callAI(system, `Create an image prompt for:\n${ctx}`);
 }
 
-// ── Domains that block hotlinking or serve watermarked/unusable images ────────
-// Matched against the parsed hostname using exact equality or suffix (.domain.com).
+// ── Download image bytes from any URL ────────────────────────────────────────
+async function fetchBytes(url: string, timeoutMs = 30_000): Promise<Uint8Array | null> {
+  try {
+    const res = await fetch(url, {
+      headers: { "User-Agent": "Mozilla/5.0 (compatible; Googlebot/2.1)" },
+      signal: AbortSignal.timeout(timeoutMs),
+    });
+    if (!res.ok) return null;
+    const ct = res.headers.get("content-type") ?? "";
+    if (!ct.startsWith("image/")) return null;
+    const buf = await res.arrayBuffer();
+    return buf.byteLength >= 2000 ? new Uint8Array(buf) : null;
+  } catch { return null; }
+}
+
+// ── 1. Pollinations AI ────────────────────────────────────────────────────────
+// Free image generation — no API key required.
+// URL: https://image.pollinations.ai/prompt/{encoded_prompt}
+async function fetchPollinationsImage(prompt: string): Promise<{ bytes: Uint8Array | null; error?: string }> {
+  try {
+    const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}`;
+    console.log("[Pollinations] Requesting:", url.slice(0, 120));
+    const res = await fetch(url, {
+      headers: { "User-Agent": "Mozilla/5.0" },
+      signal: AbortSignal.timeout(45_000),
+      redirect: "follow",
+    });
+    if (!res.ok) {
+      return { bytes: null, error: `Pollinations HTTP ${res.status}` };
+    }
+    const ct = res.headers.get("content-type") ?? "";
+    if (!ct.startsWith("image/")) {
+      return { bytes: null, error: `Pollinations returned non-image content-type: ${ct}` };
+    }
+    const buf = await res.arrayBuffer();
+    if (buf.byteLength < 2000) {
+      return { bytes: null, error: `Pollinations image too small (${buf.byteLength}B)` };
+    }
+    console.log("[Pollinations] Success:", buf.byteLength, "bytes");
+    return { bytes: new Uint8Array(buf) };
+  } catch (e) {
+    return { bytes: null, error: `Pollinations error: ${e instanceof Error ? e.message : String(e)}` };
+  }
+}
+
+// ── 2. SERP API image search ──────────────────────────────────────────────────
 const SERP_BLOCKED_DOMAINS = [
   "instagram.com", "cdninstagram.com", "lookaside.instagram.com",
   "facebook.com", "fbcdn.net", "fbsbx.com",
-  // scontent-*.fbcdn.net pattern covered by fbcdn.net suffix match above
   "shutterstock.com", "gettyimages.com", "istockphoto.com", "alamy.com",
   "depositphotos.com", "dreamstime.com", "123rf.com",
   "pinterest.com", "pinimg.com",
@@ -117,11 +149,10 @@ function isSerpUrlUsable(url: string): boolean {
       (blocked) => host === blocked || host.endsWith("." + blocked),
     );
   } catch {
-    return false; // unparseable URL → skip
+    return false;
   }
 }
 
-// Probe a URL to confirm it actually serves a 2xx image (no redirects to HTML, no hotlink blocks)
 async function probeImageUrl(url: string): Promise<boolean> {
   try {
     const res = await fetch(url, {
@@ -138,10 +169,9 @@ async function probeImageUrl(url: string): Promise<boolean> {
   }
 }
 
-// ── SERP API image search ─────────────────────────────────────────────────────
-async function fetchSerpImage(query: string): Promise<{ url: string | null; error?: string }> {
+async function fetchSerpImageBytes(query: string): Promise<{ bytes: Uint8Array | null; error?: string }> {
   const key = Deno.env.get("SERP_API_KEY");
-  if (!key) return { url: null, error: "SERP_API_KEY not set" };
+  if (!key) return { bytes: null, error: "SERP_API_KEY not set" };
   try {
     const params = new URLSearchParams({
       api_key: key,
@@ -153,35 +183,31 @@ async function fetchSerpImage(query: string): Promise<{ url: string | null; erro
     const res = await fetch(`https://serpapi.com/search.json?${params}`);
     if (!res.ok) {
       const detail = await res.text().catch(() => res.status.toString());
-      return { url: null, error: `SERP API ${res.status}: ${detail.slice(0, 120)}` };
+      return { bytes: null, error: `SERP API ${res.status}: ${detail.slice(0, 120)}` };
     }
     const data = await res.json();
-    if (data?.error) return { url: null, error: `SERP API error: ${data.error}` };
+    if (data?.error) return { bytes: null, error: `SERP API error: ${data.error}` };
 
     const results: Array<{ original?: string; thumbnail?: string }> = data?.images_results ?? [];
     for (const img of results.slice(0, 20)) {
-      // Try original first, fall back to thumbnail (Google-cached, more reliable)
       for (const candidate of [img.original, img.thumbnail]) {
         if (!candidate || !isSerpUrlUsable(candidate)) continue;
-        if (await probeImageUrl(candidate)) return { url: candidate };
+        if (!(await probeImageUrl(candidate))) continue;
+        // Download the image bytes
+        const bytes = await fetchBytes(candidate, 20_000);
+        if (bytes) {
+          console.log("[SERP] Downloaded image from:", candidate.slice(0, 80));
+          return { bytes };
+        }
       }
     }
-    return { url: null, error: `SERP returned ${results.length} results but none passed image probe` };
+    return { bytes: null, error: `SERP returned ${results.length} results but none could be downloaded` };
   } catch (e) {
-    return { url: null, error: `SERP fetch error: ${e instanceof Error ? e.message : String(e)}` };
+    return { bytes: null, error: `SERP fetch error: ${e instanceof Error ? e.message : String(e)}` };
   }
 }
 
-// ── Hugging Face image generation via HF Router ───────────────────────────────
-// Uses the HF inference router (router.huggingface.co) — accessible from Supabase.
-// NOTE: api-inference.huggingface.co is DNS-blocked in the Supabase edge runtime.
-// API key name in Supabase secrets: HUGGINGFACE_API_KEY
-//
-// Providers tried in order (all use OpenAI-compat /v1/images/generations):
-//   1. wavespeed  — fast FLUX.1-dev
-//   2. fal-ai     — FLUX.1-dev fallback
-//   3. together   — additional fallback
-
+// ── 3. Hugging Face image generation ─────────────────────────────────────────
 interface HFProvider { label: string; baseUrl: string; model: string }
 
 const HF_PROVIDERS: HFProvider[] = [
@@ -189,16 +215,6 @@ const HF_PROVIDERS: HFProvider[] = [
   { label: "fal-ai",    baseUrl: "https://router.huggingface.co/fal-ai",    model: "black-forest-labs/FLUX.1-dev" },
   { label: "together",  baseUrl: "https://router.huggingface.co/together",  model: "black-forest-labs/FLUX.1-schnell-Free" },
 ];
-
-// Fetch image bytes from a URL (handles provider responses that return a URL)
-async function fetchBytes(url: string): Promise<Uint8Array | null> {
-  try {
-    const r = await fetch(url, { signal: AbortSignal.timeout(30_000) });
-    if (!r.ok) return null;
-    const buf = await r.arrayBuffer();
-    return buf.byteLength >= 2000 ? new Uint8Array(buf) : null;
-  } catch { return null; }
-}
 
 async function generateHFImage(prompt: string): Promise<{ bytes: Uint8Array | null; error?: string }> {
   const key = Deno.env.get("HUGGINGFACE_API_KEY");
@@ -219,7 +235,6 @@ async function generateHFImage(prompt: string): Promise<{ bytes: Uint8Array | nu
           model:  provider.model,
           prompt,
           n:      1,
-          // Size hint — providers ignore what they don't support
           width:  1024,
           height: 576,
         }),
@@ -234,7 +249,6 @@ async function generateHFImage(prompt: string): Promise<{ bytes: Uint8Array | nu
 
       const ct = res.headers.get("content-type") ?? "";
 
-      // ── Binary image response ──────────────────────────────────────────────
       if (ct.startsWith("image/")) {
         const buf = await res.arrayBuffer();
         if (buf.byteLength >= 2000) return { bytes: new Uint8Array(buf) };
@@ -242,29 +256,23 @@ async function generateHFImage(prompt: string): Promise<{ bytes: Uint8Array | nu
         continue;
       }
 
-      // ── JSON response (OpenAI images API format) ───────────────────────────
       if (ct.includes("application/json")) {
-        const json = await res.json();
-
-        // b64_json embedded directly
-        const b64 = json?.data?.[0]?.b64_json ?? json?.image ?? null;
+        const jsonData = await res.json();
+        const b64 = jsonData?.data?.[0]?.b64_json ?? jsonData?.image ?? null;
         if (b64 && typeof b64 === "string") {
           const binary = atob(b64);
           const bytes = new Uint8Array(binary.length);
           for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
           if (bytes.byteLength >= 2000) return { bytes };
         }
-
-        // URL pointing to generated image
-        const imgUrl = json?.data?.[0]?.url ?? json?.images?.[0] ?? null;
+        const imgUrl = jsonData?.data?.[0]?.url ?? jsonData?.images?.[0] ?? null;
         if (imgUrl && typeof imgUrl === "string") {
           const bytes = await fetchBytes(imgUrl);
           if (bytes) return { bytes };
           errors.push(`${provider.label}: image URL fetch failed (${imgUrl.slice(0, 60)})`);
           continue;
         }
-
-        errors.push(`${provider.label}: JSON had no image — ${JSON.stringify(json).slice(0, 120)}`);
+        errors.push(`${provider.label}: JSON had no image — ${JSON.stringify(jsonData).slice(0, 120)}`);
         continue;
       }
 
@@ -293,7 +301,10 @@ async function uploadToStorage(
     .from(BUCKET)
     .upload(path, bytes, { contentType, upsert: false });
 
-  if (error) return null;
+  if (error) {
+    console.error("[Storage] Upload error:", error.message);
+    return null;
+  }
 
   const { data } = await (adminClient as any).storage
     .from(BUCKET)
@@ -302,7 +313,7 @@ async function uploadToStorage(
   return data?.signedUrl ?? null;
 }
 
-// ── Main handler ─────────────────────────────────────────────────────────────
+// ── Main handler ──────────────────────────────────────────────────────────────
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -315,7 +326,6 @@ Deno.serve(async (req: Request) => {
   if (!authHeader.startsWith("Bearer ")) return json({ error: "Unauthorized" }, 401);
 
   const isServiceRole = authHeader === `Bearer ${supabaseServiceKey}`;
-  let callerId: string | null = null;
 
   if (!isServiceRole) {
     const callerClient = createClient(supabaseUrl, supabaseAnonKey, {
@@ -323,7 +333,6 @@ Deno.serve(async (req: Request) => {
     });
     const { data: { user } } = await callerClient.auth.getUser();
     if (!user) return json({ error: "Unauthorized" }, 401);
-    callerId = user.id;
   }
 
   // ── Parse body ────────────────────────────────────────────────────────────
@@ -332,15 +341,14 @@ Deno.serve(async (req: Request) => {
     excerpt?: string | null;
     topic?: string | null;
     category?: string | null;
-    image_prompt?: string | null; // optional: skip prompt generation if provided
-    post_id?: string | null;      // optional: when provided, writes cover_image back to blog_posts
+    image_prompt?: string | null;
+    post_id?: string | null;
   };
   try { body = await req.json(); }
   catch { return json({ error: "Invalid JSON body" }, 400); }
 
   if (!body.title?.trim()) return json({ error: "title is required" }, 400);
 
-  // Validate post_id format if supplied
   const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   if (body.post_id && !UUID_RE.test(body.post_id)) {
     return json({ error: "post_id must be a valid UUID" }, 400);
@@ -349,7 +357,7 @@ Deno.serve(async (req: Request) => {
   const adminClient = createClient(supabaseUrl, supabaseServiceKey);
 
   try {
-    // ── 1. Build image prompt (unless caller supplies one) ─────────────────
+    // ── 1. Build image prompt ─────────────────────────────────────────────
     const imagePrompt = body.image_prompt?.trim()
       || await buildImagePrompt({
         title:    body.title,
@@ -358,36 +366,76 @@ Deno.serve(async (req: Request) => {
         category: body.category,
       });
 
-    // ── 2. Fetch web image + generate AI image in parallel ─────────────────
+    const slug = body.title.toLowerCase().replace(/[^a-z0-9]+/g, "-").slice(0, 40);
     const serpQuery = `${body.title} ${body.topic ?? body.category ?? ""} professional photo`.trim();
-    const [serpResult, hfResult] = await Promise.all([
-      fetchSerpImage(serpQuery),
-      generateHFImage(imagePrompt),
-    ]);
 
-    // ── 3. Pick best image: HF generated > SERP URL ────────────────────────
     let imageUrl: string | null = null;
     let source = "none";
+    const errors: Record<string, string> = {};
 
-    if (hfResult.bytes) {
-      const slug = body.title.toLowerCase().replace(/[^a-z0-9]+/g, "-").slice(0, 40);
-      const uploaded = await uploadToStorage(adminClient, hfResult.bytes, slug);
-      if (uploaded) { imageUrl = uploaded; source = "ai_generated"; }
+    // ── 2. Try Pollinations first ─────────────────────────────────────────
+    console.log("[generate-cover-image] Trying Pollinations...");
+    const pollinationsResult = await fetchPollinationsImage(imagePrompt);
+
+    if (pollinationsResult.bytes) {
+      const uploaded = await uploadToStorage(adminClient, pollinationsResult.bytes, slug);
+      if (uploaded) {
+        imageUrl = uploaded;
+        source = "pollinations";
+        console.log("[generate-cover-image] Pollinations succeeded, stored at:", uploaded.slice(0, 80));
+      } else {
+        errors.pollinations_upload = "Upload to storage failed";
+      }
+    } else {
+      errors.pollinations = pollinationsResult.error ?? "Unknown error";
+      console.warn("[generate-cover-image] Pollinations failed:", errors.pollinations);
     }
 
-    // Fall back to SERP web image
-    if (!imageUrl && serpResult.url) {
-      imageUrl = serpResult.url;
-      source = "web_search";
+    // ── 3. Fallback: SERP API ─────────────────────────────────────────────
+    if (!imageUrl) {
+      console.log("[generate-cover-image] Trying SERP...");
+      const serpResult = await fetchSerpImageBytes(serpQuery);
+
+      if (serpResult.bytes) {
+        const uploaded = await uploadToStorage(adminClient, serpResult.bytes, `serp-${slug}`);
+        if (uploaded) {
+          imageUrl = uploaded;
+          source = "web_search";
+          console.log("[generate-cover-image] SERP succeeded, stored at:", uploaded.slice(0, 80));
+        } else {
+          errors.serp_upload = "Upload to storage failed";
+        }
+      } else {
+        errors.serp = serpResult.error ?? "Unknown error";
+        console.warn("[generate-cover-image] SERP failed:", errors.serp);
+      }
     }
 
-    // ── 4. Write cover_image back to blog_posts when post_id is supplied ─────
+    // ── 4. Fallback: Hugging Face ─────────────────────────────────────────
+    if (!imageUrl) {
+      console.log("[generate-cover-image] Trying Hugging Face...");
+      const hfResult = await generateHFImage(imagePrompt);
+
+      if (hfResult.bytes) {
+        const uploaded = await uploadToStorage(adminClient, hfResult.bytes, `hf-${slug}`);
+        if (uploaded) {
+          imageUrl = uploaded;
+          source = "ai_generated";
+          console.log("[generate-cover-image] Hugging Face succeeded, stored at:", uploaded.slice(0, 80));
+        } else {
+          errors.hf_upload = "Upload to storage failed";
+        }
+      } else {
+        errors.hf = hfResult.error ?? "Unknown error";
+        console.warn("[generate-cover-image] Hugging Face failed:", errors.hf);
+      }
+    }
+
+    // ── 5. Write cover_image back to blog_posts when post_id is supplied ──
     let coverImagePersisted = false;
     let persistError: string | null = null;
 
     if (imageUrl && body.post_id) {
-      // Only require a valid JWT (already verified above) — this is an admin
-      // dashboard where all authenticated users are trusted editors.
       const { error: updateErr } = await (adminClient as any)
         .from("blog_posts")
         .update({ cover_image: imageUrl })
@@ -395,24 +443,20 @@ Deno.serve(async (req: Request) => {
 
       if (updateErr) {
         persistError = updateErr.message;
+        console.error("[generate-cover-image] Failed to persist cover_image:", persistError);
       } else {
         coverImagePersisted = true;
+        console.log("[generate-cover-image] cover_image persisted to blog_posts:", body.post_id);
       }
     }
 
-    // Return diagnostic info even when no image so client can show useful errors
-    const diagnostics = {
-      serp_error:             serpResult.error ?? null,
-      hf_error:               hfResult.error  ?? null,
-      cover_image_persisted:  coverImagePersisted,
-      ...(persistError ? { persist_error: persistError } : {}),
-    };
-
     return json({
-      image_url:    imageUrl,
-      image_prompt: imagePrompt,
+      image_url:             imageUrl,
+      image_prompt:          imagePrompt,
       source,
-      ...diagnostics,
+      cover_image_persisted: coverImagePersisted,
+      ...(persistError ? { persist_error: persistError } : {}),
+      ...(Object.keys(errors).length ? { errors } : {}),
     });
 
   } catch (err: unknown) {
