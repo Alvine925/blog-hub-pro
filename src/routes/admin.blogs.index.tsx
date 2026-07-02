@@ -3,7 +3,7 @@ import { queryOptions, useSuspenseQuery, useQueryClient } from "@tanstack/react-
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 import { toast } from "sonner";
-import { Pencil, Trash2, Eye, Send, Undo2, FileText, Clock } from "lucide-react";
+import { Pencil, Trash2, Eye, Send, Undo2, FileText, Clock, BarChart2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -155,6 +155,11 @@ function AdminBlogList() {
                   <TableCell className="text-right tabular-nums">{post.views}</TableCell>
                   <TableCell>
                     <div className="flex items-center justify-end gap-1">
+                      <Button size="icon" variant="ghost" asChild title="View stats">
+                        <Link to="/admin/blog-stats/$postId" params={{ postId: post.id }}>
+                          <BarChart2 className="h-4 w-4" />
+                        </Link>
+                      </Button>
                       {post.status === "published" && (
                         <Button size="icon" variant="ghost" asChild title="Preview">
                           <Link to="/blogs/$slug" params={{ slug: post.slug }} target="_blank">
