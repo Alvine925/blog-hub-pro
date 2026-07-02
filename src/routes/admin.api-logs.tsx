@@ -339,9 +339,14 @@ function ApiLogsPage() {
                 return (
                   <tr
                     key={row.id}
+                    role="button"
+                    tabIndex={0}
                     onClick={() => setSelected(isSelected ? null : row)}
+                    onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setSelected(isSelected ? null : row); } }}
+                    aria-expanded={isSelected}
+                    aria-label={`${row.method} ${row.path} — ${row.status_code ?? "pending"}`}
                     className={cn(
-                      "cursor-pointer transition-colors hover:bg-muted/30",
+                      "cursor-pointer transition-colors hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset",
                       isSelected && "bg-primary/5",
                       row.status_code != null && row.status_code >= 500 && "bg-red-50/40 hover:bg-red-50/60",
                     )}

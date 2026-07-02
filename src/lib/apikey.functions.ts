@@ -128,8 +128,28 @@ export const listApiRequestLogs = createServerFn({ method: "GET" })
       input,
   )
   .handler(async ({ data }): Promise<{ rows: ApiRequestLog[]; total: number }> => {
+    // ── Server-side auth guard ───────────────────────────────────────────────
+    // Parse the Supabase session cookie that the browser forwards automatically.
+    const { getWebRequest } = await import("@tanstack/react-start/server");
+    const req = getWebRequest();
+    const cookieHeader = req.headers.get("cookie") ?? "";
+    // Supabase stores the session as sb-<ref>-auth-token (may be chunked: .0, .1 …)
+    const tokenMatch = cookieHeader.match(/sb-[^=]+-auth-token(?:\.0)?=([^;]+)/);
+    let accessToken: string | null = null;
+    if (tokenMatch) {
+      try {
+        const raw = decodeURIComponent(tokenMatch[1]);
+        const parsed = JSON.parse(raw);
+        accessToken = parsed?.access_token ?? null;
+      } catch { /* malformed cookie — deny below */ }
+    }
     const { getAdminClient } = await import("./supabase.server");
     const supabase = await getAdminClient();
+
+    // Verify the token is a valid, active Supabase session
+    if (!accessToken) throw new Error("Unauthorized");
+    const { data: { user }, error: authErr } = await supabase.auth.getUser(accessToken);
+    if (authErr || !user) throw new Error("Unauthorized");
 
     const limit = Math.min(data?.limit ?? 50, 200);
     const offset = data?.offset ?? 0;

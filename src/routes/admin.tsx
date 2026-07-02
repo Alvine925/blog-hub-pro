@@ -107,7 +107,8 @@ const globalNav: Array<{ group: string; items: NavItem[] }> = [
   {
     group: "Developers",
     items: [
-      { label: "API Keys",    to: "/admin/api-keys",       icon: Key        },
+      { label: "API Keys",     to: "/admin/api-keys",      icon: Key        },
+      { label: "Request Logs", to: "/admin/api-logs",      icon: ScrollText },
       { label: "API Explorer", to: "/admin/api-explorer",  icon: BookOpen   },
       { label: "Analytics",   to: "/admin/analytics",      icon: Map        },
     ],
