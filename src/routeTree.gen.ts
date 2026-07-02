@@ -51,6 +51,7 @@ import { Route as AdminWorkspacesIdUsersRouteImport } from './routes/admin.works
 import { Route as AdminWorkspacesIdSettingsRouteImport } from './routes/admin.workspaces.$id.settings'
 import { Route as AdminWorkspacesIdNotificationsRouteImport } from './routes/admin.workspaces.$id.notifications'
 import { Route as AdminWorkspacesIdMediaRouteImport } from './routes/admin.workspaces.$id.media'
+import { Route as AdminWorkspacesIdIntegrationCenterRouteImport } from './routes/admin.workspaces.$id.integration-center'
 import { Route as AdminWorkspacesIdCollectionsRouteImport } from './routes/admin.workspaces.$id.collections'
 import { Route as AdminWorkspacesIdBlogsRouteImport } from './routes/admin.workspaces.$id.blogs'
 import { Route as AdminWorkspacesIdApiKeysRouteImport } from './routes/admin.workspaces.$id.api-keys'
@@ -272,6 +273,12 @@ const AdminWorkspacesIdMediaRoute = AdminWorkspacesIdMediaRouteImport.update({
   path: '/media',
   getParentRoute: () => AdminWorkspacesIdRoute,
 } as any)
+const AdminWorkspacesIdIntegrationCenterRoute =
+  AdminWorkspacesIdIntegrationCenterRouteImport.update({
+    id: '/integration-center',
+    path: '/integration-center',
+    getParentRoute: () => AdminWorkspacesIdRoute,
+  } as any)
 const AdminWorkspacesIdCollectionsRoute =
   AdminWorkspacesIdCollectionsRouteImport.update({
     id: '/collections',
@@ -357,6 +364,7 @@ export interface FileRoutesByFullPath {
   '/admin/workspaces/$id/api-keys': typeof AdminWorkspacesIdApiKeysRoute
   '/admin/workspaces/$id/blogs': typeof AdminWorkspacesIdBlogsRoute
   '/admin/workspaces/$id/collections': typeof AdminWorkspacesIdCollectionsRoute
+  '/admin/workspaces/$id/integration-center': typeof AdminWorkspacesIdIntegrationCenterRoute
   '/admin/workspaces/$id/media': typeof AdminWorkspacesIdMediaRoute
   '/admin/workspaces/$id/notifications': typeof AdminWorkspacesIdNotificationsRoute
   '/admin/workspaces/$id/settings': typeof AdminWorkspacesIdSettingsRoute
@@ -405,6 +413,7 @@ export interface FileRoutesByTo {
   '/admin/workspaces/$id/api-keys': typeof AdminWorkspacesIdApiKeysRoute
   '/admin/workspaces/$id/blogs': typeof AdminWorkspacesIdBlogsRoute
   '/admin/workspaces/$id/collections': typeof AdminWorkspacesIdCollectionsRoute
+  '/admin/workspaces/$id/integration-center': typeof AdminWorkspacesIdIntegrationCenterRoute
   '/admin/workspaces/$id/media': typeof AdminWorkspacesIdMediaRoute
   '/admin/workspaces/$id/notifications': typeof AdminWorkspacesIdNotificationsRoute
   '/admin/workspaces/$id/settings': typeof AdminWorkspacesIdSettingsRoute
@@ -457,6 +466,7 @@ export interface FileRoutesById {
   '/admin/workspaces/$id/api-keys': typeof AdminWorkspacesIdApiKeysRoute
   '/admin/workspaces/$id/blogs': typeof AdminWorkspacesIdBlogsRoute
   '/admin/workspaces/$id/collections': typeof AdminWorkspacesIdCollectionsRoute
+  '/admin/workspaces/$id/integration-center': typeof AdminWorkspacesIdIntegrationCenterRoute
   '/admin/workspaces/$id/media': typeof AdminWorkspacesIdMediaRoute
   '/admin/workspaces/$id/notifications': typeof AdminWorkspacesIdNotificationsRoute
   '/admin/workspaces/$id/settings': typeof AdminWorkspacesIdSettingsRoute
@@ -510,6 +520,7 @@ export interface FileRouteTypes {
     | '/admin/workspaces/$id/api-keys'
     | '/admin/workspaces/$id/blogs'
     | '/admin/workspaces/$id/collections'
+    | '/admin/workspaces/$id/integration-center'
     | '/admin/workspaces/$id/media'
     | '/admin/workspaces/$id/notifications'
     | '/admin/workspaces/$id/settings'
@@ -558,6 +569,7 @@ export interface FileRouteTypes {
     | '/admin/workspaces/$id/api-keys'
     | '/admin/workspaces/$id/blogs'
     | '/admin/workspaces/$id/collections'
+    | '/admin/workspaces/$id/integration-center'
     | '/admin/workspaces/$id/media'
     | '/admin/workspaces/$id/notifications'
     | '/admin/workspaces/$id/settings'
@@ -609,6 +621,7 @@ export interface FileRouteTypes {
     | '/admin/workspaces/$id/api-keys'
     | '/admin/workspaces/$id/blogs'
     | '/admin/workspaces/$id/collections'
+    | '/admin/workspaces/$id/integration-center'
     | '/admin/workspaces/$id/media'
     | '/admin/workspaces/$id/notifications'
     | '/admin/workspaces/$id/settings'
@@ -923,6 +936,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminWorkspacesIdMediaRouteImport
       parentRoute: typeof AdminWorkspacesIdRoute
     }
+    '/admin/workspaces/$id/integration-center': {
+      id: '/admin/workspaces/$id/integration-center'
+      path: '/integration-center'
+      fullPath: '/admin/workspaces/$id/integration-center'
+      preLoaderRoute: typeof AdminWorkspacesIdIntegrationCenterRouteImport
+      parentRoute: typeof AdminWorkspacesIdRoute
+    }
     '/admin/workspaces/$id/collections': {
       id: '/admin/workspaces/$id/collections'
       path: '/collections'
@@ -994,6 +1014,7 @@ interface AdminWorkspacesIdRouteChildren {
   AdminWorkspacesIdApiKeysRoute: typeof AdminWorkspacesIdApiKeysRoute
   AdminWorkspacesIdBlogsRoute: typeof AdminWorkspacesIdBlogsRoute
   AdminWorkspacesIdCollectionsRoute: typeof AdminWorkspacesIdCollectionsRoute
+  AdminWorkspacesIdIntegrationCenterRoute: typeof AdminWorkspacesIdIntegrationCenterRoute
   AdminWorkspacesIdMediaRoute: typeof AdminWorkspacesIdMediaRoute
   AdminWorkspacesIdNotificationsRoute: typeof AdminWorkspacesIdNotificationsRoute
   AdminWorkspacesIdSettingsRoute: typeof AdminWorkspacesIdSettingsRoute
@@ -1010,6 +1031,8 @@ const AdminWorkspacesIdRouteChildren: AdminWorkspacesIdRouteChildren = {
   AdminWorkspacesIdApiKeysRoute: AdminWorkspacesIdApiKeysRoute,
   AdminWorkspacesIdBlogsRoute: AdminWorkspacesIdBlogsRoute,
   AdminWorkspacesIdCollectionsRoute: AdminWorkspacesIdCollectionsRoute,
+  AdminWorkspacesIdIntegrationCenterRoute:
+    AdminWorkspacesIdIntegrationCenterRoute,
   AdminWorkspacesIdMediaRoute: AdminWorkspacesIdMediaRoute,
   AdminWorkspacesIdNotificationsRoute: AdminWorkspacesIdNotificationsRoute,
   AdminWorkspacesIdSettingsRoute: AdminWorkspacesIdSettingsRoute,

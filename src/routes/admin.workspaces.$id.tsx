@@ -5,7 +5,7 @@ import { createServerFn } from "@tanstack/react-start";
 import {
   LayoutDashboard, FileText, Layers, ImageIcon, Key, Webhook,
   BarChart2, Bell, Settings, Code2, Sparkles,
-  ChevronLeft, ExternalLink, LogOut, Plus, Search, ChevronRight, Info,
+  ChevronLeft, ExternalLink, LogOut, Plus, Search, ChevronRight, Info, Plug,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Workspace } from "@/lib/workspace.functions";
@@ -80,9 +80,10 @@ function buildNav(id: string): NavGroup[] {
       group: "Tools",
       items: [
         { label: "AI Assistant",  to: `${base}/ai-assistant`, icon: Sparkles   },
-        { label: "API Keys",      to: `${base}/api-keys`,     icon: Key        },
-        { label: "Webhooks",      to: `${base}/webhooks`,     icon: Webhook    },
-        { label: "API Explorer",  to: `${base}/api-explorer`, icon: Code2      },
+        { label: "API Keys",           to: `${base}/api-keys`,             icon: Key   },
+        { label: "Webhooks",           to: `${base}/webhooks`,             icon: Webhook },
+        { label: "API Explorer",       to: `${base}/api-explorer`,         icon: Code2 },
+        { label: "Integration Center", to: `${base}/integration-center`,   icon: Plug  },
       ],
     },
     {
