@@ -54,6 +54,7 @@ import { Route as AdminWorkspacesIdNotificationsRouteImport } from './routes/adm
 import { Route as AdminWorkspacesIdMediaRouteImport } from './routes/admin.workspaces.$id.media'
 import { Route as AdminWorkspacesIdIntegrationCenterRouteImport } from './routes/admin.workspaces.$id.integration-center'
 import { Route as AdminWorkspacesIdDeveloperRouteImport } from './routes/admin.workspaces.$id.developer'
+import { Route as AdminWorkspacesIdCommentsRouteImport } from './routes/admin.workspaces.$id.comments'
 import { Route as AdminWorkspacesIdCollectionsRouteImport } from './routes/admin.workspaces.$id.collections'
 import { Route as AdminWorkspacesIdCacheInvalidationRouteImport } from './routes/admin.workspaces.$id.cache-invalidation'
 import { Route as AdminWorkspacesIdBlogsRouteImport } from './routes/admin.workspaces.$id.blogs'
@@ -294,6 +295,12 @@ const AdminWorkspacesIdDeveloperRoute =
     path: '/developer',
     getParentRoute: () => AdminWorkspacesIdRoute,
   } as any)
+const AdminWorkspacesIdCommentsRoute =
+  AdminWorkspacesIdCommentsRouteImport.update({
+    id: '/comments',
+    path: '/comments',
+    getParentRoute: () => AdminWorkspacesIdRoute,
+  } as any)
 const AdminWorkspacesIdCollectionsRoute =
   AdminWorkspacesIdCollectionsRouteImport.update({
     id: '/collections',
@@ -393,6 +400,7 @@ export interface FileRoutesByFullPath {
   '/admin/workspaces/$id/blogs': typeof AdminWorkspacesIdBlogsRouteWithChildren
   '/admin/workspaces/$id/cache-invalidation': typeof AdminWorkspacesIdCacheInvalidationRoute
   '/admin/workspaces/$id/collections': typeof AdminWorkspacesIdCollectionsRoute
+  '/admin/workspaces/$id/comments': typeof AdminWorkspacesIdCommentsRoute
   '/admin/workspaces/$id/developer': typeof AdminWorkspacesIdDeveloperRoute
   '/admin/workspaces/$id/integration-center': typeof AdminWorkspacesIdIntegrationCenterRoute
   '/admin/workspaces/$id/media': typeof AdminWorkspacesIdMediaRoute
@@ -446,6 +454,7 @@ export interface FileRoutesByTo {
   '/admin/workspaces/$id/blogs': typeof AdminWorkspacesIdBlogsRouteWithChildren
   '/admin/workspaces/$id/cache-invalidation': typeof AdminWorkspacesIdCacheInvalidationRoute
   '/admin/workspaces/$id/collections': typeof AdminWorkspacesIdCollectionsRoute
+  '/admin/workspaces/$id/comments': typeof AdminWorkspacesIdCommentsRoute
   '/admin/workspaces/$id/developer': typeof AdminWorkspacesIdDeveloperRoute
   '/admin/workspaces/$id/integration-center': typeof AdminWorkspacesIdIntegrationCenterRoute
   '/admin/workspaces/$id/media': typeof AdminWorkspacesIdMediaRoute
@@ -503,6 +512,7 @@ export interface FileRoutesById {
   '/admin/workspaces/$id/blogs': typeof AdminWorkspacesIdBlogsRouteWithChildren
   '/admin/workspaces/$id/cache-invalidation': typeof AdminWorkspacesIdCacheInvalidationRoute
   '/admin/workspaces/$id/collections': typeof AdminWorkspacesIdCollectionsRoute
+  '/admin/workspaces/$id/comments': typeof AdminWorkspacesIdCommentsRoute
   '/admin/workspaces/$id/developer': typeof AdminWorkspacesIdDeveloperRoute
   '/admin/workspaces/$id/integration-center': typeof AdminWorkspacesIdIntegrationCenterRoute
   '/admin/workspaces/$id/media': typeof AdminWorkspacesIdMediaRoute
@@ -561,6 +571,7 @@ export interface FileRouteTypes {
     | '/admin/workspaces/$id/blogs'
     | '/admin/workspaces/$id/cache-invalidation'
     | '/admin/workspaces/$id/collections'
+    | '/admin/workspaces/$id/comments'
     | '/admin/workspaces/$id/developer'
     | '/admin/workspaces/$id/integration-center'
     | '/admin/workspaces/$id/media'
@@ -614,6 +625,7 @@ export interface FileRouteTypes {
     | '/admin/workspaces/$id/blogs'
     | '/admin/workspaces/$id/cache-invalidation'
     | '/admin/workspaces/$id/collections'
+    | '/admin/workspaces/$id/comments'
     | '/admin/workspaces/$id/developer'
     | '/admin/workspaces/$id/integration-center'
     | '/admin/workspaces/$id/media'
@@ -670,6 +682,7 @@ export interface FileRouteTypes {
     | '/admin/workspaces/$id/blogs'
     | '/admin/workspaces/$id/cache-invalidation'
     | '/admin/workspaces/$id/collections'
+    | '/admin/workspaces/$id/comments'
     | '/admin/workspaces/$id/developer'
     | '/admin/workspaces/$id/integration-center'
     | '/admin/workspaces/$id/media'
@@ -1008,6 +1021,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminWorkspacesIdDeveloperRouteImport
       parentRoute: typeof AdminWorkspacesIdRoute
     }
+    '/admin/workspaces/$id/comments': {
+      id: '/admin/workspaces/$id/comments'
+      path: '/comments'
+      fullPath: '/admin/workspaces/$id/comments'
+      preLoaderRoute: typeof AdminWorkspacesIdCommentsRouteImport
+      parentRoute: typeof AdminWorkspacesIdRoute
+    }
     '/admin/workspaces/$id/collections': {
       id: '/admin/workspaces/$id/collections'
       path: '/collections'
@@ -1108,6 +1128,7 @@ interface AdminWorkspacesIdRouteChildren {
   AdminWorkspacesIdBlogsRoute: typeof AdminWorkspacesIdBlogsRouteWithChildren
   AdminWorkspacesIdCacheInvalidationRoute: typeof AdminWorkspacesIdCacheInvalidationRoute
   AdminWorkspacesIdCollectionsRoute: typeof AdminWorkspacesIdCollectionsRoute
+  AdminWorkspacesIdCommentsRoute: typeof AdminWorkspacesIdCommentsRoute
   AdminWorkspacesIdDeveloperRoute: typeof AdminWorkspacesIdDeveloperRoute
   AdminWorkspacesIdIntegrationCenterRoute: typeof AdminWorkspacesIdIntegrationCenterRoute
   AdminWorkspacesIdMediaRoute: typeof AdminWorkspacesIdMediaRoute
@@ -1128,6 +1149,7 @@ const AdminWorkspacesIdRouteChildren: AdminWorkspacesIdRouteChildren = {
   AdminWorkspacesIdCacheInvalidationRoute:
     AdminWorkspacesIdCacheInvalidationRoute,
   AdminWorkspacesIdCollectionsRoute: AdminWorkspacesIdCollectionsRoute,
+  AdminWorkspacesIdCommentsRoute: AdminWorkspacesIdCommentsRoute,
   AdminWorkspacesIdDeveloperRoute: AdminWorkspacesIdDeveloperRoute,
   AdminWorkspacesIdIntegrationCenterRoute:
     AdminWorkspacesIdIntegrationCenterRoute,

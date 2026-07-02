@@ -5,7 +5,7 @@ import { createServerFn } from "@tanstack/react-start";
 import {
   LayoutDashboard, FileText, Layers, ImageIcon, Key, Webhook,
   BarChart2, Bell, Settings, Code2, Sparkles,
-  ChevronLeft, ExternalLink, LogOut, Plus, Search, ChevronRight, Info, Plug, Zap, BookOpen,
+  ChevronLeft, ExternalLink, LogOut, Plus, Search, ChevronRight, Info, Plug, Zap, BookOpen, MessageSquare,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Workspace } from "@/lib/workspace.functions";
@@ -71,9 +71,10 @@ function buildNav(id: string): NavGroup[] {
     {
       group: "Content",
       items: [
-        { label: "Blog Posts",    to: `${base}/blogs`,        icon: FileText   },
-        { label: "Collections",   to: `${base}/collections`,  icon: Layers     },
-        { label: "Media Library", to: `${base}/media`,        icon: ImageIcon  },
+        { label: "Blog Posts",    to: `${base}/blogs`,        icon: FileText       },
+        { label: "Comments",      to: `${base}/comments`,     icon: MessageSquare  },
+        { label: "Collections",   to: `${base}/collections`,  icon: Layers         },
+        { label: "Media Library", to: `${base}/media`,        icon: ImageIcon      },
       ],
     },
     {
