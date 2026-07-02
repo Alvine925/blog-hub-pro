@@ -97,6 +97,30 @@ async function buildImagePrompt(params: {
   return callAI(system, `Create an image prompt for:\n${ctx}`);
 }
 
+// ── Domains that block hotlinking or serve watermarked/unusable images ────────
+// Matched against the parsed hostname using exact equality or suffix (.domain.com).
+const SERP_BLOCKED_DOMAINS = [
+  "instagram.com", "cdninstagram.com", "lookaside.instagram.com",
+  "facebook.com", "fbcdn.net", "fbsbx.com",
+  // scontent-*.fbcdn.net pattern covered by fbcdn.net suffix match above
+  "shutterstock.com", "gettyimages.com", "istockphoto.com", "alamy.com",
+  "depositphotos.com", "dreamstime.com", "123rf.com",
+  "pinterest.com", "pinimg.com",
+  "twimg.com",
+];
+
+function isSerpUrlUsable(url: string): boolean {
+  if (!url.startsWith("http") || url.startsWith("data:")) return false;
+  try {
+    const host = new URL(url).hostname.toLowerCase();
+    return !SERP_BLOCKED_DOMAINS.some(
+      (blocked) => host === blocked || host.endsWith("." + blocked),
+    );
+  } catch {
+    return false; // unparseable URL → skip
+  }
+}
+
 // ── SERP API image search ─────────────────────────────────────────────────────
 async function fetchSerpImage(query: string): Promise<{ url: string | null; error?: string }> {
   const key = Deno.env.get("SERP_API_KEY");
@@ -106,7 +130,7 @@ async function fetchSerpImage(query: string): Promise<{ url: string | null; erro
       api_key: key,
       engine:  "google_images",
       q:       query,
-      num:     "10",
+      num:     "20",
       safe:    "active",
     });
     const res = await fetch(`https://serpapi.com/search.json?${params}`);
@@ -118,14 +142,11 @@ async function fetchSerpImage(query: string): Promise<{ url: string | null; erro
     if (data?.error) return { url: null, error: `SERP API error: ${data.error}` };
 
     const results: Array<{ original?: string; thumbnail?: string }> = data?.images_results ?? [];
-    for (const img of results.slice(0, 10)) {
-      // Accept any HTTP URL — just skip data: URIs
+    for (const img of results.slice(0, 20)) {
       const url = img.original ?? img.thumbnail ?? "";
-      if (url.startsWith("http") && !url.startsWith("data:")) {
-        return { url };
-      }
+      if (isSerpUrlUsable(url)) return { url };
     }
-    return { url: null, error: `SERP returned ${results.length} results but none usable` };
+    return { url: null, error: `SERP returned ${results.length} results but none were from embeddable domains` };
   } catch (e) {
     return { url: null, error: `SERP fetch error: ${e instanceof Error ? e.message : String(e)}` };
   }

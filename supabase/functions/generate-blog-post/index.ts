@@ -79,6 +79,30 @@ Return ONLY the image prompt as a single descriptive paragraph, no commentary.`;
   return callAI([{ role: "system", content: system }, { role: "user", content: user }]);
 }
 
+// ── Domains that block hotlinking or serve watermarked/unusable images ────────
+// Matched against the parsed hostname using exact equality or suffix (.domain.com).
+const SERP_BLOCKED_DOMAINS = [
+  "instagram.com", "cdninstagram.com", "lookaside.instagram.com",
+  "facebook.com", "fbcdn.net", "fbsbx.com",
+  // scontent-*.fbcdn.net pattern covered by fbcdn.net suffix match above
+  "shutterstock.com", "gettyimages.com", "istockphoto.com", "alamy.com",
+  "depositphotos.com", "dreamstime.com", "123rf.com",
+  "pinterest.com", "pinimg.com",
+  "twimg.com",
+];
+
+function isSerpUrlUsable(url: string): boolean {
+  if (!url.startsWith("http") || url.startsWith("data:")) return false;
+  try {
+    const host = new URL(url).hostname.toLowerCase();
+    return !SERP_BLOCKED_DOMAINS.some(
+      (blocked) => host === blocked || host.endsWith("." + blocked),
+    );
+  } catch {
+    return false; // unparseable URL → skip
+  }
+}
+
 // ── SERP API image search ─────────────────────────────────────────────────────
 async function fetchWebImage(query: string): Promise<string | null> {
   const serpKey = Deno.env.get("SERP_API_KEY");
@@ -89,7 +113,7 @@ async function fetchWebImage(query: string): Promise<string | null> {
       api_key: serpKey,
       engine:  "google_images",
       q:       query,
-      num:     "10",
+      num:     "20",
       safe:    "active",
     });
     const res = await fetch(`https://serpapi.com/search.json?${params}`);
@@ -97,9 +121,9 @@ async function fetchWebImage(query: string): Promise<string | null> {
     const data = await res.json();
     if (data?.error) return null;
     const results: Array<{ original?: string; thumbnail?: string }> = data?.images_results ?? [];
-    for (const img of results.slice(0, 10)) {
+    for (const img of results.slice(0, 20)) {
       const url = img.original ?? img.thumbnail ?? "";
-      if (url.startsWith("http") && !url.startsWith("data:")) return url;
+      if (isSerpUrlUsable(url)) return url;
     }
     return null;
   } catch {
