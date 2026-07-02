@@ -1,0 +1,507 @@
+# IMPLEMENTATION AUDIT & COMPLETION PROMPT
+
+## VERIFY AND IMPLEMENT THE COMPLETE LUNAR CMS REST API REQUEST FLOW
+
+You are an expert Senior Software Architect and Full Stack Engineer.
+
+Your task is **NOT** to blindly write code.
+
+Your first responsibility is to perform a complete audit of the existing project to determine whether the entire REST API request lifecycle described below has already been implemented.
+
+The project is already largely complete. Authentication, workspaces, dashboards, API keys, content management and many other systems already exist.
+
+Do **NOT** rebuild existing functionality.
+
+Do **NOT** duplicate code.
+
+Do **NOT** create parallel services.
+
+Instead, inspect the existing architecture and extend it only where functionality is missing.
+
+---
+
+# PHASE 1 — PROJECT AUDIT
+
+Before writing any code, inspect the project.
+
+Specifically inspect:
+
+* Existing REST API routes
+* API Gateway
+* API authentication middleware
+* API Key validation logic
+* Existing Edge Functions
+* Existing Supabase functions
+* Existing database tables
+* Existing repositories
+* Existing services
+* Existing middleware
+* Existing caching layer
+* Existing logging
+* Existing rate limiting
+* Existing permission system
+* Existing response builders
+* Existing validation
+* Existing workspace resolution
+* Existing error handling
+* Existing API documentation
+
+Create an internal checklist showing which parts already exist and which do not.
+
+Only implement missing functionality.
+
+---
+
+# PHASE 2 — VERIFY THE COMPLETE REQUEST FLOW
+
+Verify that every incoming REST API request follows this exact lifecycle.
+
+```text
+External Website
+
+↓
+
+REST Endpoint
+
+↓
+
+API Gateway
+
+↓
+
+Authentication
+
+↓
+
+API Key Validation
+
+↓
+
+Workspace Resolution
+
+↓
+
+Permission Validation
+
+↓
+
+Rate Limiting
+
+↓
+
+Request Validation
+
+↓
+
+Business Logic
+
+↓
+
+Database Query
+
+↓
+
+Response Filtering
+
+↓
+
+JSON Response Builder
+
+↓
+
+Return Response
+```
+
+If any step is missing, implement it.
+
+---
+
+# STEP 1 — API Gateway
+
+Verify that every request first enters a centralized API layer.
+
+There should not be duplicated authentication logic across endpoints.
+
+If a centralized gateway or middleware does not exist, create one.
+
+Responsibilities include:
+
+* Receive incoming requests
+* Parse headers
+* Authenticate
+* Validate API Key
+* Resolve workspace
+* Apply rate limiting
+* Validate permissions
+* Pass request to endpoint
+
+All REST endpoints must use this shared flow.
+
+---
+
+# STEP 2 — API KEY VALIDATION
+
+Verify that every request validates the supplied API Key.
+
+Expected request format
+
+```http
+Authorization:
+Bearer lunar_pk_xxxxxxxxx
+```
+
+Validation must include
+
+* Key exists
+* Key is active
+* Key has not expired
+* Key belongs to an existing workspace
+* Key has required scopes
+* Key is not revoked
+* Key is not suspended
+* Workspace subscription permits API access
+
+If any validation is missing, implement it.
+
+No endpoint should bypass API Key validation.
+
+---
+
+# STEP 3 — WORKSPACE RESOLUTION
+
+Verify that the workspace is resolved automatically from the API Key.
+
+The client must never send
+
+* workspace_id
+* tenant_id
+* collection_id
+* organization_id
+
+The API Key alone must determine which workspace owns the request.
+
+If endpoints currently require workspace identifiers from the client, refactor them to use automatic workspace resolution.
+
+---
+
+# STEP 4 — PERMISSION CHECKS
+
+Verify that permissions are enforced before business logic executes.
+
+Examples
+
+A key with
+
+* blogs.read
+
+must not access
+
+* events.write
+
+Permissions should support fine-grained scopes such as
+
+* blogs.read
+* blogs.write
+* pages.read
+* pages.write
+* events.read
+* events.write
+* media.read
+* media.write
+* search.read
+
+Requests without the required scope must return
+
+```http
+403 Forbidden
+```
+
+---
+
+# STEP 5 — RATE LIMITING
+
+Verify that rate limiting is implemented before database access.
+
+Rate limiting should support
+
+* Requests per minute
+* Requests per hour
+* Requests per day
+
+The limits should be configurable.
+
+When exceeded
+
+Return
+
+```http
+429 Too Many Requests
+```
+
+Include standard rate-limit headers where appropriate.
+
+---
+
+# STEP 6 — REQUEST VALIDATION
+
+Verify that
+
+* Query parameters
+* Route parameters
+* Request body
+* Pagination values
+* Search parameters
+* Filters
+
+are validated before execution.
+
+Reject invalid requests before querying the database.
+
+---
+
+# STEP 7 — DATABASE ACCESS
+
+Verify that every database query is automatically filtered by the resolved workspace.
+
+Example
+
+Incorrect
+
+```sql
+SELECT *
+FROM blogs;
+```
+
+Correct
+
+```sql
+SELECT *
+FROM blogs
+WHERE workspace_id = resolved_workspace
+AND status = 'published';
+```
+
+No query should ever expose another workspace's data.
+
+Audit every endpoint for tenant isolation.
+
+---
+
+# STEP 8 — RESPONSE FILTERING
+
+Before returning data
+
+Verify that internal fields are removed.
+
+Never expose
+
+* workspace_id
+* owner_id
+* internal_notes
+* draft_content
+* deleted_at
+* internal_status
+* audit_fields
+* private_metadata
+* database IDs that should remain internal
+
+Only expose public API fields.
+
+If response filtering does not exist, implement a centralized response transformer.
+
+---
+
+# STEP 9 — RESPONSE BUILDER
+
+Verify that every endpoint returns a consistent response structure.
+
+Successful responses should follow one standard.
+
+Example
+
+```json
+{
+  "success": true,
+  "data": {},
+  "meta": {},
+  "links": {}
+}
+```
+
+Errors should also use one standard structure.
+
+Example
+
+```json
+{
+  "success": false,
+  "error": {
+    "code": "UNAUTHORIZED",
+    "message": "Invalid API Key"
+  }
+}
+```
+
+If different endpoints return different formats, standardize them.
+
+---
+
+# STEP 10 — ERROR HANDLING
+
+Verify centralized handling for
+
+* 400
+* 401
+* 403
+* 404
+* 409
+* 422
+* 429
+* 500
+
+Error responses should be predictable and documented.
+
+Never expose stack traces or internal database information.
+
+---
+
+# STEP 11 — LOGGING
+
+Verify that API requests are logged.
+
+Each request should record
+
+* Timestamp
+* Endpoint
+* Method
+* Workspace
+* API Key ID (not the raw key)
+* Status Code
+* Response Time
+* IP Address (where available)
+* User Agent
+
+Sensitive information must never be logged.
+
+---
+
+# STEP 12 — CACHING
+
+Verify caching for read-only endpoints.
+
+Suitable examples include
+
+* Homepage
+* Blogs
+* Pages
+* Events
+* Categories
+
+Cache should be invalidated automatically whenever related content is published, updated or deleted.
+
+---
+
+# STEP 13 — SECURITY REVIEW
+
+Verify protection against
+
+* SQL Injection
+* Header Injection
+* Mass Assignment
+* Broken Authorization
+* Cross-workspace data leakage
+* Invalid pagination values
+* Oversized payloads
+* Excessive request rates
+* Invalid HTTP methods
+
+Implement missing protections.
+
+---
+
+# STEP 14 — ENDPOINT CONSISTENCY
+
+Audit every REST endpoint.
+
+Verify that all endpoints use the same middleware pipeline.
+
+There should not be special-case authentication logic inside individual endpoints unless absolutely necessary.
+
+---
+
+# STEP 15 — PERFORMANCE REVIEW
+
+Inspect for
+
+* Duplicate database queries
+* N+1 query problems
+* Unnecessary API calls
+* Missing indexes
+* Slow joins
+* Missing pagination
+* Inefficient filtering
+
+Optimize where appropriate.
+
+---
+
+# FILES TO REVIEW
+
+Review and reuse existing
+
+* REST API routes
+* Middleware
+* API Gateway
+* Edge Functions
+* Supabase Functions
+* Services
+* Database repositories
+* Authentication services
+* API Key services
+* Validation utilities
+* Response builders
+* Logging utilities
+
+Only create new files if there is no suitable existing implementation.
+
+---
+
+# DELIVERABLES
+
+After completing the audit
+
+Provide
+
+1. A list of everything that already exists.
+2. A list of missing functionality.
+3. A list of improvements made.
+4. A list of modified files.
+5. A list of newly created files (only if necessary).
+6. Any security issues discovered.
+7. Any performance issues discovered.
+8. Recommendations for future improvements.
+
+Do not mark the task complete until every step of the request lifecycle has been verified or implemented.
+
+---
+
+# SUCCESS CRITERIA
+
+The implementation is complete only when:
+
+* Every external request passes through a centralized API pipeline.
+* API Keys are fully validated.
+* Workspaces are resolved automatically.
+* Clients never send workspace IDs.
+* Permission checks are enforced consistently.
+* Rate limiting is active.
+* All requests are validated.
+* Every query is tenant-safe.
+* Responses are sanitized.
+* Response formats are consistent.
+* Errors are standardized.
+* Logging is implemented.
+* Caching is functioning correctly.
+* Security best practices are enforced.
+* Existing architecture has been reused wherever possible.
+* No duplicate functionality has been introduced.
