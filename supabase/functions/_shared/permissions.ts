@@ -3,6 +3,7 @@ export const PUBLISHABLE_PERMISSIONS = [
   "read:pages",
   "read:media",
   "read:collections",
+  "write:engagement",
 ] as const;
 
 export const SECRET_PERMISSIONS = [
@@ -12,6 +13,7 @@ export const SECRET_PERMISSIONS = [
   "write:media",
   "write:collections",
   "manage:api_keys",
+  "manage:comments",
 ] as const;
 
 export type Permission =

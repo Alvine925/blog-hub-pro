@@ -46,6 +46,7 @@ export type PipelineResult =
 export async function runPipeline(
   req: Request,
   fnName: string,
+  allowedMethods: readonly string[] = ["GET"],
 ): Promise<PipelineResult> {
   // ── CORS preflight ──────────────────────────────────────────────────────────
   if (req.method === "OPTIONS") {
@@ -53,7 +54,7 @@ export async function runPipeline(
   }
 
   // ── Method guard ────────────────────────────────────────────────────────────
-  if (req.method !== "GET") {
+  if (!allowedMethods.includes(req.method)) {
     return {
       ok: false,
       response: fail(
