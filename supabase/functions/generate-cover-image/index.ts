@@ -121,6 +121,23 @@ function isSerpUrlUsable(url: string): boolean {
   }
 }
 
+// Probe a URL to confirm it actually serves a 2xx image (no redirects to HTML, no hotlink blocks)
+async function probeImageUrl(url: string): Promise<boolean> {
+  try {
+    const res = await fetch(url, {
+      method: "HEAD",
+      headers: { "User-Agent": "Mozilla/5.0 (compatible; Googlebot/2.1)" },
+      redirect: "follow",
+      signal: AbortSignal.timeout(4_000),
+    });
+    if (!res.ok) return false;
+    const ct = res.headers.get("content-type") ?? "";
+    return ct.startsWith("image/");
+  } catch {
+    return false;
+  }
+}
+
 // ── SERP API image search ─────────────────────────────────────────────────────
 async function fetchSerpImage(query: string): Promise<{ url: string | null; error?: string }> {
   const key = Deno.env.get("SERP_API_KEY");
@@ -143,10 +160,13 @@ async function fetchSerpImage(query: string): Promise<{ url: string | null; erro
 
     const results: Array<{ original?: string; thumbnail?: string }> = data?.images_results ?? [];
     for (const img of results.slice(0, 20)) {
-      const url = img.original ?? img.thumbnail ?? "";
-      if (isSerpUrlUsable(url)) return { url };
+      // Try original first, fall back to thumbnail (Google-cached, more reliable)
+      for (const candidate of [img.original, img.thumbnail]) {
+        if (!candidate || !isSerpUrlUsable(candidate)) continue;
+        if (await probeImageUrl(candidate)) return { url: candidate };
+      }
     }
-    return { url: null, error: `SERP returned ${results.length} results but none were from embeddable domains` };
+    return { url: null, error: `SERP returned ${results.length} results but none passed image probe` };
   } catch (e) {
     return { url: null, error: `SERP fetch error: ${e instanceof Error ? e.message : String(e)}` };
   }

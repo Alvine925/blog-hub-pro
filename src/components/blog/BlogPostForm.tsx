@@ -565,7 +565,22 @@ export function BlogPostForm({ initial, workspaceId }: BlogPostFormProps) {
           <h3 className="text-sm font-semibold">Cover Image</h3>
           {coverImage ? (
             <div className="relative overflow-hidden rounded-md border border-border">
-              <img src={coverImage} alt="Cover preview" className="aspect-video w-full object-cover" />
+              <img
+                src={coverImage}
+                alt="Cover preview"
+                className="aspect-video w-full object-cover"
+                onError={(e) => {
+                  const img = e.currentTarget;
+                  img.style.display = "none";
+                  const parent = img.parentElement;
+                  if (parent && !parent.querySelector(".cover-error")) {
+                    const err = document.createElement("div");
+                    err.className = "cover-error flex aspect-video items-center justify-center text-xs text-destructive p-3 text-center";
+                    err.textContent = "⚠ Image failed to load — the URL may be hotlink-blocked. Try uploading the image directly or paste a different URL.";
+                    parent.insertBefore(err, img);
+                  }
+                }}
+              />
               <Button size="icon" variant="secondary" className="absolute right-2 top-2 h-7 w-7" onClick={() => setCoverImage("")} type="button">
                 <X className="h-4 w-4" />
               </Button>

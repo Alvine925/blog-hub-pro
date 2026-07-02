@@ -99,7 +99,24 @@ function isSerpUrlUsable(url: string): boolean {
       (blocked) => host === blocked || host.endsWith("." + blocked),
     );
   } catch {
-    return false; // unparseable URL → skip
+    return false;
+  }
+}
+
+// Probe a URL to confirm it actually serves a 2xx image (no redirects to HTML, no hotlink blocks)
+async function probeImageUrl(url: string): Promise<boolean> {
+  try {
+    const res = await fetch(url, {
+      method: "HEAD",
+      headers: { "User-Agent": "Mozilla/5.0 (compatible; Googlebot/2.1)" },
+      redirect: "follow",
+      signal: AbortSignal.timeout(4_000),
+    });
+    if (!res.ok) return false;
+    const ct = res.headers.get("content-type") ?? "";
+    return ct.startsWith("image/");
+  } catch {
+    return false;
   }
 }
 
@@ -122,8 +139,11 @@ async function fetchWebImage(query: string): Promise<string | null> {
     if (data?.error) return null;
     const results: Array<{ original?: string; thumbnail?: string }> = data?.images_results ?? [];
     for (const img of results.slice(0, 20)) {
-      const url = img.original ?? img.thumbnail ?? "";
-      if (isSerpUrlUsable(url)) return url;
+      // Try original first, fall back to thumbnail (Google-cached, more reliable)
+      for (const candidate of [img.original, img.thumbnail]) {
+        if (!candidate || !isSerpUrlUsable(candidate)) continue;
+        if (await probeImageUrl(candidate)) return candidate;
+      }
     }
     return null;
   } catch {
@@ -153,9 +173,11 @@ async function fetchImageBytes(url: string): Promise<Uint8Array | null> {
   } catch { return null; }
 }
 
-async function generateHFImage(prompt: string): Promise<Uint8Array | null> {
+async function generateHFImage(prompt: string): Promise<{ bytes: Uint8Array | null; error?: string }> {
   const key = Deno.env.get("HUGGINGFACE_API_KEY");
-  if (!key) return null;
+  if (!key) return { bytes: null, error: "HUGGINGFACE_API_KEY not set in Supabase secrets" };
+
+  const errors: string[] = [];
 
   for (const provider of HF_PROVIDERS) {
     const url = `${provider.baseUrl}/v1/images/generations`;
@@ -169,14 +191,19 @@ async function generateHFImage(prompt: string): Promise<Uint8Array | null> {
         body: JSON.stringify({ model: provider.model, prompt, n: 1, width: 1024, height: 576 }),
         signal: AbortSignal.timeout(60_000),
       });
-      if (!res.ok) continue;
+      if (!res.ok) {
+        const detail = await res.text().catch(() => "");
+        errors.push(`${provider.label}: HTTP ${res.status} — ${detail.slice(0, 120)}`);
+        continue;
+      }
 
       const ct = res.headers.get("content-type") ?? "";
 
       // Binary image
       if (ct.startsWith("image/")) {
         const buf = await res.arrayBuffer();
-        if (buf.byteLength >= 2000) return new Uint8Array(buf);
+        if (buf.byteLength >= 2000) return { bytes: new Uint8Array(buf) };
+        errors.push(`${provider.label}: binary too small (${buf.byteLength}B)`);
         continue;
       }
 
@@ -188,17 +215,22 @@ async function generateHFImage(prompt: string): Promise<Uint8Array | null> {
           const binary = atob(b64);
           const bytes = new Uint8Array(binary.length);
           for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-          if (bytes.byteLength >= 2000) return bytes;
+          if (bytes.byteLength >= 2000) return { bytes };
         }
         const imgUrl = data?.data?.[0]?.url ?? data?.images?.[0] ?? null;
         if (imgUrl) {
           const bytes = await fetchImageBytes(imgUrl);
-          if (bytes) return bytes;
+          if (bytes) return { bytes };
+          errors.push(`${provider.label}: image URL fetch failed`);
+          continue;
         }
+        errors.push(`${provider.label}: JSON had no image — ${JSON.stringify(data).slice(0, 80)}`);
       }
-    } catch { continue; }
+    } catch (e) {
+      errors.push(`${provider.label}: ${e instanceof Error ? e.message : String(e)}`);
+    }
   }
-  return null;
+  return { bytes: null, error: errors.join(" | ") };
 }
 
 // ── Slug helper ───────────────────────────────────────────────────────────────
@@ -422,7 +454,7 @@ Deno.serve(async (req: Request) => {
 
     // ── 3. Fetch web image (SERP) + generate AI image (HF) in parallel ───
     const searchQuery = `${blogContent.title} ${opportunityTopic ?? industry ?? ""} professional photography`;
-    const [serpImage, hfImageData] = await Promise.all([
+    const [serpImage, hfResult] = await Promise.all([
       fetchWebImage(searchQuery),
       generateHFImage(imagePrompt),
     ]);
@@ -431,8 +463,8 @@ Deno.serve(async (req: Request) => {
     let coverImage: string | null = null;
     const baseSlug = slugify(blogContent.title);
 
-    if (hfImageData) {
-      const uploaded = await uploadGeneratedImage(adminClient, hfImageData, baseSlug);
+    if (hfResult.bytes) {
+      const uploaded = await uploadGeneratedImage(adminClient, hfResult.bytes, baseSlug);
       coverImage = uploaded ?? serpImage;
     } else {
       coverImage = serpImage;
@@ -481,17 +513,24 @@ Deno.serve(async (req: Request) => {
         model:        LOVABLE_MODEL,
         duration_ms:  Date.now() - startMs,
         completed_at: new Date().toISOString(),
+        parameters:   {
+          opportunityTitle, opportunityTopic, opportunityType,
+          hf_error:   hfResult.error ?? null,
+          serp_found: serpImage !== null,
+          cover_source: hfResult.bytes ? "ai_generated" : (serpImage ? "web_search" : "none"),
+        },
       }).eq("id", genId);
     }
 
     return json({
-      post_id:      post.id,
-      post_slug:    post.slug,
-      title:        blogContent.title,
-      cover_image:  coverImage,
-      image_prompt: imagePrompt,
-      serp_image:   serpImage,
-      hf_image_uploaded: hfImageData !== null,
+      post_id:           post.id,
+      post_slug:         post.slug,
+      title:             blogContent.title,
+      cover_image:       coverImage,
+      image_prompt:      imagePrompt,
+      serp_image:        serpImage,
+      hf_image_uploaded: hfResult.bytes !== null,
+      hf_error:          hfResult.error ?? null,
     });
 
   } catch (err: unknown) {
