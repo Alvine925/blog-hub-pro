@@ -221,6 +221,7 @@ export function BlogPostForm({ initial, workspaceId }: BlogPostFormProps) {
           excerpt: excerpt.trim() || null,
           topic:   tags[0] ?? null,
           category,
+          post_id: initial?.id ?? null, // write cover_image back to blog_posts immediately when editing
         },
       });
       if (error) throw new Error(error.message);

@@ -1,0 +1,114 @@
+Edge Function
+File: supabase/functions/generate-image/index.ts
+
+import { InferenceClient } from "npm:@huggingface/inference";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type",
+};
+
+Deno.serve(async (req) => {
+  // Handle CORS preflight
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: corsHeaders });
+  }
+
+  try {
+    const { prompt, model } = await req.json();
+
+    if (!prompt) {
+      return new Response(JSON.stringify({ error: "Missing prompt" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const client = new InferenceClient(Deno.env.get("HF_TOKEN")!);
+
+    const imageBlob = await client.textToImage({
+      model: model || "black-forest-labs/FLUX.1-schnell",
+      inputs: prompt,
+      parameters: { num_inference_steps: 5 },
+      provider: "auto",
+    });
+
+    // Convert Blob → ArrayBuffer for Deno Response
+    const buffer = await imageBlob.arrayBuffer();
+
+    return new Response(buffer, {
+      headers: {
+        ...corsHeaders,
+        "Content-Type": "image/png",
+      },
+    });
+  } catch (err: any) {
+    return new Response(JSON.stringify({ error: err.message }), {
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+});
+Tip: If the npm: import fails in your Supabase project, replace it with:
+
+import { InferenceClient } from "https://esm.sh/@huggingface/inference";
+Frontend (calling the function)
+Option A — Direct fetch (recommended for binary image response)
+const SUPABASE_URL = "https://your-project.supabase.co";
+const SUPABASE_ANON_KEY = "your-anon-key";
+
+async function generateImage(prompt) {
+  const res = await fetch(`${SUPABASE_URL}/functions/v1/generate-image`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ prompt }),
+  });
+
+  if (!res.ok) {
+    const err = await res.json();
+    throw new Error(err.error);
+  }
+
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  document.getElementById("result").src = url;
+}
+Option B — Using supabase-js invoke (return base64)
+If you prefer the supabase.functions.invoke() helper, return base64 JSON instead of raw binary from the edge function:
+
+Replace the return new Response(buffer, ...) block in the edge function with:
+
+    const bytes = new Uint8Array(buffer);
+    let binary = "";
+    for (let i = 0; i < bytes.byteLength; i++) {
+      binary += String.fromCharCode(bytes[i]);
+    }
+    const base64 = btoa(binary);
+
+    return new Response(
+      JSON.stringify({ image: `data:image/png;base64,${base64}` }),
+      {
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "application/json",
+        },
+      }
+    );
+Then call it:
+
+const { data, error } = await supabase.functions.invoke("generate-image", {
+  body: { prompt: "A cat in a spacesuit", model: "black-forest-labs/FLUX.1-schnell" },
+});
+
+if (error) console.error(error);
+else document.getElementById("result").src = data.image;
+Quick Summary
+Concern	Approach
+Secret safety	Token lives only in Supabase secrets (Deno.env.get("HF_TOKEN"))
+Deno import	npm:@huggingface/inference or esm.sh fallback
+Binary vs JSON	Return raw ArrayBuffer for fetch; return base64 for invoke
+CORS	Handled via headers in the Deno function

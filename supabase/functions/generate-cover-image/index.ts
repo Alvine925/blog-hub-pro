@@ -274,12 +274,15 @@ Deno.serve(async (req: Request) => {
   if (!authHeader.startsWith("Bearer ")) return json({ error: "Unauthorized" }, 401);
 
   const isServiceRole = authHeader === `Bearer ${supabaseServiceKey}`;
+  let callerId: string | null = null;
+
   if (!isServiceRole) {
     const callerClient = createClient(supabaseUrl, supabaseAnonKey, {
       global: { headers: { Authorization: authHeader } },
     });
     const { data: { user } } = await callerClient.auth.getUser();
     if (!user) return json({ error: "Unauthorized" }, 401);
+    callerId = user.id;
   }
 
   // ── Parse body ────────────────────────────────────────────────────────────
@@ -289,11 +292,18 @@ Deno.serve(async (req: Request) => {
     topic?: string | null;
     category?: string | null;
     image_prompt?: string | null; // optional: skip prompt generation if provided
+    post_id?: string | null;      // optional: when provided, writes cover_image back to blog_posts
   };
   try { body = await req.json(); }
   catch { return json({ error: "Invalid JSON body" }, 400); }
 
   if (!body.title?.trim()) return json({ error: "title is required" }, 400);
+
+  // Validate post_id format if supplied
+  const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (body.post_id && !UUID_RE.test(body.post_id)) {
+    return json({ error: "post_id must be a valid UUID" }, 400);
+  }
 
   const adminClient = createClient(supabaseUrl, supabaseServiceKey);
 
@@ -330,10 +340,55 @@ Deno.serve(async (req: Request) => {
       source = "web_search";
     }
 
+    // ── 4. Write cover_image back to blog_posts when post_id is supplied ─────
+    let coverImagePersisted = false;
+    let persistError: string | null = null;
+
+    if (imageUrl && body.post_id) {
+      // Verify caller owns the post (service-role callers are trusted)
+      if (!isServiceRole && callerId) {
+        const { data: postRow } = await (adminClient as any)
+          .from("blog_posts")
+          .select("workspace_id")
+          .eq("id", body.post_id)
+          .maybeSingle();
+
+        const workspaceId = postRow?.workspace_id ?? null;
+        let authorized = false;
+
+        if (workspaceId) {
+          const { data: ws } = await (adminClient as any)
+            .from("workspaces")
+            .select("id")
+            .eq("id", workspaceId)
+            .eq("user_id", callerId)
+            .maybeSingle();
+          authorized = ws !== null;
+        }
+
+        if (!authorized) {
+          return json({ error: "Forbidden: you do not own this post" }, 403);
+        }
+      }
+
+      const { error: updateErr } = await (adminClient as any)
+        .from("blog_posts")
+        .update({ cover_image: imageUrl })
+        .eq("id", body.post_id);
+
+      if (updateErr) {
+        persistError = updateErr.message;
+      } else {
+        coverImagePersisted = true;
+      }
+    }
+
     // Return diagnostic info even when no image so client can show useful errors
     const diagnostics = {
-      serp_error: serpResult.error ?? null,
-      hf_error:   hfResult.error  ?? null,
+      serp_error:             serpResult.error ?? null,
+      hf_error:               hfResult.error  ?? null,
+      cover_image_persisted:  coverImagePersisted,
+      ...(persistError ? { persist_error: persistError } : {}),
     };
 
     return json({
