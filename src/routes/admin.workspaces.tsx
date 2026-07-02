@@ -120,50 +120,42 @@ function WorkspaceCard({
         tabIndex={-1}
         aria-hidden
       >
-        {/* Gradient background always present */}
+        {/* Gradient background — always the base layer */}
         <div className={`absolute inset-0 bg-gradient-to-br ${gradient}`} />
 
-        {/* Site image as blurred background layer */}
+        {/* Full-cover image for logos / site screenshots */}
         {preview?.type === "image" && !imgError && (
           <img
             src={preview.url}
-            alt=""
+            alt={ws.name}
             onError={() => setImgError(true)}
-            className="absolute inset-0 h-full w-full object-cover opacity-30 blur-sm scale-110"
+            className="absolute inset-0 h-full w-full object-cover"
           />
         )}
 
-        {/* Noise/grain overlay for depth */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent" />
+        {/* Favicon: centered large on the gradient — favicons are icons, not photos */}
+        {preview?.type === "favicon" && !imgError && (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <img
+              src={preview.url}
+              alt={ws.name}
+              onError={() => setImgError(true)}
+              className="h-16 w-16 object-contain drop-shadow-xl"
+            />
+          </div>
+        )}
 
-        {/* Centre preview: favicon or logo or initials */}
-        <div className="absolute inset-0 flex items-center justify-center">
-          {preview && !imgError ? (
-            preview.type === "favicon" ? (
-              <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-white/15 backdrop-blur-sm ring-1 ring-white/20 shadow-lg">
-                <img
-                  src={preview.url}
-                  alt={ws.name}
-                  onError={() => setImgError(true)}
-                  className="h-10 w-10 object-contain"
-                />
-              </div>
-            ) : (
-              <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-white/15 backdrop-blur-sm ring-1 ring-white/20 shadow-lg p-2">
-                <img
-                  src={preview.url}
-                  alt={ws.name}
-                  onError={() => setImgError(true)}
-                  className="h-full w-full object-contain"
-                />
-              </div>
-            )
-          ) : (
-            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-white/20 backdrop-blur-sm ring-1 ring-white/25 shadow-lg">
-              <span className="text-2xl font-bold text-white tracking-tight">{initials}</span>
-            </div>
-          )}
-        </div>
+        {/* No image at all — show initials */}
+        {(!preview || imgError) && (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <span className="text-4xl font-bold text-white/80 tracking-tight drop-shadow-lg">
+              {initials}
+            </span>
+          </div>
+        )}
+
+        {/* Bottom scrim so card text below stays readable */}
+        <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/30 to-transparent" />
 
         {/* Default badge top-left */}
         {ws.slug === "default" && (
