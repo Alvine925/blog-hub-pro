@@ -1,0 +1,335 @@
+# IMPLEMENTATION PROMPT 03A
+
+# EXTERNAL WEBSITE INTEGRATION CENTER
+
+## Objective
+
+Implement an **Integration Center** that enables users to integrate their external websites with the existing Lunar CMS REST API.
+
+Do NOT build an SDK.
+
+Instead, build an AI-powered prompt generation system that generates implementation prompts for AI coding platforms.
+
+The Integration Center should live inside the existing Developer section.
+
+---
+
+# Existing Functionality
+
+Do NOT rebuild:
+
+* Authentication
+* Workspaces
+* Dashboard
+* API Key generation
+* REST API
+* Collections
+* Blogs
+* Pages
+* Media
+* Existing UI
+
+Reuse all existing services.
+
+---
+
+# Goal
+
+A user should be able to:
+
+1. Generate an API Key.
+2. Open the Integration Center.
+3. Select their framework.
+4. Select their AI coding platform.
+5. Select the content they want to consume.
+6. Click **Generate Prompt**.
+7. Copy the generated prompt into their AI coding tool.
+8. The AI coding tool integrates the website automatically.
+
+No manual coding should be required by the user.
+
+---
+
+# New Module
+
+Create a new module named:
+
+```text
+Integration Center
+```
+
+---
+
+# Navigation
+
+Inside Developer
+
+```text
+Developer
+
+├── API Keys
+├── Documentation
+├── API Usage
+├── Logs
+└── Integration Center
+```
+
+---
+
+# Integration Center Layout
+
+Create a modern wizard.
+
+Step 1
+
+Choose Framework
+
+Supported frameworks
+
+* Next.js
+* React
+* Vue
+* Nuxt
+* Angular
+* Astro
+* SvelteKit
+* Laravel
+* PHP
+* Node.js
+* Express
+* Flutter
+* React Native
+* WordPress
+* HTML/CSS/JavaScript
+
+---
+
+Step 2
+
+Choose AI Coding Platform
+
+Supported platforms
+
+* Cursor
+* Loveable
+* Windsurf
+* Bolt
+* Replit
+* Claude Code
+* GitHub Copilot Agent
+* VS Code Agent Mode
+
+Design this to be extensible so additional AI tools can be added later.
+
+---
+
+Step 3
+
+Select Content
+
+Allow users to choose what should be integrated.
+
+Examples
+
+* Blogs
+* Pages
+* Events
+* Categories
+* Tags
+* Media
+* Search
+* Everything
+
+Selections should be used when generating the prompt.
+
+---
+
+Step 4
+
+Rendering Strategy
+
+Allow users to choose
+
+* SSR
+* SSG
+* ISR
+* CSR
+
+The generated prompt must adapt accordingly.
+
+---
+
+Step 5
+
+Styling
+
+Options
+
+* Tailwind CSS
+* Bootstrap
+* Material UI
+* Existing Project Styles
+* No Styling
+
+---
+
+Step 6
+
+Generate Prompt
+
+Generate a complete AI prompt using:
+
+* Selected framework
+* Selected AI platform
+* Selected rendering strategy
+* Selected content
+* Current API base URL
+* Existing API endpoints
+* Authentication method
+
+---
+
+# Prompt Generator Engine
+
+Create a prompt generation service.
+
+Suggested file
+
+```text
+PromptGeneratorService.ts
+```
+
+Responsibilities
+
+* Read user selections.
+* Load prompt template.
+* Inject dynamic values.
+* Generate final prompt.
+* Display in a code editor with copy button.
+
+---
+
+# Prompt Variables
+
+Support placeholders such as
+
+```text
+{{FRAMEWORK}}
+
+{{AI_PLATFORM}}
+
+{{API_BASE_URL}}
+
+{{API_KEY}}
+
+{{ENDPOINTS}}
+
+{{CONTENT_TYPES}}
+
+{{AUTH_METHOD}}
+
+{{PAGINATION}}
+
+{{SEARCH}}
+
+{{ERROR_FORMAT}}
+
+{{CACHE_STRATEGY}}
+```
+
+Replace placeholders before displaying the prompt.
+
+---
+
+# Prompt Templates
+
+Store prompt templates in the database or structured JSON files.
+
+Do not hardcode them inside React components.
+
+Each template should have
+
+* id
+* name
+* framework
+* ai_platform
+* version
+* template_body
+* created_at
+* updated_at
+
+---
+
+# Generated Prompt Requirements
+
+Every generated prompt must instruct the AI coding platform to:
+
+* Inspect the existing project first.
+* Reuse existing architecture.
+* Avoid breaking unrelated code.
+* Create reusable API services.
+* Store API configuration centrally.
+* Implement authentication using Bearer tokens.
+* Support pagination.
+* Support filtering.
+* Handle loading and error states.
+* Build SEO-friendly pages where applicable.
+* Keep code modular.
+* Follow framework best practices.
+
+---
+
+# Documentation Generator
+
+Alongside each prompt, automatically generate:
+
+* Required environment variables.
+* Installation instructions.
+* Authentication example.
+* Example API request.
+* Example response.
+* Supported endpoints.
+* Common errors.
+* Troubleshooting tips.
+
+---
+
+# Copy & Export
+
+Allow users to
+
+* Copy prompt
+* Download prompt as Markdown
+* Download prompt as TXT
+
+---
+
+# Versioning
+
+Every prompt template must include a version.
+
+Example
+
+```text
+v1.0
+
+v1.1
+
+v2.0
+```
+
+Users should always generate prompts using the latest active version.
+
+---
+
+# Acceptance Criteria
+
+Implementation is complete when:
+
+* Users can select a framework.
+* Users can select an AI coding platform.
+* Users can choose which content to integrate.
+* The system generates a tailored implementation prompt.
+* Prompts include the correct API configuration and authentication flow.
+* Prompts are easy to copy or download.
+* New frameworks and AI platforms can be added without changing existing logic.

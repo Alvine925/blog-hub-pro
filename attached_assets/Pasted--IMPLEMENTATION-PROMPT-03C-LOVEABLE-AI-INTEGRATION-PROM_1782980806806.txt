@@ -1,0 +1,652 @@
+# IMPLEMENTATION PROMPT 03C
+
+# LOVEABLE AI INTEGRATION PROMPT GENERATOR
+
+## Objective
+
+Implement a Loveable-specific prompt generator that creates optimized prompts for Loveable projects.
+
+Unlike Cursor, Loveable frequently works at the application level and can generate large portions of functionality. Therefore prompts generated for Loveable should be more prescriptive and provide clear implementation requirements.
+
+The goal is for a user to:
+
+```text
+Generate API Key
+
+↓
+
+Open Integration Center
+
+↓
+
+Select Loveable
+
+↓
+
+Select Framework
+
+↓
+
+Select Content Types
+
+↓
+
+Generate Prompt
+
+↓
+
+Copy Prompt
+
+↓
+
+Paste Into Loveable
+
+↓
+
+Loveable Integrates Lunar CMS
+```
+
+---
+
+# Existing CMS
+
+The following already exist.
+
+DO NOT rebuild.
+
+* Authentication
+* Workspaces
+* API Keys
+* REST API
+* Blogs
+* Pages
+* Events
+* Categories
+* Tags
+* Media
+* Dashboard
+* Existing UI
+
+The generated prompt must tell Loveable to integrate with existing systems only.
+
+---
+
+# Create
+
+```text
+LoveablePromptGenerator.ts
+```
+
+Responsibilities
+
+* Generate Loveable-specific prompts.
+* Inject workspace configuration.
+* Inject endpoint information.
+* Inject authentication requirements.
+* Generate implementation instructions.
+* Generate testing checklist.
+
+---
+
+# Dynamic Variables
+
+Support
+
+```text
+{{PROJECT_NAME}}
+
+{{WORKSPACE_NAME}}
+
+{{FRAMEWORK}}
+
+{{API_BASE_URL}}
+
+{{API_KEY}}
+
+{{CONTENT_TYPES}}
+
+{{ENDPOINTS}}
+
+{{SEARCH_ENABLED}}
+
+{{PAGINATION_ENABLED}}
+
+{{RENDERING_MODE}}
+
+{{SITE_URL}}
+
+{{STYLING}}
+```
+
+All placeholders must be resolved before displaying the prompt.
+
+---
+
+# Loveable Prompt Structure
+
+Generated prompt should follow this structure.
+
+## Section 1
+
+Project Context
+
+## Section 2
+
+Objectives
+
+## Section 3
+
+Existing Project Analysis
+
+## Section 4
+
+Required Features
+
+## Section 5
+
+API Integration
+
+## Section 6
+
+SEO Requirements
+
+## Section 7
+
+Performance Requirements
+
+## Section 8
+
+Testing Requirements
+
+## Section 9
+
+Acceptance Criteria
+
+---
+
+# Generated Prompt Template
+
+The generator should create prompts similar to the following.
+
+```text
+You are an expert full-stack engineer.
+
+Analyze the existing codebase before making any changes.
+
+Do not rebuild existing functionality.
+
+Integrate the existing project with Lunar CMS using the supplied REST API.
+
+Reuse existing architecture.
+
+Reuse existing components.
+
+Reuse existing layouts.
+
+Reuse existing styling.
+
+Avoid creating duplicate code.
+
+Implement only the requested functionality.
+```
+
+---
+
+# Project Analysis Instructions
+
+The generated prompt must instruct Loveable to inspect
+
+```text
+Routes
+
+Pages
+
+Layouts
+
+Components
+
+Hooks
+
+Services
+
+State Management
+
+API Clients
+
+Environment Variables
+
+Styling System
+
+Authentication System
+```
+
+Loveable should extend existing architecture.
+
+Never create parallel architecture.
+
+---
+
+# API Configuration
+
+Automatically inject
+
+```text
+Base URL
+
+Authentication Method
+
+Supported Endpoints
+```
+
+Example
+
+```text
+Base URL:
+{{API_BASE_URL}}
+
+Authentication:
+Bearer {{API_KEY}}
+```
+
+The prompt must explain:
+
+Workspace IDs are never required.
+
+Collection IDs are never required.
+
+The CMS resolves the workspace automatically from the API Key.
+
+---
+
+# Content Modules
+
+Generate instructions only for selected modules.
+
+Examples
+
+```text
+Blogs
+
+Pages
+
+Events
+
+Categories
+
+Tags
+
+Search
+
+Media
+```
+
+If Blogs are selected
+
+Loveable should build
+
+```text
+Blog Listing
+
+Blog Detail
+
+Latest Posts
+
+Featured Posts
+
+Pagination
+
+Search
+```
+
+---
+
+# Blog Listing Requirements
+
+Loveable should create
+
+```text
+Blog Grid
+
+Blog Cards
+
+Pagination
+
+Category Filter
+
+Search Bar
+
+Loading State
+
+Empty State
+
+Error State
+```
+
+All data must come from Lunar CMS APIs.
+
+---
+
+# Blog Detail Requirements
+
+Loveable should create
+
+```text
+Slug Route
+
+SEO Metadata
+
+Open Graph Metadata
+
+Related Posts
+
+Author Information
+
+Published Date
+
+Featured Image
+```
+
+Do not expose internal IDs.
+
+Use slug-based routing.
+
+---
+
+# Search Requirements
+
+If Search is enabled
+
+Implement
+
+```text
+Search Input
+
+Debounced Requests
+
+URL Search Params
+
+Search Results
+
+Empty Results
+
+Loading State
+```
+
+---
+
+# Events Integration
+
+If Events are selected
+
+Implement
+
+```text
+Event Listing
+
+Event Detail
+
+Upcoming Events
+
+Past Events
+
+Featured Events
+
+Pagination
+```
+
+---
+
+# Categories & Tags
+
+If selected
+
+Implement
+
+```text
+Category Pages
+
+Tag Pages
+
+Category Filters
+
+Tag Filters
+```
+
+These pages should use API data.
+
+---
+
+# API Layer
+
+The generated prompt should instruct Loveable to create
+
+```text
+services/cms.ts
+
+or
+
+lib/cms.ts
+```
+
+depending on project structure.
+
+Responsibilities
+
+* Authentication
+* Request Handling
+* Error Handling
+* Pagination
+* Response Transformation
+
+---
+
+# Authentication Requirements
+
+All requests should include
+
+```http
+Authorization:
+Bearer API_KEY
+```
+
+Publishable Keys only.
+
+Never place Secret Keys in frontend projects.
+
+Never hardcode keys.
+
+Use environment variables.
+
+---
+
+# Environment Variables
+
+Loveable should create
+
+```text
+CMS_API_URL
+
+CMS_API_KEY
+```
+
+and load them through the framework's environment system.
+
+---
+
+# Error Handling
+
+Handle
+
+```text
+401
+
+403
+
+404
+
+429
+
+500
+```
+
+Display user-friendly messages.
+
+Never expose raw API responses.
+
+---
+
+# Caching Strategy
+
+The prompt should adapt automatically.
+
+SSR
+
+Fetch on request.
+
+ISR
+
+Use revalidation.
+
+CSR
+
+Use client-side caching.
+
+React Query
+
+Reuse existing cache layer.
+
+Never cache authentication errors.
+
+---
+
+# SEO Requirements
+
+If pages are publicly accessible
+
+Loveable should implement
+
+```text
+Meta Titles
+
+Meta Descriptions
+
+Canonical URLs
+
+Open Graph Tags
+
+Twitter Cards
+
+Structured Data
+```
+
+SEO should be generated from CMS content.
+
+---
+
+# Performance Requirements
+
+Implement
+
+```text
+Image Optimization
+
+Lazy Loading
+
+Pagination
+
+Request Deduplication
+
+Cache Reuse
+
+Efficient Data Fetching
+```
+
+Avoid unnecessary requests.
+
+---
+
+# Mobile Responsiveness
+
+Generated prompt should require
+
+```text
+Desktop
+
+Tablet
+
+Mobile
+```
+
+compatibility.
+
+---
+
+# Security Rules
+
+Never expose
+
+```text
+Secret Keys
+
+Workspace IDs
+
+Internal Database IDs
+
+Private Endpoints
+```
+
+Only use documented REST APIs.
+
+---
+
+# Testing Instructions
+
+Loveable should verify
+
+```text
+Authentication
+
+Pagination
+
+Search
+
+SEO
+
+Loading States
+
+Error States
+
+Responsive Design
+
+Build Success
+```
+
+before marking the task complete.
+
+---
+
+# Acceptance Criteria
+
+The generated Loveable prompt is complete when
+
+✓ It is customized for the selected framework.
+
+✓ It includes the correct API configuration.
+
+✓ It explains authentication.
+
+✓ It explains pagination.
+
+✓ It explains search.
+
+✓ It explains SEO.
+
+✓ It instructs Loveable to inspect the existing project before coding.
+
+✓ It reuses existing architecture.
+
+✓ It avoids duplicate functionality.
+
+✓ It can be pasted directly into Loveable without requiring additional instructions.
+
+✓ It produces production-ready integration code.

@@ -1,0 +1,550 @@
+# IMPLEMENTATION PROMPT 03D
+
+# WINDSURF AI INTEGRATION PROMPT GENERATOR
+
+## Objective
+
+Implement a **Windsurf Prompt Generator** that produces highly structured prompts optimized for Windsurf's agent-based development workflow.
+
+Unlike other AI coding tools, Windsurf performs best when given a clear execution plan, explicit boundaries, reusable architecture guidelines, and validation steps. Every generated prompt should guide Windsurf through inspecting the project, planning the implementation, making incremental changes, and validating the final result.
+
+The generated prompt should allow a user to copy it directly into Windsurf without additional editing.
+
+---
+
+# Existing Functionality
+
+The following functionality already exists and MUST NOT be rebuilt.
+
+* User Authentication
+* Workspace Management
+* Dashboard
+* API Keys
+* REST API
+* Blogs
+* Pages
+* Categories
+* Tags
+* Events
+* Media Library
+* Existing Database
+* Existing UI Components
+
+The generated prompt must instruct Windsurf to extend the existing project rather than replacing or rebuilding it.
+
+---
+
+# Workflow
+
+The Integration Center should generate prompts that support the following workflow.
+
+```text
+Generate API Key
+
+↓
+
+Select Windsurf
+
+↓
+
+Select Framework
+
+↓
+
+Select Rendering Strategy
+
+↓
+
+Select Content Modules
+
+↓
+
+Generate Prompt
+
+↓
+
+Copy Prompt
+
+↓
+
+Paste Into Windsurf
+
+↓
+
+Windsurf Inspects Project
+
+↓
+
+Creates Implementation Plan
+
+↓
+
+Implements Integration
+
+↓
+
+Runs Validation
+```
+
+---
+
+# Create
+
+Create the following service if it does not already exist.
+
+```text
+WindsurfPromptGenerator.ts
+```
+
+Responsibilities
+
+* Load Windsurf prompt template.
+* Inject workspace configuration.
+* Inject framework information.
+* Inject endpoint documentation.
+* Inject authentication instructions.
+* Generate implementation checklist.
+* Generate validation checklist.
+
+---
+
+# Prompt Variables
+
+Support dynamic placeholders.
+
+```text
+{{PROJECT_NAME}}
+
+{{WORKSPACE_NAME}}
+
+{{FRAMEWORK}}
+
+{{FRAMEWORK_VERSION}}
+
+{{API_BASE_URL}}
+
+{{API_KEY}}
+
+{{CONTENT_MODULES}}
+
+{{AVAILABLE_ENDPOINTS}}
+
+{{RENDERING_MODE}}
+
+{{SEARCH_ENABLED}}
+
+{{PAGINATION_ENABLED}}
+
+{{CACHE_STRATEGY}}
+
+{{SITE_URL}}
+```
+
+All placeholders must be resolved before displaying the final prompt.
+
+---
+
+# Prompt Structure
+
+Generate prompts using the following structure.
+
+1. Project Context
+
+2. Objectives
+
+3. Existing Project Analysis
+
+4. Implementation Plan
+
+5. API Integration
+
+6. UI Requirements
+
+7. SEO Requirements
+
+8. Performance Requirements
+
+9. Validation Checklist
+
+10. Acceptance Criteria
+
+---
+
+# Project Context
+
+The generated prompt should begin with instructions similar to:
+
+```text
+You are an expert full-stack software engineer.
+
+Your first responsibility is to inspect the existing project.
+
+Do not begin coding immediately.
+
+Understand the project architecture before making changes.
+
+Reuse the existing routing system.
+
+Reuse existing services.
+
+Reuse existing state management.
+
+Reuse existing UI components.
+
+Avoid introducing duplicate logic.
+
+Implement only the requested integration.
+```
+
+---
+
+# Project Inspection
+
+The prompt should instruct Windsurf to inspect
+
+* Routing structure
+* Component hierarchy
+* Existing API layer
+* Existing services
+* Existing hooks
+* Existing layouts
+* Existing styling system
+* Existing environment configuration
+* Existing state management
+* Existing utilities
+
+Before creating any files, Windsurf should determine whether similar functionality already exists.
+
+If it exists, extend it instead of creating duplicate files.
+
+---
+
+# Planning Phase
+
+Before implementation, Windsurf should produce an internal execution plan covering
+
+* Files to inspect
+* Files to modify
+* Files to create
+* Dependencies
+* Existing reusable components
+* Existing reusable utilities
+* Potential breaking changes
+* Testing strategy
+
+Only after the plan is complete should implementation begin.
+
+---
+
+# API Configuration
+
+Automatically inject
+
+```text
+Base URL
+
+Authentication Method
+
+Available Endpoints
+
+Response Format
+```
+
+Example
+
+```text
+Base URL
+
+{{API_BASE_URL}}
+
+Authentication
+
+Authorization:
+Bearer {{API_KEY}}
+```
+
+Explain that
+
+Workspace IDs are never sent.
+
+Collection IDs are never sent.
+
+The CMS automatically resolves the workspace using the supplied API Key.
+
+---
+
+# API Client
+
+The generated prompt should instruct Windsurf to create or reuse a centralized API client.
+
+Suggested locations
+
+```text
+lib/api.ts
+
+services/api.ts
+
+services/cms.ts
+```
+
+Responsibilities
+
+* Authentication
+* Request execution
+* Error handling
+* Pagination
+* Response transformation
+
+If an API client already exists, extend it.
+
+---
+
+# Content Modules
+
+Generate instructions only for selected modules.
+
+Examples
+
+* Blogs
+* Pages
+* Events
+* Categories
+* Tags
+* Search
+* Media
+
+Only selected modules should be implemented.
+
+---
+
+# Blog Integration
+
+If Blogs are selected
+
+Implement
+
+* Blog Listing
+* Blog Detail
+* Latest Posts
+* Featured Posts
+* Related Posts
+* Pagination
+* Search
+* Category Filtering
+* Tag Filtering
+
+Slug-based routing only.
+
+Never expose internal IDs.
+
+---
+
+# Events Integration
+
+If Events are selected
+
+Implement
+
+* Upcoming Events
+* Past Events
+* Event Details
+* Featured Events
+
+Support pagination and search where available.
+
+---
+
+# Search Integration
+
+If enabled
+
+Implement
+
+* Search Field
+* Debounced Requests
+* URL Query Parameters
+* Search Results
+* Empty State
+* Loading State
+
+Reuse existing search UI if available.
+
+---
+
+# Authentication
+
+Every request must include
+
+```http
+Authorization:
+Bearer API_KEY
+```
+
+The generated prompt must explain
+
+Publishable Keys
+
+Browser-safe
+
+Read-only
+
+Secret Keys
+
+Server-only
+
+Never expose Secret Keys inside client-side applications.
+
+---
+
+# Environment Variables
+
+The generated prompt should instruct Windsurf to use
+
+```text
+CMS_API_URL
+
+CMS_API_KEY
+```
+
+Never hardcode credentials.
+
+---
+
+# Rendering Strategy
+
+Adapt instructions according to the selected rendering mode.
+
+SSR
+
+Fetch data server-side.
+
+ISR
+
+Use revalidation.
+
+CSR
+
+Use client-side fetching.
+
+SSG
+
+Generate static pages where appropriate.
+
+---
+
+# SEO
+
+If public pages are created
+
+Implement
+
+* Dynamic Metadata
+* Open Graph
+* Twitter Cards
+* Canonical URLs
+* Structured Data
+* XML Sitemap integration where appropriate
+
+Metadata should come from CMS content.
+
+---
+
+# Performance
+
+Implement
+
+* Request deduplication
+* Lazy loading
+* Optimized image loading
+* Client-side caching where appropriate
+* Efficient pagination
+* Efficient filtering
+
+Avoid unnecessary API calls.
+
+---
+
+# Error Handling
+
+Implement
+
+* Loading State
+* Empty State
+* Error State
+* Retry Logic
+* Offline Handling
+* Unauthorized Handling
+* Not Found Handling
+
+Display friendly error messages.
+
+---
+
+# Validation Phase
+
+Before completing the task, Windsurf should verify
+
+* API authentication works.
+* Environment variables load correctly.
+* API Key is configurable.
+* Pagination works.
+* Search works.
+* Filtering works.
+* SEO metadata renders correctly.
+* Responsive layouts remain intact.
+* Existing functionality has not been broken.
+* Production build succeeds.
+
+---
+
+# Code Quality
+
+Require Windsurf to
+
+* Follow TypeScript best practices.
+* Reuse existing architecture.
+* Avoid duplicate components.
+* Keep services modular.
+* Keep functions focused.
+* Write readable code.
+* Use consistent naming.
+* Respect the existing coding style.
+
+---
+
+# Final Deliverables
+
+The generated prompt should instruct Windsurf to provide
+
+* Summary of changes.
+* List of modified files.
+* List of newly created files.
+* Manual testing instructions.
+* Any assumptions made during implementation.
+* Recommended future improvements.
+
+---
+
+# Acceptance Criteria
+
+The Windsurf prompt is complete when
+
+✓ It is dynamically generated using the user's selections.
+
+✓ It contains the correct API configuration.
+
+✓ It explains authentication.
+
+✓ It explains rendering strategy.
+
+✓ It explains pagination, filtering and search.
+
+✓ It instructs Windsurf to inspect the project before implementation.
+
+✓ It promotes reuse of existing architecture.
+
+✓ It avoids duplicate code.
+
+✓ It includes a validation checklist.
+
+✓ It can be copied directly into Windsurf and executed without requiring additional instructions.

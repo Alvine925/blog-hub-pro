@@ -2,7 +2,7 @@ import { createFileRoute, Link, Outlet, useRouterState, useNavigate } from "@tan
 import {
   LayoutDashboard, Moon, FolderOpen, CreditCard, Settings, ChevronRight,
   LogOut, Bell, BookOpen, HelpCircle, Map, FileText, Users,
-  ChevronDown, User, Key, ScrollText,
+  ChevronDown, User, Key, ScrollText, Plug,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState, useEffect, useRef } from "react";
@@ -107,10 +107,11 @@ const globalNav: Array<{ group: string; items: NavItem[] }> = [
   {
     group: "Developers",
     items: [
-      { label: "API Keys",     to: "/admin/api-keys",      icon: Key        },
-      { label: "Request Logs", to: "/admin/api-logs",      icon: ScrollText },
-      { label: "API Explorer", to: "/admin/api-explorer",  icon: BookOpen   },
-      { label: "Analytics",   to: "/admin/analytics",      icon: Map        },
+      { label: "API Keys",          to: "/admin/api-keys",           icon: Key        },
+      { label: "Request Logs",      to: "/admin/api-logs",           icon: ScrollText },
+      { label: "API Explorer",      to: "/admin/api-explorer",       icon: BookOpen   },
+      { label: "Analytics",         to: "/admin/analytics",          icon: Map        },
+      { label: "Integration Center", to: "/admin/integration-center", icon: Plug       },
     ],
   },
   {

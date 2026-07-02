@@ -1,0 +1,559 @@
+# IMPLEMENTATION PROMPT 03B
+
+# CURSOR AI INTEGRATION PROMPT GENERATOR
+
+## Objective
+
+Implement a **Cursor Prompt Generator** that automatically creates a high-quality implementation prompt for Cursor AI.
+
+The generated prompt should allow a developer to copy it directly into Cursor and have Cursor integrate the user's existing website with the Lunar CMS REST API.
+
+Do **NOT** generate generic prompts.
+
+The prompt must be dynamically generated using the user's workspace, selected framework, API configuration and selected content.
+
+---
+
+# Existing Functionality
+
+The following already exists and MUST NOT be rebuilt.
+
+* Workspace
+* Authentication
+* REST API
+* API Keys
+* Blogs
+* Pages
+* Collections
+* Categories
+* Media
+* Existing Dashboard
+* Existing UI Components
+
+Reuse all existing functionality.
+
+---
+
+# Goal
+
+A user should complete the following workflow.
+
+```text
+Generate API Key
+
+↓
+
+Open Integration Center
+
+↓
+
+Choose Cursor
+
+↓
+
+Choose Framework
+
+↓
+
+Choose Content
+
+↓
+
+Generate Prompt
+
+↓
+
+Copy Prompt
+
+↓
+
+Paste into Cursor
+
+↓
+
+Cursor automatically integrates the website
+```
+
+---
+
+# Prompt Generator
+
+Create
+
+```text
+CursorPromptGenerator.ts
+```
+
+Responsibilities
+
+* Load the Cursor prompt template.
+* Replace placeholders.
+* Inject the selected API endpoints.
+* Inject authentication details.
+* Inject selected content types.
+* Return a complete implementation prompt.
+
+---
+
+# Dynamic Variables
+
+The generated prompt should automatically replace the following variables.
+
+```text
+{{PROJECT_NAME}}
+
+{{FRAMEWORK}}
+
+{{FRAMEWORK_VERSION}}
+
+{{API_BASE_URL}}
+
+{{API_KEY}}
+
+{{CONTENT_TYPES}}
+
+{{ENDPOINTS}}
+
+{{RENDERING_MODE}}
+
+{{STYLING}}
+
+{{AUTH_METHOD}}
+
+{{PAGINATION}}
+
+{{SEARCH}}
+
+{{CACHE_STRATEGY}}
+
+{{ERROR_FORMAT}}
+
+{{SITE_URL}}
+
+{{WORKSPACE_NAME}}
+```
+
+Never leave unresolved placeholders.
+
+---
+
+# Cursor Prompt Requirements
+
+The generated prompt should begin with clear instructions.
+
+Example structure
+
+```text
+You are an expert senior software engineer.
+
+Your task is to integrate an existing {{FRAMEWORK}} project with Lunar CMS.
+
+Do not rebuild the project.
+
+Inspect the existing codebase before making changes.
+
+Reuse existing architecture.
+
+Only implement the requested functionality.
+
+Do not modify unrelated files.
+
+Write clean production-ready code.
+
+Follow framework best practices.
+```
+
+---
+
+# Project Inspection
+
+The generated prompt must instruct Cursor to:
+
+Inspect the project.
+
+Identify
+
+* Routing
+* Existing API layer
+* Existing components
+* Existing layouts
+* Existing hooks
+* Existing styling
+* Existing state management
+* Existing data fetching libraries
+
+Cursor should reuse these instead of creating duplicates.
+
+---
+
+# API Configuration
+
+The generated prompt should automatically include
+
+Base URL
+
+Example
+
+```text
+https://api.yourdomain.com/v1
+```
+
+Authentication
+
+```text
+Authorization
+
+Bearer {{API_KEY}}
+```
+
+The prompt should explain that:
+
+Only the API Key is required.
+
+Workspace IDs must never be sent.
+
+Collection IDs must never be sent.
+
+The CMS automatically resolves the workspace.
+
+---
+
+# Required Features
+
+Depending on the user's selection, Cursor should implement
+
+* Blog Listing
+* Blog Details
+* Pages
+* Events
+* Categories
+* Search
+* Pagination
+* Featured Content
+* Latest Content
+
+Only generate instructions for selected modules.
+
+---
+
+# Folder Detection
+
+Cursor should inspect the project first.
+
+Examples
+
+If Next.js App Router
+
+Use
+
+```text
+app/
+```
+
+If Pages Router
+
+Use
+
+```text
+pages/
+```
+
+Do not assume folder structure.
+
+---
+
+# API Client
+
+The prompt should instruct Cursor to create a reusable API client.
+
+Example
+
+```text
+lib/api.ts
+
+services/cms.ts
+```
+
+Do not duplicate existing clients.
+
+If one already exists
+
+Extend it.
+
+---
+
+# Environment Variables
+
+Cursor should use
+
+```text
+CMS_API_URL
+
+CMS_API_KEY
+```
+
+Do not hardcode credentials.
+
+---
+
+# Authentication Flow
+
+The generated prompt should explain
+
+Every request should include
+
+```http
+Authorization:
+Bearer API_KEY
+```
+
+Example
+
+```typescript
+fetch(
+`${CMS_API_URL}/blogs`,
+{
+headers:{
+Authorization:`Bearer ${CMS_API_KEY}`
+}
+})
+```
+
+Never expose Secret Keys inside frontend projects.
+
+Only Publishable Keys should be used in browser applications.
+
+---
+
+# Data Fetching
+
+Cursor should detect whether the project uses
+
+* fetch
+* React Query
+* SWR
+* Axios
+
+Reuse the existing solution.
+
+Do not introduce unnecessary dependencies.
+
+---
+
+# SEO
+
+If the framework supports SSR or SSG
+
+The prompt should instruct Cursor to
+
+* Generate metadata
+* Dynamic titles
+* Open Graph tags
+* Canonical URLs
+* Structured Data where appropriate
+* XML Sitemap updates if applicable
+
+SEO should follow framework best practices.
+
+---
+
+# Pagination
+
+If the endpoint supports pagination
+
+Cursor should implement
+
+Previous
+
+Next
+
+Page Numbers
+
+Loading State
+
+Empty State
+
+No Results State
+
+---
+
+# Search
+
+If Search is selected
+
+Implement
+
+* Search Input
+* Debouncing
+* Loading State
+* Empty Results
+* URL Query Parameters
+
+---
+
+# Images
+
+Cursor should
+
+* Lazy load images
+* Handle missing images
+* Support responsive images
+* Use the framework's preferred image component if available
+
+---
+
+# Error Handling
+
+Implement
+
+Loading
+
+Error
+
+Retry
+
+Offline
+
+404
+
+Unauthorized
+
+Empty State
+
+All user-facing messages should be friendly.
+
+---
+
+# Caching
+
+The prompt should adapt based on rendering strategy.
+
+SSR
+
+No long-term cache.
+
+ISR
+
+Use revalidation.
+
+CSR
+
+Cache requests in memory.
+
+React Query
+
+Reuse existing cache.
+
+Never cache authentication failures.
+
+---
+
+# Code Quality
+
+Cursor should
+
+* Reuse components.
+* Avoid duplicate code.
+* Create reusable hooks.
+* Create reusable services.
+* Follow TypeScript strict mode.
+* Use proper interfaces.
+* Keep functions small.
+
+---
+
+# Files To Create
+
+Only if they do not already exist.
+
+Examples
+
+```text
+lib/api.ts
+
+services/cms.ts
+
+hooks/useBlogs.ts
+
+hooks/usePages.ts
+
+types/blog.ts
+
+types/page.ts
+
+components/blogs/
+
+components/search/
+```
+
+If similar files already exist
+
+Extend them.
+
+---
+
+# Files To Modify
+
+Cursor should identify these automatically.
+
+Possible examples
+
+```text
+App Router
+
+Layout
+
+Navigation
+
+Blog Pages
+
+Search Components
+
+Routes
+
+Environment Configuration
+```
+
+Never overwrite unrelated functionality.
+
+---
+
+# Final Validation
+
+Before completing the task, Cursor should verify
+
+✓ Authentication works.
+
+✓ API Key is configurable.
+
+✓ No hardcoded credentials exist.
+
+✓ Existing functionality still works.
+
+✓ Blog pages load correctly.
+
+✓ Pagination works.
+
+✓ Search works.
+
+✓ Errors are handled.
+
+✓ Loading states exist.
+
+✓ SEO has not been broken.
+
+✓ The project builds successfully.
+
+---
+
+# Acceptance Criteria
+
+The generated Cursor prompt is complete when:
+
+* It is personalized using the selected framework and workspace.
+* It contains the correct API base URL and authentication method.
+* It instructs Cursor to inspect and reuse the existing project.
+* It avoids duplicate architecture.
+* It generates production-ready code.
+* It does not require the developer to manually explain the API.
+* The prompt can be copied directly into Cursor and used without further editing.
