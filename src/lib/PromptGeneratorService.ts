@@ -3,7 +3,7 @@
  *
  * Takes user selections from the Integration Center wizard and produces:
  * 1. A complete AI implementation prompt tailored to the chosen platform
- * 2. A documentation block (env vars, examples, troubleshooting)
+ * 2. A documentation block (env vars, examples, engagement, troubleshooting)
  *
  * All logic lives here — React components only call generatePrompt().
  */
@@ -12,6 +12,7 @@ import {
   UNIVERSAL_TEMPLATE,
   PLATFORM_TEMPLATES,
   ENDPOINT_REFERENCE,
+  ENGAGEMENT_ENDPOINT_REFERENCE,
   FRAMEWORKS,
   AI_PLATFORMS,
   CONTENT_TYPES,
@@ -28,6 +29,7 @@ export interface GeneratorSelections {
   renderStrategyId: string;
   stylingId: string;
   apiBaseUrl: string;
+  siteName?: string;
   apiKeyPlaceholder?: string;
 }
 
@@ -42,6 +44,7 @@ export interface GeneratedOutput {
     contentTypes: string[];
     renderStrategy: string;
     styling: string;
+    siteName: string;
   };
 }
 
@@ -135,7 +138,8 @@ function serviceCodeHint(frameworkId: string, renderStrategyId: string): string 
     return `// Create: services/lunarCms.ts  (or lib/cms_service.dart for Flutter)
 // Read API key from secure storage or build-time config (never hardcode)
 // Set Authorization: Bearer <key> on every request
-// Parse the JSON response envelope: { success, data, meta }`;
+// Parse the JSON response envelope: { success, data, meta }
+// getEnhancedPost(slug) → GET /api/v1/posts/:slug (stats + features + branding + share + related)`;
   }
 
   if (isBackend) {
@@ -154,6 +158,11 @@ async function cmsRequest(path, params = {}) {
     throw new Error(err?.error?.message ?? \`Lunar CMS error \${res.status}\`);
   }
   return res.json();
+}
+
+// Enhanced single post (engagement + branding + share + related)
+export async function getEnhancedPost(slug) {
+  return cmsRequest(\`/api/v1/posts/\${slug}\`);
 }`;
   }
 
@@ -179,19 +188,20 @@ async function cmsRequest<T>(path: string, params?: Record<string, string | numb
     throw new Error(err?.error?.message ?? \`Lunar CMS error \${res.status}\`);
   }
   return res.json() as Promise<CmsEnvelope<T>>;
+}
+
+// Enhanced single post — one call returns everything for a post page
+export async function getEnhancedPost(slug: string) {
+  const res = await fetch(\`\${LUNAR_CMS_URL}/api/v1/posts/\${slug}\`, {
+    headers: { Authorization: \`Bearer \${LUNAR_CMS_API_KEY}\` },
+    next: { revalidate: 60 },
+  });
+  if (!res.ok) return null;
+  return res.json(); // { data, stats, features, branding, share, related }
 }`;
 }
 
 function envVarBlock(frameworkId: string, apiBaseUrl: string): string {
-  const isVite = ["react", "vue", "svelte"].includes(frameworkId);
-
-  if (isVite) {
-    // Vite exposes vars with VITE_ prefix to the browser — but API key must stay server-side.
-    // For pure CSR apps, they'll need a proxy; show the server-safe var name.
-    return `LUNAR_CMS_URL=${apiBaseUrl}
-LUNAR_CMS_API_KEY=pk_live_your_key_here`;
-  }
-
   return `LUNAR_CMS_URL=${apiBaseUrl}
 LUNAR_CMS_API_KEY=pk_live_your_key_here`;
 }
@@ -208,9 +218,304 @@ function buildEndpointList(contentTypeIds: string[]): string {
     .join("\n");
 }
 
+// ── Proxy instructions (framework-specific) ────────────────────────────────────
+
+function buildProxyInstructions(frameworkId: string): string {
+  switch (frameworkId) {
+    case "nextjs":
+      return `**Next.js Route Handler** — create \`app/api/engagement/[...path]/route.ts\`:
+
+\`\`\`ts
+import { NextRequest, NextResponse } from "next/server";
+
+const CMS = process.env.LUNAR_CMS_URL!;
+const KEY = process.env.LUNAR_CMS_API_KEY!;
+
+async function proxy(req: NextRequest, { params }: { params: { path: string[] } }) {
+  const path = params.path.join("/");
+  const url  = \`\${CMS}/api/v1/\${path}\${req.nextUrl.search}\`;
+  const body = req.method !== "GET" && req.method !== "DELETE" ? await req.text() : undefined;
+
+  const upstream = await fetch(url, {
+    method:  req.method,
+    headers: {
+      "Authorization": \`Bearer \${KEY}\`,
+      "Content-Type":  "application/json",
+      "X-Visitor-Id":  req.headers.get("X-Visitor-Id") ?? "anonymous",
+    },
+    body,
+  });
+  const data = await upstream.json();
+  return NextResponse.json(data, { status: upstream.status });
+}
+
+export const GET = proxy;
+export const POST = proxy;
+export const DELETE = proxy;
+\`\`\`
+
+All client engagement calls use relative URLs: \`/api/engagement/posts/:slug/likes\`.`;
+
+    case "sveltekit":
+      return `**SvelteKit Server Route** — create \`src/routes/api/engagement/[...path]/+server.ts\`:
+
+\`\`\`ts
+import type { RequestHandler } from "@sveltejs/kit";
+
+const CMS = process.env.LUNAR_CMS_URL!;
+const KEY = process.env.LUNAR_CMS_API_KEY!;
+
+export const GET: RequestHandler = proxy;
+export const POST: RequestHandler = proxy;
+export const DELETE: RequestHandler = proxy;
+
+async function proxy({ request, params, url }): Promise<Response> {
+  const path     = (params as any).path;
+  const upstream = await fetch(\`\${CMS}/api/v1/\${path}\${url.search}\`, {
+    method:  request.method,
+    headers: {
+      "Authorization": \`Bearer \${KEY}\`,
+      "Content-Type":  "application/json",
+      "X-Visitor-Id":  request.headers.get("X-Visitor-Id") ?? "anonymous",
+    },
+    body: request.method !== "GET" && request.method !== "DELETE" ? await request.text() : undefined,
+  });
+  return upstream;
+}
+\`\`\``;
+
+    case "nuxt":
+      return `**Nuxt Server Route** — create \`server/api/engagement/[...path].ts\`:
+
+\`\`\`ts
+import { defineEventHandler, getRequestHeaders, readBody, getMethod } from "h3";
+
+export default defineEventHandler(async (event) => {
+  const config  = useRuntimeConfig();
+  const path    = getRouterParam(event, "path");
+  const method  = getMethod(event);
+  const headers = getRequestHeaders(event);
+  const body    = ["POST", "PUT"].includes(method) ? await readBody(event) : undefined;
+
+  const res = await fetch(\`\${config.lunarCmsUrl}/api/v1/\${path}\`, {
+    method,
+    headers: {
+      "Authorization": \`Bearer \${config.lunarCmsApiKey}\`,
+      "Content-Type":  "application/json",
+      "X-Visitor-Id":  headers["x-visitor-id"] ?? "anonymous",
+    },
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  return res.json();
+});
+\`\`\``;
+
+    default:
+      return `Create a **server-side proxy endpoint** at \`/api/engagement/[...path]\` that:
+1. Receives the request from the browser (client sends NO API key)
+2. Reads \`LUNAR_CMS_API_KEY\` from environment variables (server-only)
+3. Forwards the request to \`\${LUNAR_CMS_URL}/api/v1/...\` with \`Authorization: Bearer <key>\`
+4. Forwards the \`X-Visitor-Id\` header from the client request
+5. Returns the upstream response to the browser
+
+This ensures the API key never reaches the client's JavaScript bundle.
+All client engagement calls use the proxy's relative URL path (e.g. \`/api/engagement/posts/:slug/likes\`).`;
+  }
+}
+
+// ── Engagement section builder ─────────────────────────────────────────────────
+
+function buildEngagementSection(frameworkId: string, siteName: string): string {
+  const proxyInstructions = buildProxyInstructions(frameworkId);
+
+  return `### Overview
+
+All engagement features are controlled by the CMS API response — the site never needs
+its own config. The CMS admin enables/disables likes, comments, share, and the branded
+attribution banner from the dashboard. The site simply respects the \`features\` flags.
+
+---
+
+### 1. Visitor Identity — \`lib/visitorId.ts\`
+
+Every engagement call requires an \`X-Visitor-Id\` header. Create this client-only utility:
+
+\`\`\`ts
+// lib/visitorId.ts  (client-only — never import in server components)
+export function getVisitorId(): string {
+  if (typeof window === "undefined") return "server";
+  let id = localStorage.getItem("lunar_vid");
+  if (!id) {
+    id = crypto.randomUUID();
+    localStorage.setItem("lunar_vid", id);
+  }
+  return id;
+}
+\`\`\`
+
+---
+
+### 2. Engagement Proxy — protect the API key
+
+All engagement write calls go through a server-side proxy so the API key never reaches
+the browser. Clients call relative URLs (e.g. \`/api/engagement/posts/:slug/likes\`);
+the proxy injects the Authorization header and forwards \`X-Visitor-Id\`.
+
+${proxyInstructions}
+
+---
+
+### 3. Enhanced Single Post API
+
+Use \`getEnhancedPost(slug)\` which calls \`GET /api/v1/posts/:slug\`.
+This single API call returns everything needed for a post page:
+
+\`\`\`json
+{
+  "data":     { ...all blog fields },
+  "stats":    { "views": 142, "likes": 38, "comments": 12, "shares": 5 },
+  "features": { "likes": true, "comments": true, "socialShare": true,
+                "relatedPosts": true, "viewTracking": true, "poweredBy": true },
+  "branding": { "enabled": true, "text": "Powered by Lunar CMS", "url": "https://..." },
+  "share":    { "facebook": "https://...", "linkedin": "https://...",
+                "x": "https://...", "whatsapp": "https://...", "email": "mailto:..." },
+  "related":  [ { "slug": "...", "title": "...", "excerpt": "...",
+                  "cover_image": "...", "category": "..." } ]
+}
+\`\`\`
+
+---
+
+### 4. PostEngagement Component (Client-side)
+
+Create \`components/PostEngagement.tsx\` (or equivalent client component).
+Mount it on every blog post detail page, below the content.
+
+It receives \`initialData\` from the server fetch (eliminates layout shift) and a \`slug\` prop.
+
+**Layout:**
+\`\`\`
+┌────────────────────────────────────────────────────┐
+│  👁 views  ·  ♥ likes  ·  💬 comments  ·  ↗ Share  │
+├────────────────────────────────────────────────────┤
+│  [Like button]      [Share button → ShareModal]    │
+├────────────────────────────────────────────────────┤
+│  Comments section (threaded list + submit form)    │
+└────────────────────────────────────────────────────┘
+\`\`\`
+
+**Implement these behaviours:**
+
+**a) View tracking** — fires once on mount, never blocks rendering:
+\`\`\`ts
+useEffect(() => {
+  fetch(\`/api/engagement/posts/\${slug}/view\`, {
+    method: "POST",
+    headers: { "X-Visitor-Id": getVisitorId(), "Content-Type": "application/json" },
+    body: JSON.stringify({ referrer: document.referrer }),
+  }).catch(() => {}); // silent fail
+}, []);
+\`\`\`
+
+**b) Like button** — \`GET /api/engagement/posts/:slug/likes\` → \`{ likes, liked }\`
+- On click: POST (like) or DELETE (unlike) to the same URL
+- Optimistic UI: update count instantly, revert on error
+- Heart icon: filled rose when liked, outlined when not
+- Disabled while request is in flight
+
+**c) Share button → ShareModal** — opens the ShareModal component (see section 5)
+- On each platform button click: open URL in new tab + call \`POST /api/engagement/posts/:slug/share\` with \`{ channel: "facebook" }\`
+
+**d) Comments section** — \`GET /api/engagement/posts/:slug/comments\`
+- Threaded: replies indented under parent comment
+- Each comment shows: \`author_name\`, formatted date, content
+- "Reply" button sets the \`parentId\` for the form below
+- Comment form fields: name (required), email (required, not displayed publicly), website (optional), message (required)
+- On submit: \`POST /api/engagement/posts/:slug/comments\` with \`{ name, email, content, parent_id }\`
+- If response has \`requiresApproval: true\`: show "Your comment is awaiting moderation — thank you!"
+- Otherwise: show the new comment inline immediately
+
+**Feature flag guards — only render if enabled:**
+\`\`\`ts
+if (!features.likes)       // hide like button
+if (!features.comments)    // hide comments section
+if (!features.socialShare) // hide share button
+if (!features.viewTracking) // skip view tracking useEffect
+\`\`\`
+
+---
+
+### 5. ShareModal Component
+
+\`\`\`
+Props: isOpen, onClose, shareLinks, slug
+Backdrop: fixed inset-0 bg-black/50 z-50 — closes on backdrop click or Escape key
+Modal: centred card, X close button in the top-right corner
+Buttons (each opens URL in new tab AND tracks the share):
+  • Facebook   — blue  (#1877F2)
+  • LinkedIn   — blue  (#0A66C2)
+  • X/Twitter  — black (#000000)
+  • WhatsApp   — green (#25D366)
+  • Email      — grey
+"Copy link" button — copies window.location.href, shows "Copied!" for 2 seconds
+\`\`\`
+
+---
+
+### 6. PoweredByBanner Component — AUTO-RENDERED, ZERO CONFIG
+
+**Include this component at the bottom of every blog post page.**
+The \`branding.enabled\` field in the API response controls whether it renders.
+The site owner never needs to configure anything — the CMS admin controls it.
+
+\`\`\`tsx
+function PoweredByBanner({ branding }: { branding: { enabled: boolean; text: string; url: string } }) {
+  if (!branding?.enabled) return null;
+  return (
+    <div className="fixed bottom-0 right-0 m-4 z-40">
+      <a
+        href={branding.url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="flex items-center gap-1.5 rounded-full bg-black/80 px-3 py-1.5 text-xs text-white/80 hover:text-white transition-colors backdrop-blur"
+      >
+        <span>🌙</span>
+        <span>{branding.text}</span>
+      </a>
+    </div>
+  );
+}
+\`\`\`
+
+Always render \`<PoweredByBanner branding={post.branding} />\` at the bottom of every post page.
+When \`branding.enabled\` is false the component renders nothing — no stub, no placeholder.
+
+---
+
+### 7. Related Posts Component
+
+Create \`components/RelatedPosts.tsx\`:
+- Only render if \`features.relatedPosts\` is true and \`post.related.length > 0\`
+- Show up to 3 posts in a grid: cover image, category badge, title, excerpt, link to \`/blog/:slug\`
+
+---
+
+### 8. Site Branding — **${siteName}**
+
+Use **${siteName}** as the site name throughout:
+- \`<Navbar>\` — site name in the top-left logo/wordmark
+- \`<Footer>\` — copyright line: "© {year} ${siteName}"
+- \`<title>\` tags — e.g. "My Post Title — ${siteName}"
+- Hero headline on the homepage
+- \`README.md\` — "Site: ${siteName}"
+
+Do not hardcode "Lunar CMS" as the consumer site name — that is the CMS brand.
+${siteName} is the name of the public-facing blog being built.`;
+}
+
 // ── Documentation generator ───────────────────────────────────────────────────
 
-function buildDocumentation(sel: GeneratorSelections, framework: string, apiPlatform: string): string {
+function buildDocumentation(sel: GeneratorSelections, framework: string, apiPlatform: string, siteName: string): string {
   const selectedContent =
     sel.contentTypeIds.includes("everything")
       ? CONTENT_TYPES
@@ -218,6 +523,7 @@ function buildDocumentation(sel: GeneratorSelections, framework: string, apiPlat
 
   return `# Lunar CMS — Integration Documentation
 ## ${framework} + ${apiPlatform}
+## Site: **${siteName}**
 Generated: ${new Date().toISOString().slice(0, 10)}
 
 ---
@@ -245,7 +551,14 @@ You never need to send a workspace ID or collection ID.
 
 ---
 
-## Example API Request
+## Site Name
+
+This integration builds the site **${siteName}**.
+Use this name in the navbar, footer, \`<title>\` tags, hero, and README.
+
+---
+
+## Example API Request (Content)
 
 \`\`\`bash
 curl "${sel.apiBaseUrl}/v1/blogs?page=1&limit=10" \\
@@ -273,20 +586,81 @@ curl "${sel.apiBaseUrl}/v1/blogs?page=1&limit=10" \\
       "updated_at": "2025-01-20T08:30:00Z"
     }
   ],
-  "meta": {
-    "page": 1,
-    "limit": 10,
-    "total": 45,
-    "totalPages": 5
-  }
+  "meta": { "page": 1, "limit": 10, "total": 45, "totalPages": 5 }
 }
 \`\`\`
 
 ---
 
-## Supported Endpoints
+## Example API Request (Enhanced Post — Engagement + Branding)
+
+\`\`\`bash
+curl "${sel.apiBaseUrl}/api/v1/posts/my-first-post" \\
+  -H "Authorization: Bearer pk_live_your_api_key_here"
+\`\`\`
+
+\`\`\`json
+{
+  "data":     { "slug": "my-first-post", "title": "...", "...": "all blog fields" },
+  "stats":    { "views": 142, "likes": 38, "comments": 12, "shares": 5 },
+  "features": { "likes": true, "comments": true, "socialShare": true,
+                "relatedPosts": true, "viewTracking": true, "poweredBy": true },
+  "branding": { "enabled": true, "text": "Powered by Lunar CMS", "url": "https://..." },
+  "share":    { "facebook": "https://...", "linkedin": "https://...",
+                "x": "https://...", "whatsapp": "https://...", "email": "mailto:..." },
+  "related":  [ { "slug": "...", "title": "...", "excerpt": "...", "cover_image": "...", "category": "..." } ]
+}
+\`\`\`
+
+---
+
+## Content Endpoints
 
 ${selectedContent.map((c) => `### ${c.label}\n\`${c.endpoint}\`\n${c.description}`).join("\n\n")}
+
+---
+
+## Engagement Endpoints
+
+All engagement write operations must go through a server-side proxy endpoint
+(e.g. \`/api/engagement/[...path]\`) that injects the Authorization header.
+The API key must never be sent to the browser.
+
+Engagement calls also require an \`X-Visitor-Id\` header — a UUID generated once per browser,
+persisted in \`localStorage\`. See \`lib/visitorId.ts\` in the generated prompt.
+
+${ENGAGEMENT_ENDPOINT_REFERENCE}
+
+### View tracking
+- Fires automatically on post page load (once per mount)
+- Sends \`{ referrer: document.referrer }\`
+- Silent fail — does not block content rendering
+
+### Like button
+- \`GET .../likes\` returns \`{ likes: number, liked: boolean }\`
+- \`POST\` to like, \`DELETE\` to unlike — optimistic UI (revert on error)
+
+### Share modal
+- Show platform buttons from \`post.share\` (Facebook, LinkedIn, X, WhatsApp, Email)
+- On click: open URL in new tab + \`POST .../share\` with \`{ channel: "facebook" }\`
+- "Copy link" button copies \`window.location.href\`
+
+### Comments
+- Load with \`GET .../comments\` — threaded (replies nested under parent)
+- Submit with \`POST .../comments\` — \`{ name, email, content, parent_id }\`
+- If \`requiresApproval: true\`: show "Your comment is awaiting moderation"
+- Otherwise: show new comment inline immediately
+
+---
+
+## "Powered by Lunar CMS" Banner
+
+The banner is **automatically controlled by the CMS**. The developer does nothing except
+render \`<PoweredByBanner branding={post.branding} />\` on every post page.
+
+- \`branding.enabled: true\` → small pill renders in the bottom-right corner
+- \`branding.enabled: false\` → component renders nothing (no placeholder)
+- The CMS admin toggles this from the dashboard — no site-level configuration needed
 
 ---
 
@@ -335,6 +709,15 @@ echo ".env.local" >> .gitignore
 **Rate limited?**
 - Implement exponential backoff: wait 2^n seconds before retrying (max 32s)
 - Use caching (SWR, TanStack Query, ISR) to reduce API call volume
+
+**Engagement features not appearing?**
+- Call \`GET /api/v1/posts/:slug\` (not \`/v1/blogs/:slug\`) — only the enhanced endpoint returns features, branding, and share links
+- Check \`features.likes\`, \`features.comments\`, \`features.socialShare\` flags in the response
+- Ensure the engagement proxy is running (check server logs for 401 or network errors)
+
+**"Powered by" banner not showing?**
+- Check \`branding.enabled\` in the enhanced post response
+- The CMS admin controls this — contact your Lunar CMS workspace admin to enable it
 `;
 }
 
@@ -352,31 +735,35 @@ export function generatePrompt(sel: GeneratorSelections): GeneratedOutput {
   const stylingLabel    = styling?.label     ?? sel.stylingId;
 
   const keyPlaceholder = sel.apiKeyPlaceholder ?? "pk_live_your_api_key_here";
+  const siteNameValue  = sel.siteName?.trim() || "My Blog";
 
   // Select platform-specific template, fall back to universal
   const template = PLATFORM_TEMPLATES[sel.aiPlatformId] ?? UNIVERSAL_TEMPLATE;
 
   const vars: Record<string, string> = {
-    FRAMEWORK:            frameworkLabel,
-    AI_PLATFORM:          aiPlatformLabel,
-    API_BASE_URL:         sel.apiBaseUrl,
-    API_KEY_PLACEHOLDER:  keyPlaceholder,
-    RENDER_STRATEGY:      renderLabel,
-    STYLING:              stylingLabel,
-    ENDPOINT_LIST:        buildEndpointList(sel.contentTypeIds),
-    ENDPOINT_REFERENCE:   ENDPOINT_REFERENCE,
-    RENDER_INSTRUCTIONS:  renderInstructions(sel.renderStrategyId, sel.frameworkId),
-    STYLING_INSTRUCTIONS: stylingInstructions(sel.stylingId),
-    SERVICE_CODE_HINT:    serviceCodeHint(sel.frameworkId, sel.renderStrategyId),
-    ENV_VAR_BLOCK:        envVarBlock(sel.frameworkId, sel.apiBaseUrl),
-    AUTH_METHOD:          "Bearer Token",
-    PAGINATION:           "page (1-based), limit (1–100, default 20)",
-    SEARCH:               "?search=query (searches title and excerpt)",
-    ERROR_FORMAT:         '{ "success": false, "error": { "code": "...", "message": "..." } }',
-    CACHE_STRATEGY:       "5-minute Cache-Control headers on all successful responses",
-    WORKSPACE_NAME:       "your-workspace",
-    PROJECT_NAME:         "your-project",
-    SITE_URL:             sel.apiBaseUrl.replace(/\/functions\/v1\/content-router.*/, ""),
+    FRAMEWORK:                   frameworkLabel,
+    AI_PLATFORM:                 aiPlatformLabel,
+    API_BASE_URL:                sel.apiBaseUrl,
+    API_KEY_PLACEHOLDER:         keyPlaceholder,
+    RENDER_STRATEGY:             renderLabel,
+    STYLING:                     stylingLabel,
+    SITE_NAME:                   siteNameValue,
+    ENDPOINT_LIST:               buildEndpointList(sel.contentTypeIds),
+    ENDPOINT_REFERENCE:          ENDPOINT_REFERENCE,
+    ENGAGEMENT_ENDPOINT_REFERENCE: ENGAGEMENT_ENDPOINT_REFERENCE,
+    RENDER_INSTRUCTIONS:         renderInstructions(sel.renderStrategyId, sel.frameworkId),
+    STYLING_INSTRUCTIONS:        stylingInstructions(sel.stylingId),
+    SERVICE_CODE_HINT:           serviceCodeHint(sel.frameworkId, sel.renderStrategyId),
+    ENV_VAR_BLOCK:               envVarBlock(sel.frameworkId, sel.apiBaseUrl),
+    ENGAGEMENT_SECTION:          buildEngagementSection(sel.frameworkId, siteNameValue),
+    AUTH_METHOD:                 "Bearer Token",
+    PAGINATION:                  "page (1-based), limit (1–100, default 20)",
+    SEARCH:                      "?search=query (searches title and excerpt)",
+    ERROR_FORMAT:                '{ "success": false, "error": { "code": "...", "message": "..." } }',
+    CACHE_STRATEGY:              "5-minute Cache-Control headers on all successful responses",
+    WORKSPACE_NAME:              "your-workspace",
+    PROJECT_NAME:                "your-project",
+    SITE_URL:                    sel.apiBaseUrl.replace(/\/functions\/v1\/content-router.*/, ""),
   };
 
   let prompt = template.template_body;
@@ -384,7 +771,7 @@ export function generatePrompt(sel: GeneratorSelections): GeneratedOutput {
     prompt = prompt.replaceAll(`{{${key}}}`, value);
   }
 
-  const documentation = buildDocumentation(sel, frameworkLabel, aiPlatformLabel);
+  const documentation = buildDocumentation(sel, frameworkLabel, aiPlatformLabel, siteNameValue);
 
   return {
     prompt,
@@ -397,6 +784,7 @@ export function generatePrompt(sel: GeneratorSelections): GeneratedOutput {
       contentTypes:   sel.contentTypeIds,
       renderStrategy: renderLabel,
       styling:        stylingLabel,
+      siteName:       siteNameValue,
     },
   };
 }

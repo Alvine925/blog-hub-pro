@@ -43,13 +43,14 @@ function getUrl(): string {
 }
 
 function getServiceKey(): string {
+  // Only accept actual service role keys — never fall back to publishable keys.
+  // Falling back to a publishable key silently creates an admin client without
+  // admin privileges, causing opaque RLS failures instead of a clear startup error.
   const key =
     env("SUPABASE_SERVICE_ROLE_KEY") ??
     env("VITE_SUPABASE_SERVICE_ROLE") ??
-    env("SUPABASE_SERVICE_ROLE") ??
-    env("SUPABASE_PUBLISHABLE_KEY") ??
-    env("VITE_SUPABASE_PUBLISHABLE_KEY");
-  if (!key) throw new Error("Missing env var: SUPABASE_SERVICE_ROLE_KEY");
+    env("SUPABASE_SERVICE_ROLE");
+  if (!key) throw new Error("Missing env var: SUPABASE_SERVICE_ROLE_KEY — set it in Replit Secrets");
   return key;
 }
 

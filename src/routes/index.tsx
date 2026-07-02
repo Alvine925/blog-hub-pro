@@ -17,10 +17,8 @@ function IndexPage() {
         return;
       }
 
-      // Check onboarding state
+      // Check onboarding state — use the browser client directly (server client cannot be imported here)
       try {
-        const { getAdminClient } = await import("@/lib/supabase.server");
-        // Can't use server client on client side — use supabase client directly
         const { data } = await supabase
           .from("user_onboarding" as never)
           .select("step, completed_at")

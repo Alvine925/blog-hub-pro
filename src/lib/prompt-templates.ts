@@ -115,7 +115,7 @@ export const STYLING_OPTIONS: StylingOption[] = [
   { id: "none",           label: "No Styling",              description: "Plain HTML/markup, style yourself" },
 ];
 
-// ── Shared endpoint reference block (injected into every template) ─────────────
+// ── Shared endpoint reference block (content) ──────────────────────────────────
 
 export const ENDPOINT_REFERENCE = `| Method | Endpoint | Query params |
 |--------|----------|--------------|
@@ -133,20 +133,35 @@ export const ENDPOINT_REFERENCE = `| Method | Endpoint | Query params |
 | GET | /v1/media | page, limit |
 | GET | /v1/search | q, page, limit |`;
 
+// ── Engagement endpoint reference block ────────────────────────────────────────
+
+export const ENGAGEMENT_ENDPOINT_REFERENCE = `| Method | Endpoint | Purpose |
+|--------|----------|---------|
+| GET | /api/v1/posts/:slug | Enhanced post (includes stats, features, branding, share links, related) |
+| POST | /api/v1/posts/:slug/view | Track a page view (fires on load) |
+| GET | /api/v1/posts/:slug/likes | Get like count + whether visitor has liked |
+| POST | /api/v1/posts/:slug/likes | Like the post |
+| DELETE | /api/v1/posts/:slug/likes | Unlike the post |
+| GET | /api/v1/posts/:slug/comments | Load threaded comments |
+| POST | /api/v1/posts/:slug/comments | Submit a comment |
+| POST | /api/v1/posts/:slug/share | Track a share click (channel: facebook/linkedin/x/whatsapp/email) |
+| GET | /api/v1/posts/:slug/stats | Get live stats (views, likes, comments, shares) |`;
+
 // ── Per-platform prompt templates ─────────────────────────────────────────────
 
 export const PLATFORM_TEMPLATES: Record<string, PromptTemplate> = {
 
   // ── CURSOR ────────────────────────────────────────────────────────────────
   cursor: {
-    id: "cursor-v1",
+    id: "cursor-v2",
     name: "Cursor Integration Prompt",
-    version: "v1.0",
+    version: "v2.0",
     description: "Optimised for Cursor's agent composer and @-file context",
     created_at: "2025-01-01T00:00:00Z",
-    updated_at: "2025-01-01T00:00:00Z",
+    updated_at: "2025-07-01T00:00:00Z",
     template_body: `# Lunar CMS Integration — {{FRAMEWORK}}
 > Generated for **Cursor** · {{RENDER_STRATEGY}} · {{STYLING}}
+> Site name: **{{SITE_NAME}}**
 
 ---
 
@@ -157,8 +172,10 @@ Use the **Agent** tab (Composer) for this task. Do not use inline Chat for file 
 ---
 
 ## Objective
-Integrate this existing **{{FRAMEWORK}}** project with the **Lunar CMS REST API**.
-This is a **read-only** content integration — do not touch the CMS itself.
+Build a fully functional external blog website called **{{SITE_NAME}}** that integrates with the **Lunar CMS REST API**.
+The site fetches all content and engagement data from the API. No local database. No hardcoded posts.
+
+Use **{{SITE_NAME}}** throughout: page titles, navbar, footer, meta tags, hero headlines, README.
 
 ---
 
@@ -204,6 +221,7 @@ The file must:
 - Set \`Authorization: Bearer \${key}\` on every request
 - Target base URL: \`{{API_BASE_URL}}\`
 - Export typed async functions for each selected content endpoint
+- Export \`getEnhancedPost(slug)\` that calls \`GET /api/v1/posts/:slug\` (returns stats, features, branding, share links, related)
 - Support \`page\` and \`limit\` pagination params
 - Throw descriptive errors on non-2xx responses
 - Parse the standard response envelope: \`{ success, data, meta }\`
@@ -234,7 +252,13 @@ The file must:
 
 ---
 
-## Step 5 — Cursor-Specific Checklist
+## Step 5 — Engagement Features (Likes, Comments, Share, "Powered by")
+
+{{ENGAGEMENT_SECTION}}
+
+---
+
+## Step 6 — Cursor-Specific Checklist
 
 Use Cursor's agent to verify each item:
 - [ ] \`@\` reference the env file and confirm variables load
@@ -242,6 +266,11 @@ Use Cursor's agent to verify each item:
 - [ ] Confirm no existing pages are broken
 - [ ] Confirm TypeScript types are generated for all API responses
 - [ ] Confirm the API key is never logged or exposed in client bundles
+- [ ] Like button toggles correctly with optimistic UI
+- [ ] Share modal opens with correct platform links and tracks clicks
+- [ ] Comments load threaded and comment submission works
+- [ ] "Powered by Lunar CMS" banner appears automatically when \`branding.enabled\` is true
+- [ ] Site name **{{SITE_NAME}}** appears in navbar, footer, and page titles
 
 ---
 
@@ -252,7 +281,11 @@ Authentication: \`Authorization: Bearer pk_live_your_key_here\`
 
 The API key resolves the workspace automatically. Never send workspace IDs.
 
+### Content Endpoints
 {{ENDPOINT_REFERENCE}}
+
+### Engagement Endpoints
+{{ENGAGEMENT_ENDPOINT_REFERENCE}}
 
 ### Response envelope
 \`\`\`json
@@ -273,14 +306,15 @@ Do not modify unrelated files. Ask before making any structural change.
 
   // ── LOVABLE ───────────────────────────────────────────────────────────────
   lovable: {
-    id: "lovable-v1",
+    id: "lovable-v2",
     name: "Lovable Integration Prompt",
-    version: "v1.0",
+    version: "v2.0",
     description: "Optimised for Lovable's full-stack app generation workflow",
     created_at: "2025-01-01T00:00:00Z",
-    updated_at: "2025-01-01T00:00:00Z",
+    updated_at: "2025-07-01T00:00:00Z",
     template_body: `# Lunar CMS Integration — {{FRAMEWORK}}
 > Generated for **Lovable** · {{RENDER_STRATEGY}} · {{STYLING}}
+> Site name: **{{SITE_NAME}}**
 
 ---
 
@@ -291,14 +325,14 @@ Lovable will generate and update files directly. Follow these instructions preci
 ---
 
 ## Objective
-Integrate this existing **{{FRAMEWORK}}** project with the **Lunar CMS REST API**.
+Build a fully functional external blog website called **{{SITE_NAME}}** that integrates with the **Lunar CMS REST API**.
 
 **Critical rules:**
 - Analyse the existing codebase before generating anything
 - Reuse existing components, layouts, hooks, and services
 - Never rebuild functionality that already exists
 - Never create parallel architecture alongside existing code
-- Implement only the features listed below
+- Use **{{SITE_NAME}}** in the navbar, footer, page titles, hero, and README
 
 ---
 
@@ -337,12 +371,13 @@ Create (or extend existing) \`src/services/lunarCms.ts\`:
 - All responses follow: \`{ success: boolean, data: T, meta: PaginationMeta }\`
 - Typed interfaces for every content type
 - Centralised error handling
+- Export \`getEnhancedPost(slug)\` → calls \`GET /api/v1/posts/:slug\` (returns stats, features, branding, share links, related posts)
 
 {{SERVICE_CODE_HINT}}
 
 ---
 
-## Section 4 — Required Features
+## Section 4 — Required Content Features
 
 Implement the following based on selected content:
 
@@ -370,8 +405,8 @@ Lovable must implement:
 - Full post content rendering
 - SEO metadata: title, description, Open Graph, canonical URL
 - Author name and published date
-- Related posts section (3 posts from \`/v1/blogs/:slug/related\`)
-- Featured image with lazy loading
+- \`<PostEngagement>\` client component mounted below content (see Section 6)
+- \`<PoweredByBanner>\` at the very bottom of every post page (see Section 6)
 
 **Pages** (if pages selected)
 - Dynamic slug-based routes
@@ -389,15 +424,21 @@ Lovable must implement:
 
 ---
 
-## Section 6 — Styling: {{STYLING}}
+## Section 6 — Engagement Features (Likes, Comments, Share, "Powered by")
+
+{{ENGAGEMENT_SECTION}}
+
+---
+
+## Section 7 — Styling: {{STYLING}}
 {{STYLING_INSTRUCTIONS}}
 
 ---
 
-## Section 7 — SEO Requirements
+## Section 8 — SEO Requirements
 
 For every public-facing page:
-- Dynamic \`<title>\` using CMS content title
+- Dynamic \`<title>\` using CMS content title + **{{SITE_NAME}}**
 - \`<meta name="description">\` using excerpt or summary
 - Open Graph: \`og:title\`, \`og:description\`, \`og:image\`, \`og:url\`
 - Canonical URL tag
@@ -405,7 +446,7 @@ For every public-facing page:
 
 ---
 
-## Section 8 — Error Handling
+## Section 9 — Error Handling
 
 Handle all these states:
 - **Loading** — skeleton UI while fetching
@@ -416,17 +457,24 @@ Handle all these states:
 - **429** — "Too many requests — please wait a moment"
 - **500** — "Something went wrong — try again shortly"
 
+Failed engagement calls (likes, comments, view tracking) must fail silently — never block content display.
+
 ---
 
-## Section 9 — Acceptance Criteria
+## Section 10 — Acceptance Criteria
 
 Lovable must confirm before finishing:
+- [ ] Site name **{{SITE_NAME}}** appears in navbar, footer, and page titles
 - [ ] All selected content types are fetching from \`{{API_BASE_URL}}\`
 - [ ] Authorization header is set on every request using the env variable
 - [ ] No API key appears in client-side JavaScript bundles (for SSR routes)
 - [ ] All pages have loading, error, and empty states
 - [ ] Pagination works correctly
 - [ ] SEO metadata renders correctly in \`<head>\`
+- [ ] Like button toggles with optimistic UI
+- [ ] Share modal opens and tracks share clicks
+- [ ] Comments load threaded and submission shows confirmation or moderation message
+- [ ] "Powered by Lunar CMS" banner appears automatically from \`branding.enabled\`
 - [ ] Existing pages and features are unaffected
 - [ ] No TypeScript errors
 
@@ -436,20 +484,25 @@ Lovable must confirm before finishing:
 
 Base URL: \`{{API_BASE_URL}}\`
 
+### Content Endpoints
 {{ENDPOINT_REFERENCE}}
+
+### Engagement Endpoints
+{{ENGAGEMENT_ENDPOINT_REFERENCE}}
 `,
   },
 
   // ── WINDSURF ──────────────────────────────────────────────────────────────
   windsurf: {
-    id: "windsurf-v1",
+    id: "windsurf-v2",
     name: "Windsurf Integration Prompt",
-    version: "v1.0",
+    version: "v2.0",
     description: "Optimised for Windsurf's Cascade agent plan-execute workflow",
     created_at: "2025-01-01T00:00:00Z",
-    updated_at: "2025-01-01T00:00:00Z",
+    updated_at: "2025-07-01T00:00:00Z",
     template_body: `# Lunar CMS Integration — {{FRAMEWORK}}
 > Generated for **Windsurf (Cascade)** · {{RENDER_STRATEGY}} · {{STYLING}}
+> Site name: **{{SITE_NAME}}**
 
 ---
 
@@ -467,8 +520,8 @@ Do not skip the planning phase. Do not write code without first reading the proj
 ---
 
 ## Objective
-Integrate this existing **{{FRAMEWORK}}** project with the **Lunar CMS REST API**.
-This is a read-only content integration. The CMS itself must not be modified.
+Build a fully functional external blog website called **{{SITE_NAME}}** that integrates with the **Lunar CMS REST API**.
+Use **{{SITE_NAME}}** in the navbar, footer, page titles, and meta tags throughout.
 
 ---
 
@@ -545,6 +598,7 @@ Requirements:
 - The API key resolves the workspace automatically — never send workspace IDs
 - Typed response parsing with \`{ success, data, meta }\` envelope
 - Reusable pagination support (\`page\`, \`limit\`)
+- Export \`getEnhancedPost(slug)\` → \`GET /api/v1/posts/:slug\` (engagement + branding + share + related)
 - Centralised error handling (throw on non-2xx)
 
 {{SERVICE_CODE_HINT}}
@@ -566,24 +620,38 @@ Requirements:
 - [ ] **Empty state** — "No content available" message
 - [ ] **Pagination** — page/limit params, Previous/Next/page number controls
 - [ ] **SEO** — title, meta description, Open Graph for all public pages
+- [ ] Blog post pages must include \`<PostEngagement>\` and \`<PoweredByBanner>\` (see Phase 6)
 
 ### Styling: {{STYLING}}
 {{STYLING_INSTRUCTIONS}}
 
 ---
 
-## Phase 6 — Validation Checklist
+## Phase 6 — Engagement Features (Likes, Comments, Share, "Powered by")
+
+{{ENGAGEMENT_SECTION}}
+
+---
+
+## Phase 7 — Validation Checklist
 
 Cascade must verify each item before declaring the task complete:
 
 \`\`\`
 [ ] curl "{{API_BASE_URL}}/v1/blogs?limit=1" succeeds with Authorization header
+[ ] curl "{{API_BASE_URL}}/api/v1/posts/<slug>" returns stats + features + branding
 [ ] Environment variables load in all environments (dev + build)
 [ ] LUNAR_CMS_API_KEY is NOT exposed in client-side JavaScript
 [ ] All selected content types render real CMS data
+[ ] Site name "{{SITE_NAME}}" appears in navbar, footer, and page <title>
 [ ] Pagination increments and decrements correctly
 [ ] Loading, error, and empty states render correctly
 [ ] SEO metadata appears in <head> for public pages
+[ ] Like button toggles optimistically and calls the API
+[ ] Share modal opens, platform buttons open correct URLs, share is tracked
+[ ] Comments load threaded; new submission shows confirmation or moderation message
+[ ] "Powered by Lunar CMS" banner renders on post pages when branding.enabled is true
+[ ] Banner is invisible when branding.enabled is false
 [ ] TypeScript compiles with no errors (npx tsc --noEmit)
 [ ] Production build succeeds (npm run build or equivalent)
 [ ] No existing pages or features are broken
@@ -597,7 +665,11 @@ Cascade must verify each item before declaring the task complete:
 Base URL: \`{{API_BASE_URL}}\`
 Authentication: \`Authorization: Bearer pk_live_your_key_here\`
 
+### Content Endpoints
 {{ENDPOINT_REFERENCE}}
+
+### Engagement Endpoints
+{{ENGAGEMENT_ENDPOINT_REFERENCE}}
 
 ### Response envelope
 \`\`\`json
@@ -612,14 +684,15 @@ Begin with Phase 1. Output the inspection summary, then present the Phase 2 plan
 
   // ── BOLT ──────────────────────────────────────────────────────────────────
   bolt: {
-    id: "bolt-v1",
+    id: "bolt-v2",
     name: "Bolt Integration Prompt",
-    version: "v1.0",
+    version: "v2.0",
     description: "Optimised for Bolt's WebContainer full-stack generation",
     created_at: "2025-01-01T00:00:00Z",
-    updated_at: "2025-01-01T00:00:00Z",
+    updated_at: "2025-07-01T00:00:00Z",
     template_body: `# Lunar CMS Integration — {{FRAMEWORK}}
 > Generated for **Bolt** · {{RENDER_STRATEGY}} · {{STYLING}}
+> Site name: **{{SITE_NAME}}**
 
 ---
 
@@ -630,8 +703,9 @@ Bolt runs in a WebContainer — all files are created and executed in-browser.
 ---
 
 ## Objective
-Integrate this **{{FRAMEWORK}}** project with the **Lunar CMS REST API**.
+Build a fully functional external blog website called **{{SITE_NAME}}** that integrates with the **Lunar CMS REST API**.
 Read the current file structure first. Reuse what exists. Do not rebuild from scratch.
+Use **{{SITE_NAME}}** in the navbar, footer, page titles, hero, and README.
 
 ---
 
@@ -668,6 +742,7 @@ Create \`src/lib/lunarCms.ts\` (or equivalent path for this project):
 - Every request must include: \`Authorization: Bearer \${LUNAR_CMS_API_KEY}\`
 - Workspace is auto-resolved from the API key — never send workspace IDs
 - Standard response shape: \`{ success: boolean, data: T[], meta: { page, limit, total, totalPages } }\`
+- Export \`getEnhancedPost(slug)\` → \`GET /api/v1/posts/:slug\` returns engagement stats, features, branding, share links, related posts
 
 {{SERVICE_CODE_HINT}}
 
@@ -695,6 +770,8 @@ Create \`src/lib/lunarCms.ts\` (or equivalent path for this project):
 - Slug-based route
 - Full content display
 - SEO: title, description, Open Graph tags
+- Mount \`<PostEngagement>\` client component below content
+- Include \`<PoweredByBanner>\` at the bottom of every post page
 
 **Search** (if selected)
 - Debounced search input (300ms)
@@ -708,6 +785,12 @@ Create \`src/lib/lunarCms.ts\` (or equivalent path for this project):
 
 ---
 
+## Engagement Features (Likes, Comments, Share, "Powered by")
+
+{{ENGAGEMENT_SECTION}}
+
+---
+
 ## Bolt-Specific Notes
 
 - Use Bolt's **terminal panel** to run \`npm install\` if any new packages are needed
@@ -718,11 +801,27 @@ Create \`src/lib/lunarCms.ts\` (or equivalent path for this project):
 
 ---
 
+## Final Checklist
+
+- [ ] Site name **{{SITE_NAME}}** appears in navbar, footer, and page titles
+- [ ] All selected content types display real Lunar CMS data
+- [ ] Like button toggles with optimistic UI
+- [ ] Share modal opens and tracks clicks
+- [ ] Comments load and submission works
+- [ ] "Powered by Lunar CMS" banner shows/hides based on \`branding.enabled\`
+- [ ] No API key visible in client-side JavaScript
+
+---
+
 ## API Reference
 
 Base URL: \`{{API_BASE_URL}}\`
 
+### Content Endpoints
 {{ENDPOINT_REFERENCE}}
+
+### Engagement Endpoints
+{{ENGAGEMENT_ENDPOINT_REFERENCE}}
 
 ---
 
@@ -732,14 +831,15 @@ Start by reading the existing files. Then generate the Lunar CMS client. Then im
 
   // ── REPLIT ────────────────────────────────────────────────────────────────
   replit: {
-    id: "replit-v1",
+    id: "replit-v2",
     name: "Replit Agent Integration Prompt",
-    version: "v1.0",
+    version: "v2.0",
     description: "Optimised for Replit AI Agent in the cloud IDE",
     created_at: "2025-01-01T00:00:00Z",
-    updated_at: "2025-01-01T00:00:00Z",
+    updated_at: "2025-07-01T00:00:00Z",
     template_body: `# Lunar CMS Integration — {{FRAMEWORK}}
 > Generated for **Replit Agent** · {{RENDER_STRATEGY}} · {{STYLING}}
+> Site name: **{{SITE_NAME}}**
 
 ---
 
@@ -750,8 +850,9 @@ You have access to the full Replit workspace: file editor, shell, package manage
 ---
 
 ## Objective
-Integrate this **{{FRAMEWORK}}** project with the **Lunar CMS REST API**.
-This is a read-only integration. Content comes from Lunar CMS. The CMS itself is external.
+Build a fully functional external blog website called **{{SITE_NAME}}** that integrates with the **Lunar CMS REST API**.
+This site is standalone. All content and engagement data comes from Lunar CMS. No local database.
+Use **{{SITE_NAME}}** in the navbar, footer, page titles, and hero section.
 
 ---
 
@@ -804,6 +905,7 @@ Create \`lib/lunarCms.ts\` (or the appropriate path for this project):
 - Auth: \`Authorization: Bearer \${process.env.LUNAR_CMS_API_KEY}\`
 - API key resolves the workspace automatically — never send workspace IDs
 - Handle \`{ success, data, meta }\` response envelope
+- Export \`getEnhancedPost(slug)\` → \`GET /api/v1/posts/:slug\` (returns stats, features, branding, share links, related)
 
 {{SERVICE_CODE_HINT}}
 
@@ -826,6 +928,13 @@ Create \`lib/lunarCms.ts\` (or the appropriate path for this project):
 4. **States:** loading (skeleton), error (message + retry), empty (no content)
 5. **Pagination:** Previous / Next controls using \`meta.page\` and \`meta.totalPages\`
 6. **SEO metadata** on public pages (title, description, Open Graph)
+7. Blog post detail pages must include the \`<PostEngagement>\` and \`<PoweredByBanner>\` components (see next section)
+
+---
+
+## Engagement Features (Likes, Comments, Share, "Powered by")
+
+{{ENGAGEMENT_SECTION}}
 
 ---
 
@@ -839,8 +948,12 @@ Create \`lib/lunarCms.ts\` (or the appropriate path for this project):
 Ask the Replit Agent to run these shell commands after implementation:
 
 \`\`\`bash
-# Test API connectivity
+# Test content API connectivity
 curl "{{API_BASE_URL}}/v1/blogs?limit=1" \\
+  -H "Authorization: Bearer $LUNAR_CMS_API_KEY"
+
+# Test enhanced post API
+curl "{{API_BASE_URL}}/api/v1/posts/<your-slug>" \\
   -H "Authorization: Bearer $LUNAR_CMS_API_KEY"
 
 # Type check (if TypeScript)
@@ -857,10 +970,15 @@ Use the Replit **Webview** to preview and verify each page.
 ## Checklist
 
 - [ ] Secrets are set in Replit Secrets panel (not in .env file in source)
+- [ ] Site name **{{SITE_NAME}}** appears in navbar, footer, and page titles
 - [ ] Lunar CMS client reads URL and key from environment
 - [ ] All selected content types render real data
 - [ ] Pagination works correctly
 - [ ] Loading, error, and empty states are implemented
+- [ ] Like button toggles with optimistic UI; API call succeeds
+- [ ] Share modal opens and tracks clicks per platform
+- [ ] Comments load threaded; new comments show confirmation or moderation message
+- [ ] "Powered by Lunar CMS" banner auto-renders based on \`branding.enabled\`
 - [ ] TypeScript compiles without errors
 - [ ] Dev server starts successfully (\`npm run dev\`)
 - [ ] Existing functionality is not broken
@@ -872,7 +990,11 @@ Use the Replit **Webview** to preview and verify each page.
 Base URL: \`{{API_BASE_URL}}\`
 Authentication: \`Authorization: Bearer pk_live_your_key_here\`
 
+### Content Endpoints
 {{ENDPOINT_REFERENCE}}
+
+### Engagement Endpoints
+{{ENGAGEMENT_ENDPOINT_REFERENCE}}
 
 ---
 
@@ -882,14 +1004,15 @@ Start by reading the project structure using shell commands. Then implement the 
 
   // ── CLAUDE CODE ───────────────────────────────────────────────────────────
   claudecode: {
-    id: "claudecode-v1",
+    id: "claudecode-v2",
     name: "Claude Code Integration Prompt",
-    version: "v1.0",
+    version: "v2.0",
     description: "Optimised for Claude Code CLI agent with direct file access",
     created_at: "2025-01-01T00:00:00Z",
-    updated_at: "2025-01-01T00:00:00Z",
+    updated_at: "2025-07-01T00:00:00Z",
     template_body: `# Lunar CMS Integration — {{FRAMEWORK}}
 > Generated for **Claude Code** · {{RENDER_STRATEGY}} · {{STYLING}}
+> Site name: **{{SITE_NAME}}**
 
 ---
 
@@ -900,8 +1023,8 @@ You have direct access to the file system. Read files before editing them.
 ---
 
 ## Objective
-Integrate this **{{FRAMEWORK}}** project with the **Lunar CMS REST API**.
-This is a read-only content integration — the CMS itself must not be modified.
+Build a fully functional external blog website called **{{SITE_NAME}}** that integrates with the **Lunar CMS REST API**.
+No local database. No hardcoded posts. Use **{{SITE_NAME}}** throughout (navbar, footer, page titles, README).
 
 ---
 
@@ -949,6 +1072,7 @@ Create a single centralised client. Read existing lib/services files first, then
 - Authentication: \`Authorization: Bearer \${LUNAR_CMS_API_KEY}\`
 - The API key resolves the workspace — never send workspace IDs or collection IDs
 - Parse \`{ success, data, meta }\` response envelope
+- Export \`getEnhancedPost(slug)\` → \`GET /api/v1/posts/:slug\` — single call returns post data, stats, features, branding, share links, and related posts
 - Throw typed errors on non-2xx with status code and message
 
 {{SERVICE_CODE_HINT}}
@@ -972,6 +1096,13 @@ Create a single centralised client. Read existing lib/services files first, then
 - Empty state (no content message)
 - Pagination using \`page\` / \`limit\` / \`meta.totalPages\`
 - SEO: \`<head>\` metadata for all public pages
+- Blog post detail pages: mount \`<PostEngagement>\` and \`<PoweredByBanner>\` (see next section)
+
+---
+
+## Engagement Features (Likes, Comments, Share, "Powered by")
+
+{{ENGAGEMENT_SECTION}}
 
 ---
 
@@ -992,6 +1123,9 @@ Use Claude Code's diff-based editing to minimise risk:
 \`\`\`bash
 curl "{{API_BASE_URL}}/v1/blogs?limit=1" \\
   -H "Authorization: Bearer $LUNAR_CMS_API_KEY" | jq .
+
+curl "{{API_BASE_URL}}/api/v1/posts/<your-slug>" \\
+  -H "Authorization: Bearer $LUNAR_CMS_API_KEY" | jq .stats,.features,.branding
 \`\`\`
 
 ---
@@ -1012,6 +1146,13 @@ curl "{{API_BASE_URL}}/v1/blogs?limit=1" -H "Authorization: Bearer $LUNAR_CMS_AP
 grep -r "LUNAR_CMS_API_KEY" .next/static 2>/dev/null && echo "KEY EXPOSED - FIX IMMEDIATELY" || echo "Key safe"
 \`\`\`
 
+Manual verify:
+- [ ] Site name **{{SITE_NAME}}** appears in navbar, footer, and \`<title>\`
+- [ ] Like button toggles optimistically
+- [ ] Share modal opens, platform links work, clicks tracked
+- [ ] Comments load threaded; submission confirmed or moderated
+- [ ] "Powered by Lunar CMS" pill auto-renders based on API \`branding.enabled\`
+
 All checks must pass before the task is complete.
 
 ---
@@ -1020,7 +1161,11 @@ All checks must pass before the task is complete.
 
 Base URL: \`{{API_BASE_URL}}\`
 
+### Content Endpoints
 {{ENDPOINT_REFERENCE}}
+
+### Engagement Endpoints
+{{ENGAGEMENT_ENDPOINT_REFERENCE}}
 
 ### Standard response shape
 \`\`\`json
@@ -1035,14 +1180,15 @@ Begin by reading the project with the shell commands above. Then implement step 
 
   // ── GITHUB COPILOT AGENT ─────────────────────────────────────────────────
   copilot: {
-    id: "copilot-v1",
+    id: "copilot-v2",
     name: "GitHub Copilot Agent Integration Prompt",
-    version: "v1.0",
+    version: "v2.0",
     description: "Optimised for GitHub Copilot Agent mode in VS Code",
     created_at: "2025-01-01T00:00:00Z",
-    updated_at: "2025-01-01T00:00:00Z",
+    updated_at: "2025-07-01T00:00:00Z",
     template_body: `# Lunar CMS Integration — {{FRAMEWORK}}
 > Generated for **GitHub Copilot Agent** · {{RENDER_STRATEGY}} · {{STYLING}}
+> Site name: **{{SITE_NAME}}**
 
 ---
 
@@ -1053,8 +1199,8 @@ Use the **Chat panel** with \`@workspace\` context and **Agent mode** enabled.
 ---
 
 ## Objective
-Integrate this **{{FRAMEWORK}}** project with the **Lunar CMS REST API**.
-This is a read-only content integration. The CMS itself is not part of this repo.
+Build a fully functional external blog website called **{{SITE_NAME}}** that integrates with the **Lunar CMS REST API**.
+Use **{{SITE_NAME}}** in the navbar, footer, page titles, and meta tags throughout the project.
 
 ---
 
@@ -1105,7 +1251,8 @@ Ask Copilot to create a centralised API client. Read existing lib/services files
 \`\`\`
 Copilot prompt: "@workspace Create a Lunar CMS API client in the appropriate lib or services folder.
 It must read LUNAR_CMS_API_KEY from env, target {{API_BASE_URL}}, set Authorization: Bearer on every
-request, and export typed functions for each endpoint."
+request, export typed functions for each endpoint, and export getEnhancedPost(slug) that calls
+GET /api/v1/posts/:slug to return stats, features, branding, share links, and related posts."
 \`\`\`
 
 Requirements:
@@ -1140,7 +1287,15 @@ Use {{STYLING}} for styling and follow {{FRAMEWORK}} conventions.
 \`\`\`
 @workspace Implement [content type] detail page using slug-based routing.
 Include SEO metadata in <head> using CMS content fields.
+Mount <PostEngagement> client component below post content.
+Include <PoweredByBanner branding={post.branding} /> at the bottom of the page.
 \`\`\`
+
+---
+
+## Engagement Features (Likes, Comments, Share, "Powered by")
+
+{{ENGAGEMENT_SECTION}}
 
 ---
 
@@ -1158,6 +1313,9 @@ After Copilot proposes each change, verify:
 - [ ] API key is NOT referenced in client-side component files (use server-side for SSR)
 - [ ] TypeScript types are correct (\`npx tsc --noEmit\`)
 - [ ] Pagination controls work with \`meta.totalPages\`
+- [ ] Site name **{{SITE_NAME}}** appears in navbar, footer, and page titles
+- [ ] Like, comment, and share features work on post detail pages
+- [ ] "Powered by Lunar CMS" banner appears automatically from \`branding.enabled\`
 
 ---
 
@@ -1166,7 +1324,11 @@ After Copilot proposes each change, verify:
 Base URL: \`{{API_BASE_URL}}\`
 Auth: \`Authorization: Bearer pk_live_your_key_here\`
 
+### Content Endpoints
 {{ENDPOINT_REFERENCE}}
+
+### Engagement Endpoints
+{{ENGAGEMENT_ENDPOINT_REFERENCE}}
 
 ---
 
@@ -1176,14 +1338,15 @@ Start with: \`@workspace Read this project's structure and tell me: (1) where AP
 
   // ── VS CODE AGENT MODE ────────────────────────────────────────────────────
   vscodeagent: {
-    id: "vscodeagent-v1",
+    id: "vscodeagent-v2",
     name: "VS Code Agent Mode Integration Prompt",
-    version: "v1.0",
+    version: "v2.0",
     description: "Optimised for VS Code built-in agent mode (Copilot-independent)",
     created_at: "2025-01-01T00:00:00Z",
-    updated_at: "2025-01-01T00:00:00Z",
+    updated_at: "2025-07-01T00:00:00Z",
     template_body: `# Lunar CMS Integration — {{FRAMEWORK}}
 > Generated for **VS Code Agent Mode** · {{RENDER_STRATEGY}} · {{STYLING}}
+> Site name: **{{SITE_NAME}}**
 
 ---
 
@@ -1194,8 +1357,9 @@ You have access to the workspace file system, integrated terminal, and editor.
 ---
 
 ## Objective
-Integrate this **{{FRAMEWORK}}** project with the **Lunar CMS REST API**.
-This is a read-only content integration. Work incrementally. Validate after each step.
+Build a fully functional external blog website called **{{SITE_NAME}}** that integrates with the **Lunar CMS REST API**.
+Work incrementally. Validate after each step.
+Use **{{SITE_NAME}}** in the navbar, footer, page titles, and meta tags.
 
 ---
 
@@ -1245,6 +1409,7 @@ Client requirements:
 - Full TypeScript types for all response shapes
 - Standard envelope: \`{ success, data, meta }\`
 - Pagination: \`page\` and \`limit\` params
+- Export \`getEnhancedPost(slug)\` → \`GET /api/v1/posts/:slug\` (engagement stats + features + branding + share + related)
 
 {{SERVICE_CODE_HINT}}
 
@@ -1272,16 +1437,23 @@ curl "{{API_BASE_URL}}/v1/blogs?limit=1" \\
 4. Implement loading, error, and empty states
 5. Implement pagination controls
 6. Add SEO \`<head>\` metadata for public pages
-7. Run \`npx tsc --noEmit\` after each file — fix errors before moving on
+7. For blog post detail pages: mount \`<PostEngagement>\` and \`<PoweredByBanner>\` (see Step 5)
+8. Run \`npx tsc --noEmit\` after each file — fix errors before moving on
 
 ---
 
-## Step 5 — Styling: {{STYLING}}
+## Step 5 — Engagement Features (Likes, Comments, Share, "Powered by")
+
+{{ENGAGEMENT_SECTION}}
+
+---
+
+## Step 6 — Styling: {{STYLING}}
 {{STYLING_INSTRUCTIONS}}
 
 ---
 
-## Step 6 — Terminal Verification
+## Step 7 — Terminal Verification
 
 Run these checks in the VS Code integrated terminal:
 
@@ -1301,10 +1473,15 @@ npm run dev
 ## Acceptance Checklist
 
 - [ ] \`LUNAR_CMS_URL\` and \`LUNAR_CMS_API_KEY\` load from env
+- [ ] Site name **{{SITE_NAME}}** appears in navbar, footer, and \`<title>\` tags
 - [ ] All selected content types display real Lunar CMS data
 - [ ] Loading, error, and empty states visible in browser
 - [ ] Pagination navigates between pages correctly
 - [ ] SEO metadata in \`<head>\` for public pages
+- [ ] Like button toggles with optimistic UI
+- [ ] Share modal opens; share clicks are tracked per platform
+- [ ] Comments load threaded; submission shows confirmation or moderation message
+- [ ] "Powered by Lunar CMS" banner auto-renders from \`branding.enabled\`
 - [ ] TypeScript compiles without errors
 - [ ] Production build succeeds
 - [ ] No existing features broken
@@ -1316,7 +1493,11 @@ npm run dev
 
 Base URL: \`{{API_BASE_URL}}\`
 
+### Content Endpoints
 {{ENDPOINT_REFERENCE}}
+
+### Engagement Endpoints
+{{ENGAGEMENT_ENDPOINT_REFERENCE}}
 
 ---
 
@@ -1328,17 +1509,18 @@ Begin with Step 0. Read the workspace. Output a summary. Then proceed step by st
 // ── Universal Fallback Template ────────────────────────────────────────────────
 
 export const UNIVERSAL_TEMPLATE: PromptTemplate = {
-  id: "universal-v1",
+  id: "universal-v2",
   name: "Universal Integration Prompt",
-  version: "v1.0",
+  version: "v2.0",
   description: "Works with any framework and AI coding platform",
   created_at: "2025-01-01T00:00:00Z",
-  updated_at: "2025-01-01T00:00:00Z",
+  updated_at: "2025-07-01T00:00:00Z",
   template_body: `# Lunar CMS Integration — {{FRAMEWORK}} + {{AI_PLATFORM}}
+> Site name: **{{SITE_NAME}}**
 
 ## Your Task
-You are integrating an existing **{{FRAMEWORK}}** project with the **Lunar CMS REST API**.
-This is a read-only integration. Do NOT modify the CMS itself.
+You are building a fully functional external blog website called **{{SITE_NAME}}** that integrates with the **Lunar CMS REST API**.
+No local database. No hardcoded posts. Use **{{SITE_NAME}}** throughout (navbar, footer, page titles, README).
 
 ---
 
@@ -1381,9 +1563,9 @@ The service must:
 - Read the API key from the environment variable
 - Set the Authorization header on every request
 - Export typed functions for each content endpoint
+- Export \`getEnhancedPost(slug)\` → \`GET /api/v1/posts/:slug\` (returns stats, features, branding, share links, related)
 - Handle HTTP errors (non-2xx) and throw descriptive errors
 - Support pagination parameters (page, limit)
-- Support filtering parameters where applicable
 - Never expose the API key to the client-side (for SSR/SSG frameworks)
 
 \`\`\`
@@ -1422,13 +1604,19 @@ Every error response has the shape:
 
 ---
 
-## Step 6 — Styling: {{STYLING}}
+## Step 6 — Engagement Features (Likes, Comments, Share, "Powered by")
+
+{{ENGAGEMENT_SECTION}}
+
+---
+
+## Step 7 — Styling: {{STYLING}}
 
 {{STYLING_INSTRUCTIONS}}
 
 ---
 
-## Step 7 — Implementation Requirements
+## Step 8 — Implementation Requirements
 
 For every page/component you create:
 - [ ] Implement **loading states**
@@ -1438,12 +1626,17 @@ For every page/component you create:
 - [ ] Build **SEO-friendly** markup with title, meta description, and Open Graph tags
 - [ ] Keep components **modular**
 - [ ] Follow **{{FRAMEWORK}}** best practices
+- [ ] Use site name **{{SITE_NAME}}** in navbar, footer, and \`<title>\` tags
 
 ---
 
 ## Available Endpoints Reference
 
+### Content Endpoints
 {{ENDPOINT_REFERENCE}}
+
+### Engagement Endpoints
+{{ENGAGEMENT_ENDPOINT_REFERENCE}}
 
 ---
 

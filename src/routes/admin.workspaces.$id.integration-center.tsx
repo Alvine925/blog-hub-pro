@@ -3,7 +3,7 @@ import { useState, useCallback } from "react";
 import { toast } from "sonner";
 import {
   Plug, ChevronRight, ChevronLeft, Check, Copy, Download,
-  Sparkles, RefreshCw, FileText, Code2,
+  Sparkles, RefreshCw, FileText, Code2, Edit2, X, Globe,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -21,12 +21,22 @@ export const Route = createFileRoute("/admin/workspaces/$id/integration-center")
   component: IntegrationCenter,
 });
 
-// ── Constants ──────────────────────────────────────────────────────────────────
+// ── Dynamic API base URL ───────────────────────────────────────────────────────
 
-const CMS_BASE_URL =
-  typeof window !== "undefined"
-    ? `${location.origin.includes("localhost") ? "https://your-project.supabase.co/functions/v1/content-router" : location.origin + "/functions/v1/content-router"}`
-    : "https://your-project.supabase.co/functions/v1/content-router";
+function getDefaultApiUrl(): string {
+  const supabaseUrl =
+    (typeof import.meta !== "undefined" && (import.meta.env?.VITE_SUPABASE_URL as string | undefined)) ??
+    "";
+  if (supabaseUrl) {
+    return `${supabaseUrl.replace(/\/$/, "")}/functions/v1/content-router`;
+  }
+  if (typeof window !== "undefined" && !location.origin.includes("localhost")) {
+    return `${location.origin}/functions/v1/content-router`;
+  }
+  return "https://your-project.supabase.co/functions/v1/content-router";
+}
+
+// ── Constants ──────────────────────────────────────────────────────────────────
 
 const STEPS = [
   { id: 1, label: "Framework"    },
@@ -76,6 +86,132 @@ function Stepper({ current }: { current: number }) {
           )}
         </div>
       ))}
+    </div>
+  );
+}
+
+// ── Site Config Banner (API URL + Site Name) ───────────────────────────────────
+
+function SiteConfigBanner({
+  apiUrl,
+  siteName,
+  onApiUrlChange,
+  onSiteNameChange,
+}: {
+  apiUrl: string;
+  siteName: string;
+  onApiUrlChange: (url: string) => void;
+  onSiteNameChange: (name: string) => void;
+}) {
+  const [editingUrl,  setEditingUrl]  = useState(false);
+  const [editingName, setEditingName] = useState(false);
+  const [draftUrl,    setDraftUrl]    = useState(apiUrl);
+  const [draftName,   setDraftName]   = useState(siteName);
+
+  function saveUrl() {
+    const trimmed = draftUrl.trim();
+    if (!trimmed) { toast.error("API URL cannot be empty"); return; }
+    onApiUrlChange(trimmed);
+    setEditingUrl(false);
+    toast.success("API URL updated");
+  }
+
+  function saveName() {
+    const trimmed = draftName.trim();
+    if (!trimmed) { toast.error("Site name cannot be empty"); return; }
+    onSiteNameChange(trimmed);
+    setEditingName(false);
+    toast.success("Site name updated");
+  }
+
+  return (
+    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      {/* API URL */}
+      <div className="flex items-center gap-3 rounded-xl border border-border bg-muted/30 px-4 py-3">
+        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+          <Plug className="h-3.5 w-3.5 text-primary" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60">
+            Lunar CMS API Endpoint
+          </p>
+          {editingUrl ? (
+            <div className="mt-1 flex items-center gap-2">
+              <input
+                type="url"
+                value={draftUrl}
+                onChange={(e) => setDraftUrl(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") saveUrl(); if (e.key === "Escape") { setDraftUrl(apiUrl); setEditingUrl(false); } }}
+                className="flex-1 rounded-lg border border-border bg-white px-3 py-1.5 text-xs font-mono outline-none focus:ring-2 focus:ring-primary/30"
+                placeholder="https://your-project.supabase.co/functions/v1/content-router"
+                autoFocus
+              />
+              <button type="button" onClick={saveUrl}
+                className="rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-white hover:bg-primary/90">
+                Save
+              </button>
+              <button type="button" onClick={() => { setDraftUrl(apiUrl); setEditingUrl(false); }}
+                className="rounded-lg border border-border bg-white p-1.5 text-muted-foreground hover:text-foreground">
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          ) : (
+            <div className="mt-0.5 flex items-center gap-2">
+              <code className="truncate text-xs text-foreground font-mono">
+                {apiUrl || <span className="text-amber-600 font-medium">⚠ No URL set — click Edit</span>}
+              </code>
+              <button type="button" onClick={() => { setDraftUrl(apiUrl); setEditingUrl(true); }}
+                className="shrink-0 flex items-center gap-1 rounded-md px-2 py-0.5 text-[10px] font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">
+                <Edit2 className="h-3 w-3" /> Edit
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Site Name */}
+      <div className="flex items-center gap-3 rounded-xl border border-border bg-muted/30 px-4 py-3">
+        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+          <Globe className="h-3.5 w-3.5 text-primary" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60">
+            Your Site Name
+          </p>
+          {editingName ? (
+            <div className="mt-1 flex items-center gap-2">
+              <input
+                type="text"
+                value={draftName}
+                onChange={(e) => setDraftName(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") saveName(); if (e.key === "Escape") { setDraftName(siteName); setEditingName(false); } }}
+                className="flex-1 rounded-lg border border-border bg-white px-3 py-1.5 text-xs outline-none focus:ring-2 focus:ring-primary/30"
+                placeholder="e.g. TechBlog, My Company Blog"
+                maxLength={60}
+                autoFocus
+              />
+              <button type="button" onClick={saveName}
+                className="rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-white hover:bg-primary/90">
+                Save
+              </button>
+              <button type="button" onClick={() => { setDraftName(siteName); setEditingName(false); }}
+                className="rounded-lg border border-border bg-white p-1.5 text-muted-foreground hover:text-foreground">
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          ) : (
+            <div className="mt-0.5 flex items-center gap-2">
+              <span className="truncate text-xs text-foreground font-medium">
+                {siteName || <span className="text-muted-foreground italic">My Blog</span>}
+              </span>
+              <button type="button" onClick={() => { setDraftName(siteName); setEditingName(true); }}
+                className="shrink-0 flex items-center gap-1 rounded-md px-2 py-0.5 text-[10px] font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">
+                <Edit2 className="h-3 w-3" /> Edit
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
@@ -191,7 +327,6 @@ function StepContent({
         </p>
       </div>
 
-      {/* Everything shortcut */}
       <button
         type="button"
         onClick={() => onToggle("everything")}
@@ -420,6 +555,11 @@ function StepGenerate({
             {v}
           </span>
         ))}
+        {output.selections.siteName && (
+          <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-[11px] font-medium text-emerald-700">
+            🌐 {output.selections.siteName}
+          </span>
+        )}
         <span className="rounded-full border border-primary/30 bg-primary/5 px-2.5 py-0.5 text-[11px] font-medium text-primary">
           {output.template_version}
         </span>
@@ -502,6 +642,8 @@ function IntegrationCenter() {
   const [rendering,  setRendering]  = useState("ssg");
   const [styling,    setStyling]    = useState("tailwind");
   const [output,     setOutput]     = useState<GeneratedOutput | null>(null);
+  const [apiUrl,     setApiUrl]     = useState<string>(getDefaultApiUrl);
+  const [siteName,   setSiteName]   = useState<string>("My Blog");
 
   function toggleContent(id: string) {
     if (id === "everything") {
@@ -524,14 +666,14 @@ function IntegrationCenter() {
 
   function handleNext() {
     if (step === 5) {
-      // Generate on final "next"
       const sel: GeneratorSelections = {
         frameworkId:      framework,
         aiPlatformId:     aiPlatform,
         contentTypeIds:   content,
         renderStrategyId: rendering,
         stylingId:        styling,
-        apiBaseUrl:       CMS_BASE_URL,
+        apiBaseUrl:       apiUrl,
+        siteName:         siteName.trim() || "My Blog",
       };
       const result = generatePrompt(sel);
       setOutput(result);
@@ -566,10 +708,18 @@ function IntegrationCenter() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Integration Center</h1>
           <p className="mt-0.5 text-sm text-muted-foreground">
-            Generate a tailored AI implementation prompt to integrate your website with the Lunar CMS API — no manual coding required.
+            Generate a tailored AI prompt to build an external blog with likes, comments, share modals, and the Lunar CMS attribution banner — all wired automatically.
           </p>
         </div>
       </div>
+
+      {/* Site config banner */}
+      <SiteConfigBanner
+        apiUrl={apiUrl}
+        siteName={siteName}
+        onApiUrlChange={setApiUrl}
+        onSiteNameChange={setSiteName}
+      />
 
       {/* Stepper */}
       <div className="flex justify-center overflow-x-auto py-2">
@@ -645,9 +795,9 @@ function IntegrationCenter() {
       {step === 1 && (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           {[
-            { icon: "🔑", title: "API Key Required", desc: "Make sure you have an API key from the API Keys section before integrating." },
-            { icon: "⚡", title: "One Prompt, Full Integration", desc: "The generated prompt instructs the AI agent to build the entire integration automatically." },
-            { icon: "🔒", title: "Read-Only & Secure", desc: "Publishable keys expose only published content. Your CMS data stays safe." },
+            { icon: "🔑", title: "API Key Required",       desc: "Make sure you have an API key from the API Keys section before integrating." },
+            { icon: "💬", title: "Engagement Built-in",    desc: "Likes, comments, share modals, view tracking, and the Powered by Lunar CMS banner are included automatically in the prompt." },
+            { icon: "🔒", title: "Read-Only & Secure",     desc: "Publishable keys expose only published content. Engagement writes proxy through the server so the API key never reaches the browser." },
           ].map((card) => (
             <div key={card.title} className="rounded-xl border border-border bg-white p-5 space-y-2">
               <span className="text-2xl">{card.icon}</span>

@@ -7,7 +7,9 @@ and engagement data from the **Lunar CMS REST API**. This site represents exactl
 how a real external customer would integrate Lunar CMS into their own product.
 
 The site must work as a standalone Replit project (separate from the CMS itself).
-The site name is **{{SITE_NAME}}** — use it throughout (page titles, nav, footer, meta tags).
+The site name is **{{SITE_NAME}}** — use it throughout (page titles, nav, footer, meta tags, hero headline, README).
+
+> **Tip:** Replace `{{SITE_NAME}}` with the actual name before sending this prompt to an AI agent (e.g. "TechBlog", "Acme Insights", "DevDigest"). The Integration Center in Lunar CMS lets you set this in the UI and it gets substituted automatically.
 
 ---
 
@@ -45,13 +47,13 @@ Do not use any CMS SDK. Use plain `fetch()` calls against the REST API.
 The user will provide:
 
 ```
-LUNAR_API_KEY=pk_live_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-LUNAR_API_URL=https://<your-lunar-cms-deployment>.repl.co
+LUNAR_CMS_API_KEY=pk_live_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+LUNAR_CMS_URL=https://<your-lunar-cms-deployment>.repl.co
 ```
 
 Store them in `.env.local`.
 
-The `LUNAR_API_KEY` is a Lunar CMS publishable key.
+The `LUNAR_CMS_API_KEY` is a Lunar CMS publishable key.
 It is safe to use server-side only (in Server Components and Route Handlers).
 Never expose it to the browser directly — for engagement write operations (likes, comments)
 use a Next.js Route Handler as a proxy.
@@ -63,7 +65,7 @@ use a Next.js Route Handler as a proxy.
 ### Standard headers (server-side calls)
 
 ```
-Authorization: Bearer <LUNAR_API_KEY>
+Authorization: Bearer <LUNAR_CMS_API_KEY>
 Content-Type: application/json
 ```
 
@@ -241,7 +243,7 @@ src/
     CategoryBadge.tsx               — Category pill/badge
     FeaturedPost.tsx                — Hero card for featured posts
     Navbar.tsx                      — Site navigation (shows site name: {{SITE_NAME}})
-    Footer.tsx                      — Site footer
+    Footer.tsx                      — Site footer (shows site name: {{SITE_NAME}})
     LikeButton.tsx                  — Like/unlike toggle button (Client Component)
     CommentThread.tsx               — Comment list + reply tree (Client Component)
     CommentForm.tsx                 — Submit comment / reply form (Client Component)
@@ -273,8 +275,8 @@ Define TypeScript interfaces:
 Server-side API client (no `"use client"`, never exposed to browser):
 
 ```typescript
-const BASE = process.env.LUNAR_API_URL!;
-const KEY  = process.env.LUNAR_API_KEY!;
+const BASE = process.env.LUNAR_CMS_URL!;
+const KEY  = process.env.LUNAR_CMS_API_KEY!;
 
 function headers() {
   return { Authorization: `Bearer ${KEY}`, "Content-Type": "application/json" };
@@ -301,8 +303,8 @@ Clients send `X-Visitor-Id`; this proxy forwards it along with Authorization.
 ```typescript
 import { NextRequest, NextResponse } from "next/server";
 
-const CMS = process.env.LUNAR_API_URL!;
-const KEY = process.env.LUNAR_API_KEY!;
+const CMS = process.env.LUNAR_CMS_URL!;
+const KEY = process.env.LUNAR_CMS_API_KEY!;
 
 async function proxy(req: NextRequest, { params }: { params: { path: string[] } }) {
   const path    = params.path.join("/");
@@ -386,7 +388,7 @@ It receives `initialData` (from the server fetch) so there is no layout shift.
        method: "POST",
        headers: { "X-Visitor-Id": getVisitorId(), "Content-Type": "application/json" },
        body: JSON.stringify({ referrer: document.referrer }),
-     });
+     }).catch(() => {}); // silent fail
    }, []);
    ```
 
@@ -418,9 +420,10 @@ It receives `initialData` (from the server fetch) so there is no layout shift.
 
 **Only show sections that are enabled in `initialData.features`:**
 ```ts
-if (!features.likes) // hide like button
-if (!features.comments) // hide comments section
+if (!features.likes)       // hide like button
+if (!features.comments)    // hide comments section
 if (!features.socialShare) // hide share button
+if (!features.viewTracking) // skip view tracking useEffect
 ```
 
 ### `components/ShareModal.tsx`
@@ -428,9 +431,10 @@ if (!features.socialShare) // hide share button
 ```tsx
 // Props: isOpen, onClose, shareLinks: ShareLinks, slug: string
 // Backdrop: fixed inset-0 bg-black/50 z-50
-// Modal: centered card with X close button
+// Modal: centered card with X close button — closes on backdrop click or Escape
 // Buttons: Facebook (blue), LinkedIn (blue), X (black), WhatsApp (green), Email (gray)
 // "Copy link" button with clipboard icon — shows "Copied!" for 2 seconds after click
+// On each platform click: open URL in new tab + POST /api/engagement/posts/:slug/share
 ```
 
 ### `components/LikeButton.tsx`
@@ -458,8 +462,7 @@ if (!features.socialShare) // hide share button
 // If branding.enabled is true:
 //   Render a small fixed or static footer-level banner:
 //   "<branding.text>" linking to "<branding.url>"
-//   Suggested: sticky bottom bar, small text, subtle styling
-//   Example: "Powered by Lunar CMS" → links to the CMS URL
+//   Suggested: sticky bottom-right pill, small text, subtle styling
 
 export function PoweredByBanner({ branding }: { branding: BrandingConfig }) {
   if (!branding?.enabled) return null;
@@ -491,6 +494,20 @@ The site owner never needs to configure anything — the CMS admin controls it f
 // Show up to 3 posts in a grid (title, excerpt, category, cover image)
 ```
 
+### `components/Navbar.tsx`
+
+```tsx
+// Shows {{SITE_NAME}} in the top-left as the site logo/wordmark
+// Navigation links: Home, Blog, Categories, Search
+```
+
+### `components/Footer.tsx`
+
+```tsx
+// Shows: © {year} {{SITE_NAME}}
+// Optional: powered-by attribution is handled by PoweredByBanner, not the footer
+```
+
 ---
 
 ## Styling
@@ -508,10 +525,10 @@ The site owner never needs to configure anything — the CMS admin controls it f
 
 ## Error Handling
 
-* Missing env vars → throw at startup
+* Missing env vars → throw at startup with clear message
 * 404 from API → `notFound()`
 * Non-2xx → user-friendly error UI
-* Failed engagement calls → silent fail (don't block content display)
+* Failed engagement calls → silent fail (never block content display)
 * Comment submission failure → show inline error message, keep form data
 
 ---
@@ -525,18 +542,20 @@ Include `README.md` with:
 3. How to get an API key from Lunar CMS dashboard
 4. Required environment variables
 5. How to run locally (`npm run dev`)
-6. How engagement features work (automatic — no extra config)
+6. How engagement features work (automatic — no extra config needed)
+7. How the "Powered by Lunar CMS" banner works (CMS-controlled, zero site config)
 
 ---
 
 ## Success Criteria
 
+- [ ] Site name **{{SITE_NAME}}** appears in navbar, footer, page titles, and hero
 - [ ] Homepage loads real posts from Lunar CMS
 - [ ] Blog listing paginates and filters correctly
 - [ ] Single post shows full content
 - [ ] View is tracked automatically on post page load (no user action needed)
 - [ ] Like button toggles correctly with optimistic UI
-- [ ] Share modal opens and share links work
+- [ ] Share modal opens and share links work for all platforms
 - [ ] Share clicks are tracked via the API
 - [ ] Comments load in threaded view
 - [ ] Comment submission shows confirmation or moderation message
@@ -546,4 +565,3 @@ Include `README.md` with:
 - [ ] All feature flags from `features.*` are respected
 - [ ] No API key visible in client-side bundles
 - [ ] `npm run build` succeeds with no TypeScript errors
-- [ ] Site name `{{SITE_NAME}}` appears in navbar and page titles
