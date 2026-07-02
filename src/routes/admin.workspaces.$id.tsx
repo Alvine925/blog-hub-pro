@@ -92,12 +92,6 @@ function buildNav(id: string): NavGroup[] {
       ],
     },
     {
-      group: "Team",
-      items: [
-        { label: "Users",         to: `${base}/users`,        icon: Users      },
-      ],
-    },
-    {
       group: "System",
       items: [
         { label: "Settings",      to: `${base}/settings`,     icon: Settings   },

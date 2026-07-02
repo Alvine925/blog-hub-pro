@@ -38,6 +38,7 @@ interface WorkspaceIntel {
   business_model: string | null;
   brand_voice: string | null;
   content_pillars: string[];
+  selected_collections: string[];
   ai_context: {
     brandSummary?: string;
     primaryTopics?: string[];
@@ -66,13 +67,12 @@ const getOverview = createServerFn({ method: "GET" })
     const db = getAdminClient() as any;
 
     const [
-      pubRes, draftRes, schedRes, collRes, mediaRes, aiRes,
+      pubRes, draftRes, schedRes, mediaRes, aiRes,
       postsRes, actRes, wsRes, compRes, kwRes, oppRes,
     ] = await Promise.all([
       db.from("blog_posts").select("id", { count: "exact", head: true }).eq("status", "published"),
       db.from("blog_posts").select("id", { count: "exact", head: true }).eq("status", "draft"),
       db.from("blog_posts").select("id", { count: "exact", head: true }).eq("status", "scheduled"),
-      db.from("collections").select("id", { count: "exact", head: true }),
       db.from("media_files").select("id", { count: "exact", head: true }).eq("workspace_id", data.id),
       db.from("ai_generations").select("id", { count: "exact", head: true }).eq("workspace_id", data.id),
       db.from("blog_posts")
@@ -84,7 +84,7 @@ const getOverview = createServerFn({ method: "GET" })
         .order("occurred_at", { ascending: false })
         .limit(8),
       db.from("workspaces")
-        .select("website_url,industry,description,target_audience,business_model,brand_voice,content_pillars,ai_context")
+        .select("website_url,industry,description,target_audience,business_model,brand_voice,content_pillars,selected_collections,ai_context")
         .eq("id", data.id)
         .maybeSingle(),
       db.from("workspace_competitors").select("*").eq("workspace_id", data.id).limit(6),
@@ -104,7 +104,7 @@ const getOverview = createServerFn({ method: "GET" })
         postsPublished: pub,
         postsDraft:     draft,
         postsScheduled: sched,
-        collections:    collRes.count  ?? 0,
+        collections:    (wsRes.data?.selected_collections ?? []).length,
         mediaFiles:     mediaRes.count ?? 0,
         aiGenerations:  aiRes.count    ?? 0,
       },
@@ -120,7 +120,7 @@ const getOverview = createServerFn({ method: "GET" })
 // ── Route ─────────────────────────────────────────────────────────────────────
 const overviewQuery = (id: string) =>
   queryOptions({
-    queryKey: ["workspace-overview", id, "v2"],
+    queryKey: ["workspace-overview", id, "v3"],
     queryFn:  () => getOverview({ data: { id } }),
   });
 
