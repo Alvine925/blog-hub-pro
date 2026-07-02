@@ -1,11 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { queryOptions, useSuspenseQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import {
   UserPlus, Trash2, Loader2, Users, ShieldCheck, ShieldAlert, Eye,
-  ChevronDown, ChevronUp, Mail,
+  ChevronDown, ChevronUp, Mail, Crown,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,16 +22,20 @@ import {
   listUsers, listInvites, inviteUser, updateUserRole, removeUser, revokeInvite,
   type CmsUser, type CmsUserInvite, type UserRole,
 } from "@/lib/user.functions";
+import { listWorkspaces, type Workspace } from "@/lib/workspace.functions";
 import { formatBlogDate } from "@/lib/blog-types";
+import { supabase } from "@/integrations/supabase/client";
 
 const usersQuery = queryOptions({ queryKey: ["admin", "users"], queryFn: () => listUsers() });
 const invitesQuery = queryOptions({ queryKey: ["admin", "invites"], queryFn: () => listInvites() });
+const workspacesQuery = queryOptions({ queryKey: ["admin", "workspaces"], queryFn: () => listWorkspaces() });
 
 export const Route = createFileRoute("/admin/users")({
   head: () => ({ meta: [{ title: "Users & Roles — Admin" }] }),
   loader: ({ context }) => Promise.all([
     context.queryClient.ensureQueryData(usersQuery),
     context.queryClient.ensureQueryData(invitesQuery),
+    context.queryClient.ensureQueryData(workspacesQuery),
   ]),
   component: UsersPage,
   errorComponent: ({ error }) => (
@@ -64,18 +68,27 @@ function RoleBadge({ role }: { role: UserRole }) {
 function UsersPage() {
   const { data: users } = useSuspenseQuery(usersQuery);
   const { data: invites } = useSuspenseQuery(invitesQuery);
+  const { data: workspaces } = useSuspenseQuery(workspacesQuery);
   const queryClient = useQueryClient();
   const invite = useServerFn(inviteUser);
   const updateRole = useServerFn(updateUserRole);
   const remove = useServerFn(removeUser);
   const revokeInv = useServerFn(revokeInvite);
 
+  const [currentUserEmail, setCurrentUserEmail] = useState<string | null>(null);
   const [formOpen, setFormOpen] = useState(false);
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<UserRole>("editor");
+  const [workspaceAccess, setWorkspaceAccess] = useState<string>("all");
   const [busy, setBusy] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [pendingRemove, setPendingRemove] = useState<CmsUser | null>(null);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user?.email) setCurrentUserEmail(session.user.email);
+    });
+  }, []);
 
   async function refresh() {
     await Promise.all([
@@ -89,11 +102,14 @@ function UsersPage() {
     setBusy(true);
     try {
       const inv = await invite({ data: { email: email.trim(), role } });
+      const wsLabel = workspaceAccess === "all"
+        ? "all workspaces"
+        : (workspaces.find((w) => w.id === workspaceAccess)?.name ?? "selected workspace");
       toast.success(`Invite sent to ${email}`, {
-        description: `Share this token with them: ${inv.token.slice(0, 16)}…`,
+        description: `Role: ${ROLE_LABELS[role]} · Access: ${wsLabel} · Token: ${inv.token.slice(0, 16)}…`,
         duration: 8000,
       });
-      setEmail(""); setFormOpen(false);
+      setEmail(""); setWorkspaceAccess("all"); setFormOpen(false);
       await refresh();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed to invite");
@@ -174,9 +190,26 @@ function UsersPage() {
 
       <div className="space-y-4">
         <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-          Team Members <Badge variant="secondary" className="ml-1">{users.length}</Badge>
+          Team Members <Badge variant="secondary" className="ml-1">{users.length + (currentUserEmail ? 1 : 0)}</Badge>
         </h2>
-        {users.length === 0 ? (
+
+        {/* Current superadmin user */}
+        {currentUserEmail && (
+          <div className="flex items-center gap-4 border-b border-border py-4">
+            <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center shrink-0 text-xs font-semibold uppercase text-white">
+              {currentUserEmail.slice(0, 2)}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium">You</p>
+              <p className="text-xs text-muted-foreground">{currentUserEmail}</p>
+            </div>
+            <span className="inline-flex items-center gap-1 rounded border px-2 py-0.5 text-xs font-medium bg-primary/10 text-primary border-primary/20">
+              <Crown className="h-3 w-3" /> Superadmin
+            </span>
+          </div>
+        )}
+
+        {users.length === 0 && !currentUserEmail ? (
           <div className="flex flex-col items-center gap-2 py-10 text-center">
             <Users className="h-8 w-8 text-muted-foreground" />
             <p className="text-sm text-muted-foreground">No team members yet. Invite someone below.</p>
@@ -258,7 +291,7 @@ function UsersPage() {
         </button>
 
         {formOpen && (
-          <div className="mt-5 grid gap-4 sm:grid-cols-[1fr_auto_auto]">
+          <div className="mt-5 grid gap-4 sm:grid-cols-[1fr_auto_auto_auto]">
             <div className="space-y-1.5">
               <Label htmlFor="inv-email">Email</Label>
               <Input id="inv-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleInvite()} placeholder="colleague@example.com" />
@@ -273,6 +306,20 @@ function UsersPage() {
                   <SelectItem value="admin">Admin</SelectItem>
                   <SelectItem value="editor">Editor</SelectItem>
                   <SelectItem value="viewer">Viewer</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Workspace Access</Label>
+              <Select value={workspaceAccess} onValueChange={setWorkspaceAccess}>
+                <SelectTrigger className="w-44">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Workspaces</SelectItem>
+                  {workspaces.map((ws: Workspace) => (
+                    <SelectItem key={ws.id} value={ws.id}>{ws.name}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>

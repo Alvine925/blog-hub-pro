@@ -135,23 +135,13 @@ function StatCard({
   sub?: string; accent?: boolean;
 }) {
   return (
-    <div className={cn(
-      "flex flex-col gap-4 rounded-xl border p-5 transition-shadow hover:shadow-md",
-      accent ? "border-primary/20 bg-primary/5" : "border-border bg-white",
-    )}>
-      <div className="flex items-center justify-between">
-        <span className={cn(
-          "flex h-9 w-9 items-center justify-center rounded-lg",
-          accent ? "bg-primary text-white" : "bg-muted text-muted-foreground",
-        )}>
-          <Icon className="h-4 w-4" />
-        </span>
-        {sub && (
-          <span className="flex items-center gap-1 text-xs text-emerald-600 font-medium">
-            <TrendingUp className="h-3 w-3" /> {sub}
-          </span>
-        )}
-      </div>
+    <div className="flex flex-col gap-2">
+      <span className={cn(
+        "flex h-9 w-9 items-center justify-center rounded-lg",
+        accent ? "bg-primary text-white" : "bg-muted text-muted-foreground",
+      )}>
+        <Icon className="h-4 w-4" />
+      </span>
       <div>
         <p className={cn(
           "text-3xl font-bold tabular-nums tracking-tight",
@@ -160,6 +150,11 @@ function StatCard({
           {typeof value === "number" ? value.toLocaleString() : value}
         </p>
         <p className="mt-0.5 text-sm text-muted-foreground">{label}</p>
+        {sub && (
+          <span className="mt-1 flex items-center gap-1 text-xs text-emerald-600 font-medium">
+            <TrendingUp className="h-3 w-3" /> {sub}
+          </span>
+        )}
       </div>
     </div>
   );
@@ -170,45 +165,33 @@ function WorkspaceCard({ ws }: { ws: WorkspaceRow }) {
   const initials = ws.name.slice(0, 2).toUpperCase();
 
   return (
-    <Link to="/admin/workspaces/$id" params={{ id: ws.id }}>
-      <div className="group relative overflow-hidden rounded-xl border border-border bg-white p-5 shadow-sm transition-all hover:shadow-md hover:border-primary/30 cursor-pointer">
-        {/* Top gradient bar */}
-        <div className={cn("absolute inset-x-0 top-0 h-0.5 bg-gradient-to-r", gradient)} />
-
-        <div className="flex items-start gap-3">
-          {/* Avatar */}
-          <div className={cn(
-            "flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br text-sm font-bold text-white shadow-sm",
-            gradient,
-          )}>
-            {initials}
-          </div>
-
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2">
-              <p className="truncate text-sm font-semibold text-foreground group-hover:text-primary transition-colors">
-                {ws.name}
-              </p>
-              {ws.slug === "default" && (
-                <span className="shrink-0 rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
-                  default
-                </span>
-              )}
-            </div>
-            {ws.description ? (
-              <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">{ws.description}</p>
-            ) : (
-              <p className="mt-0.5 text-xs text-muted-foreground/50 italic">No description</p>
-            )}
-            <div className="mt-3 flex items-center gap-1 text-[11px] text-muted-foreground">
-              <Clock className="h-3 w-3 shrink-0" />
-              <span>Updated {fmtRelative(ws.updated_at)}</span>
-            </div>
-          </div>
-
-          <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground/30 transition-all group-hover:translate-x-0.5 group-hover:text-primary mt-0.5" />
-        </div>
+    <Link
+      to="/admin/workspaces/$id"
+      params={{ id: ws.id }}
+      className="group flex items-center gap-3 py-3 border-b border-border last:border-0 hover:text-primary transition-colors"
+    >
+      <div className={cn(
+        "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br text-sm font-bold text-white",
+        gradient,
+      )}>
+        {initials}
       </div>
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-2">
+          <p className="truncate text-sm font-semibold text-foreground group-hover:text-primary transition-colors">
+            {ws.name}
+          </p>
+          {ws.slug === "default" && (
+            <span className="shrink-0 rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+              default
+            </span>
+          )}
+        </div>
+        <p className="text-xs text-muted-foreground truncate">
+          {ws.description ?? <span className="italic opacity-50">No description</span>}
+        </p>
+      </div>
+      <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground/30 group-hover:text-primary transition-colors" />
     </Link>
   );
 }
@@ -241,7 +224,6 @@ function GlobalDashboard() {
 
   const QUICK_ACTIONS = [
     { label: "New Workspace", desc: "Create an isolated content project", to: "/admin/workspaces", icon: FolderOpen, primary: true },
-    { label: "Write Post", desc: "Publish to your blog", to: "/admin/blogs/new", icon: FileText },
     { label: "Upload Media", desc: "Add images to the library", to: "/admin/media", icon: ImageIcon },
     { label: "AI Assistant", desc: "Generate content with AI", to: "/admin/ai-assistant", icon: Sparkles },
     { label: "Analytics", desc: "View traffic and usage", to: "/admin/analytics", icon: BarChart2 },
@@ -278,7 +260,7 @@ function GlobalDashboard() {
 
       {/* ── Content Status Bar ── */}
       {postCount > 0 && (
-        <div className="rounded-xl border border-border bg-white p-5 shadow-sm">
+        <div>
           <div className="mb-4 flex items-center gap-2">
             <Activity className="h-4 w-4 text-muted-foreground" />
             <h2 className="text-sm font-semibold">Content Status</h2>
@@ -335,29 +317,15 @@ function GlobalDashboard() {
             </div>
 
             {workspaces.length === 0 ? (
-              <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-border py-16 text-center">
-                <FolderOpen className="h-8 w-8 text-muted-foreground/30" />
-                <p className="text-sm font-medium">No workspaces yet</p>
-                <p className="text-xs text-muted-foreground">Create your first workspace to organize your content.</p>
-                <Link
-                  to="/admin/workspaces"
-                  className="mt-1 flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-white hover:bg-primary/90 transition-colors"
-                >
-                  <Plus className="h-3 w-3" /> Create Workspace
-                </Link>
+              <div className="py-10 text-center">
+                <FolderOpen className="h-8 w-8 text-muted-foreground/30 mx-auto mb-2" />
+                <p className="text-sm text-muted-foreground">No workspaces yet. Create your first one.</p>
               </div>
             ) : (
-              <div className="grid gap-3 sm:grid-cols-2">
+              <div className="divide-y divide-border">
                 {workspaces.map((ws) => (
                   <WorkspaceCard key={ws.id} ws={ws} />
                 ))}
-                {/* Add new card */}
-                <Link to="/admin/workspaces">
-                  <div className="flex items-center gap-3 rounded-xl border border-dashed border-border bg-white p-5 text-sm text-muted-foreground hover:border-primary/40 hover:text-primary transition-colors cursor-pointer h-full min-h-[88px]">
-                    <Plus className="h-5 w-5 shrink-0" />
-                    <span>New Workspace</span>
-                  </div>
-                </Link>
               </div>
             )}
           </section>
@@ -368,26 +336,24 @@ function GlobalDashboard() {
               <Zap className="h-4 w-4 text-muted-foreground" />
               <h2 className="text-sm font-semibold">Quick Actions</h2>
             </div>
-            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="divide-y divide-border">
               {QUICK_ACTIONS.map((a) => (
-                <Link key={a.to} to={a.to}>
-                  <div className={cn(
-                    "group flex items-center gap-3 rounded-xl border p-4 transition-all hover:shadow-sm cursor-pointer",
-                    a.primary
-                      ? "border-primary/20 bg-primary/5 hover:bg-primary/10"
-                      : "border-border bg-white hover:border-primary/20",
+                <Link
+                  key={a.to}
+                  to={a.to}
+                  className="group flex items-center gap-3 py-3 hover:text-primary transition-colors"
+                >
+                  <span className={cn(
+                    "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg",
+                    a.primary ? "bg-primary text-white" : "bg-muted text-muted-foreground group-hover:text-primary",
                   )}>
-                    <span className={cn(
-                      "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg transition-transform group-hover:scale-110",
-                      a.primary ? "bg-primary text-white" : "bg-muted text-muted-foreground",
-                    )}>
-                      <a.icon className="h-4 w-4" />
-                    </span>
-                    <div className="min-w-0">
-                      <p className={cn("text-sm font-semibold", a.primary && "text-primary")}>{a.label}</p>
-                      <p className="text-xs text-muted-foreground truncate">{a.desc}</p>
-                    </div>
+                    <a.icon className="h-4 w-4" />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className={cn("text-sm font-medium", a.primary && "text-primary")}>{a.label}</p>
+                    <p className="text-xs text-muted-foreground truncate">{a.desc}</p>
                   </div>
+                  <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground/30 group-hover:text-primary transition-colors" />
                 </Link>
               ))}
             </div>
@@ -397,7 +363,7 @@ function GlobalDashboard() {
         {/* ── Right: Activity Feed ── */}
         <div className="space-y-6">
           {/* Help links */}
-          <div className="rounded-xl border border-border bg-white p-4 shadow-sm space-y-1">
+          <div className="space-y-1">
             <p className="mb-3 text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">Resources</p>
             {[
               { label: "Documentation", icon: BookOpen, to: "/admin/api-explorer" },
@@ -418,8 +384,8 @@ function GlobalDashboard() {
           </div>
 
           {/* Recent Activity */}
-          <div className="rounded-xl border border-border bg-white p-5 shadow-sm">
-            <div className="mb-1 flex items-center gap-2">
+          <div>
+            <div className="mb-3 flex items-center gap-2">
               <Activity className="h-4 w-4 text-muted-foreground" />
               <h2 className="text-sm font-semibold">Recent Activity</h2>
             </div>

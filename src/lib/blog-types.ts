@@ -22,6 +22,7 @@ export interface BlogPost {
   views: number;
   created_at: string;
   updated_at: string;
+  workspace_id?: string | null;
   // Extended SEO fields
   og_image: string | null;
   og_title: string | null;
@@ -33,7 +34,9 @@ export interface BlogPost {
 }
 
 // Card/list projection (no heavy content field).
-export type BlogPostSummary = Omit<BlogPost, "content">;
+export type BlogPostSummary = Omit<BlogPost, "content"> & {
+  workspace?: { name: string } | null;
+};
 
 export const BLOG_CATEGORIES = [
   "Wedding",

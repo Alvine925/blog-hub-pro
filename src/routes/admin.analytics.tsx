@@ -50,18 +50,18 @@ function MetricCard({
   label: string; value: string | number; icon: React.ComponentType<{ className?: string }>; accent?: boolean; sub?: string;
 }) {
   return (
-    <div className="rounded-xl border border-border bg-background p-5 shadow-sm">
-      <div className="flex items-center justify-between mb-3">
-        <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{label}</span>
+    <div className="flex flex-col gap-2">
+      <div className="flex items-center gap-2">
         <span className={cn(
           "flex h-8 w-8 items-center justify-center rounded-lg",
           accent ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground",
         )}>
           <Icon className="h-4 w-4" />
         </span>
+        <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{label}</span>
       </div>
       <p className={cn("text-3xl font-bold tabular-nums", accent && "text-primary")}>{value}</p>
-      {sub && <p className="mt-1 text-xs text-muted-foreground">{sub}</p>}
+      {sub && <p className="text-xs text-muted-foreground">{sub}</p>}
     </div>
   );
 }
@@ -131,7 +131,7 @@ function AnalyticsPage() {
       {/* Charts row 1 */}
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Top posts by views */}
-        <div className="rounded-xl border border-border bg-background p-6 shadow-sm">
+        <div>
           <h2 className="mb-5 text-sm font-semibold">Top Posts by Views</h2>
           {topPostsData.length === 0 ? (
             <p className="text-sm text-muted-foreground py-8 text-center">No published posts with views yet.</p>
@@ -156,7 +156,7 @@ function AnalyticsPage() {
         </div>
 
         {/* Posts by status */}
-        <div className="rounded-xl border border-border bg-background p-6 shadow-sm">
+        <div>
           <h2 className="mb-5 text-sm font-semibold">Content Status Distribution</h2>
           {statusData.length === 0 ? (
             <p className="text-sm text-muted-foreground py-8 text-center">No posts yet.</p>
@@ -192,7 +192,7 @@ function AnalyticsPage() {
       {/* Charts row 2 */}
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Content growth over time */}
-        <div className="rounded-xl border border-border bg-background p-6 shadow-sm">
+        <div>
           <h2 className="mb-5 text-sm font-semibold">Content Growth</h2>
           {growthData.length === 0 ? (
             <p className="text-sm text-muted-foreground py-8 text-center">No data yet.</p>
@@ -213,7 +213,7 @@ function AnalyticsPage() {
         </div>
 
         {/* Posts by category */}
-        <div className="rounded-xl border border-border bg-background p-6 shadow-sm">
+        <div>
           <h2 className="mb-5 text-sm font-semibold">Posts by Category</h2>
           {categoryData.length === 0 ? (
             <p className="text-sm text-muted-foreground py-8 text-center">No posts yet.</p>
@@ -238,8 +238,8 @@ function AnalyticsPage() {
       </div>
 
       {/* Full post table */}
-      <div className="rounded-xl border border-border bg-background shadow-sm">
-        <div className="flex items-center gap-2 border-b border-border px-5 py-4">
+      <div className="border-t border-border">
+        <div className="flex items-center gap-2 border-b border-border px-0 py-4">
           <Users className="h-4 w-4 text-primary" />
           <h2 className="text-sm font-semibold">All Posts Performance</h2>
         </div>

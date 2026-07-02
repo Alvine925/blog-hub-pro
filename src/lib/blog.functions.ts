@@ -133,7 +133,7 @@ export const adminListPosts = createServerFn({ method: "GET" }).handler(
 
     const { data: rows, error } = await supabase
       .from("blog_posts")
-      .select(SUMMARY_COLUMNS)
+      .select(SUMMARY_COLUMNS + ", workspace_id, workspace:workspaces(name)")
       .order("updated_at", { ascending: false })
       .limit(500);
 

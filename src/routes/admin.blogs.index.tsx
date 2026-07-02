@@ -3,7 +3,7 @@ import { queryOptions, useSuspenseQuery, useQueryClient } from "@tanstack/react-
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2, Eye, Send, Undo2, FileText, Clock } from "lucide-react";
+import { Pencil, Trash2, Eye, Send, Undo2, FileText, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -99,27 +99,17 @@ function AdminBlogList() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold">Blogs</h1>
-          <p className="text-sm text-muted-foreground">
-            {posts.length} post{posts.length === 1 ? "" : "s"}
-          </p>
-        </div>
-        <Button asChild>
-          <Link to="/admin/blogs/new">
-            <Plus className="mr-2 h-4 w-4" /> New Post
-          </Link>
-        </Button>
+      <div>
+        <h1 className="text-2xl font-bold">Blogs</h1>
+        <p className="text-sm text-muted-foreground">
+          {posts.length} post{posts.length === 1 ? "" : "s"} across all workspaces
+        </p>
       </div>
 
       {posts.length === 0 ? (
         <div className="flex flex-col items-center justify-center gap-3 py-24 text-center border-t border-border">
           <FileText className="h-10 w-10 text-muted-foreground" />
-          <p className="text-muted-foreground">No blog posts yet.</p>
-          <Button asChild>
-            <Link to="/admin/blogs/new">Create your first post</Link>
-          </Button>
+          <p className="text-muted-foreground">No blog posts yet. Create posts from inside a workspace.</p>
         </div>
       ) : (
         <div className="overflow-x-auto">
@@ -128,6 +118,7 @@ function AdminBlogList() {
               <TableRow>
                 <TableHead className="w-[70px]">Cover</TableHead>
                 <TableHead>Title</TableHead>
+                <TableHead>Workspace</TableHead>
                 <TableHead>Category</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Date</TableHead>
@@ -150,6 +141,9 @@ function AdminBlogList() {
                     {post.featured && (
                       <Badge variant="outline" className="ml-2">Featured</Badge>
                     )}
+                  </TableCell>
+                  <TableCell className="text-muted-foreground text-sm">
+                    {post.workspace?.name ?? "—"}
                   </TableCell>
                   <TableCell>{post.category}</TableCell>
                   <TableCell><StatusBadge post={post} /></TableCell>
