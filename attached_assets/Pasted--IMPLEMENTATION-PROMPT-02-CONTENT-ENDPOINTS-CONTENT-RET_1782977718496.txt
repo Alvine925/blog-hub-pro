@@ -1,0 +1,690 @@
+# IMPLEMENTATION PROMPT 02
+
+# CONTENT ENDPOINTS & CONTENT RETRIEVAL
+
+## Lunar CMS REST API
+
+---
+
+# IMPORTANT
+
+## Read Before Starting
+
+The CMS is already complete.
+
+Do NOT rebuild or modify the following modules unless absolutely necessary.
+
+* Authentication
+* Workspace Management
+* Blog Module
+* Pages Module
+* Collections
+* Categories
+* Tags
+* Media Library
+* Existing Dashboard
+* Existing Database Schema
+* Existing AI Features
+
+Your responsibility is ONLY to expose the existing content securely through REST APIs.
+
+The API must be read-only for Publishable Keys.
+
+Do not duplicate business logic.
+
+Reuse existing repositories, services, types and database queries whenever possible.
+
+---
+
+# Objective
+
+Implement the content retrieval layer of the REST API.
+
+The API should allow external applications to securely retrieve content stored inside the existing CMS.
+
+Every request must:
+
+* Authenticate
+* Resolve Workspace
+* Validate permissions
+* Return only published content (unless Secret Key permissions allow otherwise)
+* Return standardized JSON
+
+---
+
+# Request Lifecycle
+
+Every request follows this flow:
+
+```text
+External Website
+        │
+GET /v1/blogs
+        │
+Bearer API Key
+        │
+api-gateway
+        │
+validate-api-key
+        │
+resolve-workspace
+        │
+validate-permissions
+        │
+content-router
+        │
+query existing CMS tables
+        │
+transform response
+        │
+log request
+        │
+return JSON
+```
+
+No endpoint should query Supabase directly from the client.
+
+---
+
+# Edge Function
+
+Create (if missing)
+
+```
+content-router
+```
+
+Responsibilities
+
+* Receive authenticated request
+* Determine endpoint
+* Call correct content service
+* Validate query parameters
+* Transform output
+* Return standardized response
+
+Do not duplicate query logic.
+
+Use shared services.
+
+---
+
+# Content Services
+
+Create if they do not already exist.
+
+```
+ContentService.ts
+
+BlogService.ts
+
+PageService.ts
+
+MediaService.ts
+
+CollectionService.ts
+
+CategoryService.ts
+
+TagService.ts
+
+SearchService.ts
+```
+
+These services should call existing repositories instead of directly querying Supabase.
+
+---
+
+# API Endpoints
+
+Implement Version 1.
+
+Base URL
+
+```
+/v1
+```
+
+---
+
+# Blogs
+
+## Get All Blogs
+
+```
+GET /v1/blogs
+```
+
+Returns only published blogs.
+
+Supports
+
+page
+
+limit
+
+sort
+
+order
+
+search
+
+category
+
+tag
+
+author
+
+featured
+
+from
+
+to
+
+Response
+
+```json
+{
+  "success": true,
+  "data": [],
+  "meta": {
+      "page":1,
+      "limit":20,
+      "total":125,
+      "totalPages":7
+  }
+}
+```
+
+---
+
+## Get Blog By Slug
+
+```
+GET /v1/blogs/:slug
+```
+
+Never expose internal IDs.
+
+Lookup should always use slug.
+
+If not found
+
+Return
+
+404
+
+---
+
+## Related Blogs
+
+```
+GET /v1/blogs/:slug/related
+```
+
+Should use existing categories and tags.
+
+Limit configurable.
+
+Default
+
+5
+
+---
+
+## Featured Blogs
+
+```
+GET /v1/blogs/featured
+```
+
+Return only featured published blogs.
+
+---
+
+## Latest Blogs
+
+```
+GET /v1/blogs/latest
+```
+
+Default
+
+10
+
+Configurable using
+
+limit
+
+---
+
+# Pages
+
+```
+GET /v1/pages
+
+GET /v1/pages/:slug
+```
+
+Return only published pages.
+
+---
+
+# Collections
+
+```
+GET /v1/collections
+```
+
+Returns visible collections only.
+
+Should not expose hidden or internal collections.
+
+---
+
+# Categories
+
+```
+GET /v1/categories
+```
+
+Supports
+
+search
+
+sort
+
+page
+
+limit
+
+---
+
+# Tags
+
+```
+GET /v1/tags
+```
+
+Supports
+
+search
+
+sort
+
+page
+
+limit
+
+---
+
+# Media
+
+```
+GET /v1/media
+```
+
+Return public media only.
+
+Never expose private bucket URLs.
+
+If signed URLs are required, generate temporary signed URLs.
+
+---
+
+# Search
+
+```
+GET /v1/search
+```
+
+Query
+
+```
+?q=seo
+```
+
+Search
+
+Blogs
+
+Pages
+
+Categories
+
+Tags
+
+Collections
+
+Search should use existing indexes where available.
+
+---
+
+# Filtering
+
+Every endpoint should support filtering.
+
+Examples
+
+```
+?category=marketing
+
+?tag=seo
+
+?author=john
+
+?featured=true
+
+?status=published
+
+?created_after=2025-01-01
+
+?created_before=2025-12-31
+```
+
+Validate every parameter.
+
+Reject invalid values.
+
+---
+
+# Pagination
+
+Every collection endpoint supports
+
+page
+
+limit
+
+Maximum
+
+100
+
+Default
+
+20
+
+Return pagination metadata.
+
+---
+
+# Sorting
+
+Supported
+
+```
+created_at
+
+updated_at
+
+published_at
+
+title
+
+views
+```
+
+Order
+
+```
+asc
+
+desc
+```
+
+Reject unsupported fields.
+
+---
+
+# Response Transformation
+
+Do not expose database schema directly.
+
+Example
+
+Instead of
+
+```json
+{
+"id":"9f83...",
+"workspace_id":"..."
+}
+```
+
+Return
+
+```json
+{
+"title":"",
+"slug":"",
+"excerpt":"",
+"image":"",
+"published_at":""
+}
+```
+
+Hide internal implementation details.
+
+---
+
+# Content Visibility
+
+Publishable Key
+
+Return
+
+Published Content Only
+
+Secret Key
+
+Can optionally request
+
+Drafts
+
+Scheduled
+
+Archived
+
+if permissions allow.
+
+---
+
+# Caching
+
+Cache
+
+Blogs
+
+Pages
+
+Collections
+
+Categories
+
+Tags
+
+Latest Blogs
+
+Featured Blogs
+
+Recommended cache
+
+5 minutes
+
+Invalidate cache automatically when content changes.
+
+---
+
+# Error Responses
+
+400
+
+Invalid Query
+
+401
+
+Unauthorized
+
+403
+
+Forbidden
+
+404
+
+Not Found
+
+429
+
+Rate Limited
+
+500
+
+Internal Error
+
+Always return consistent JSON.
+
+---
+
+# Performance
+
+Never use SELECT *
+
+Select only required fields.
+
+Use pagination.
+
+Reuse existing indexes.
+
+Avoid N+1 queries.
+
+Batch related queries where possible.
+
+Measure query duration.
+
+Log slow queries.
+
+---
+
+# Security
+
+Never expose
+
+workspace_id
+
+user_id
+
+deleted records
+
+drafts (unless authorized)
+
+internal IDs
+
+private storage paths
+
+service role information
+
+---
+
+# Files To Create
+
+Only if missing.
+
+```
+supabase/functions/content-router/
+
+src/services/
+
+BlogService.ts
+
+PageService.ts
+
+CollectionService.ts
+
+CategoryService.ts
+
+TagService.ts
+
+MediaService.ts
+
+SearchService.ts
+
+ContentTransformer.ts
+
+src/types/
+
+blog.ts
+
+page.ts
+
+collection.ts
+
+category.ts
+
+tag.ts
+
+search.ts
+```
+
+---
+
+# Existing Files To Update
+
+Reuse existing routing.
+
+Reuse existing Supabase client.
+
+Reuse authentication utilities.
+
+Reuse existing blog queries.
+
+Do not duplicate existing repositories.
+
+---
+
+# External Website Example
+
+Example
+
+```typescript
+const response = await fetch(
+"https://api.yourdomain.com/v1/blogs?page=1&limit=10",
+{
+headers:{
+Authorization:`Bearer ${API_KEY}`
+}
+})
+
+const data=await response.json()
+```
+
+No Workspace ID required.
+
+No Project ID required.
+
+No Collection ID required.
+
+The API Key determines everything.
+
+---
+
+# Acceptance Criteria
+
+The implementation is complete when:
+
+✓ All content endpoints authenticate through the API Gateway.
+
+✓ Every endpoint resolves the correct workspace automatically.
+
+✓ Published content is returned correctly.
+
+✓ Slug-based retrieval works for all supported content types.
+
+✓ Pagination, filtering, sorting and search function correctly.
+
+✓ Internal database fields are never exposed.
+
+✓ All responses follow the standard response contract.
+
+✓ Existing CMS functionality remains unchanged.
+
+✓ Content retrieval is optimized for performance and ready for external websites, mobile apps and future SDKs.
