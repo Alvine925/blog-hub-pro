@@ -292,12 +292,116 @@ export const triggerManualCachePurge = createServerFn({ method: "POST" })
   });
 
 // ---------------------------------------------------------------------------
+// MANUAL RETRY
+// ---------------------------------------------------------------------------
+
+export const retryWebhookDelivery = createServerFn({ method: "POST" })
+  .validator((input: { logId: string }) =>
+    z.object({ logId: z.string().uuid() }).parse(input),
+  )
+  .handler(async ({ data }): Promise<TestDeliveryResult> => {
+    const { getAdminClient } = await import("./supabase.server");
+    const supabase = await getAdminClient();
+
+    // Look up the original log entry
+    const { data: log, error: logError } = await (supabase as any)
+      .from("webhook_logs")
+      .select("webhook_id, event")
+      .eq("id", data.logId)
+      .single();
+    if (logError || !log) throw new Error("Delivery log not found");
+
+    // Look up the webhook
+    const { data: hook, error: hookError } = await (supabase as any)
+      .from("webhooks")
+      .select("url, secret, active")
+      .eq("id", log.webhook_id)
+      .single();
+    if (hookError || !hook) throw new Error("Webhook not found");
+
+    const body = JSON.stringify({
+      event: log.event,
+      timestamp: new Date().toISOString(),
+      data: { reason: "manual_retry" },
+    });
+
+    const hdrs: Record<string, string> = {
+      "Content-Type": "application/json",
+      "User-Agent": "LunarCMS/1.0",
+      "X-Lunar-Event": log.event,
+      "X-Lunar-Retry": "true",
+    };
+    if (hook.secret) {
+      const { createHmac } = await import("node:crypto");
+      hdrs["X-Lunar-Signature"] = "sha256=" + createHmac("sha256", hook.secret).update(body).digest("hex");
+    }
+
+    const start = Date.now();
+    let status: number | null = null;
+    let error: string | null = null;
+
+    try {
+      const res = await fetch(hook.url, {
+        method: "POST", headers: hdrs, body,
+        signal: AbortSignal.timeout(10_000),
+      });
+      status = res.status;
+    } catch (err) {
+      error = err instanceof Error ? err.message : String(err);
+    }
+
+    const duration_ms = Date.now() - start;
+    await (supabase as any).from("webhook_logs").insert({
+      webhook_id: log.webhook_id,
+      event: `${log.event} (retry)`,
+      response_status: status,
+      duration_ms,
+      error,
+    });
+
+    return { status, duration_ms, error };
+  });
+
+// ---------------------------------------------------------------------------
 // DISPATCHER (server-side only)
 // ---------------------------------------------------------------------------
+
+const RETRY_BACKOFF_MS = [0, 1_000, 2_000]; // wait before attempt 0, 1, 2
+const MAX_ATTEMPTS      = 3;
+
+function sleep(ms: number) {
+  return new Promise<void>((r) => setTimeout(r, ms));
+}
 
 async function hmacSha256(secret: string, body: string): Promise<string> {
   const { createHmac } = await import("node:crypto");
   return "sha256=" + createHmac("sha256", secret).update(body).digest("hex");
+}
+
+/** Fire a single HTTP delivery, returning status + error. Never throws. */
+async function fireDelivery(
+  url: string,
+  headers: Record<string, string>,
+  body: string,
+): Promise<{ status: number | null; error: string | null }> {
+  try {
+    const res = await fetch(url, {
+      method: "POST",
+      headers,
+      body,
+      signal: AbortSignal.timeout(10_000),
+    });
+    return { status: res.status, error: null };
+  } catch (err) {
+    return { status: null, error: err instanceof Error ? err.message : String(err) };
+  }
+}
+
+/** Returns true when the delivery should be retried (server-side error or network failure). */
+function shouldRetry(status: number | null, error: string | null): boolean {
+  if (error) return true;          // network / timeout
+  if (status !== null && status >= 500) return true; // 5xx server error
+  return false;
 }
 
 export async function dispatchWebhooks(
@@ -324,37 +428,40 @@ export async function dispatchWebhooks(
 
     await Promise.allSettled(
       hooks.map(async (hook: Webhook) => {
-        const start = Date.now();
+        const hdrs: Record<string, string> = {
+          "Content-Type": "application/json",
+          "User-Agent": "LunarCMS/1.0",
+          "X-Lunar-Event": event,
+        };
+        if (hook.secret) hdrs["X-Lunar-Signature"] = await hmacSha256(hook.secret, body);
+
+        const globalStart = Date.now();
         let response_status: number | null = null;
         let errorMsg: string | null = null;
+        let attempts = 0;
 
-        try {
-          const hdrs: Record<string, string> = {
-            "Content-Type": "application/json",
-            "User-Agent": "LunarCMS/1.0",
-            "X-Lunar-Event": event,
-          };
-          if (hook.secret) hdrs["X-Lunar-Signature"] = await hmacSha256(hook.secret, body);
-
-          const res = await fetch(hook.url, {
-            method: "POST",
-            headers: hdrs,
-            body,
-            signal: AbortSignal.timeout(10_000),
-          });
-          response_status = res.status;
-        } catch (err) {
-          errorMsg = String(err);
+        for (let i = 0; i < MAX_ATTEMPTS; i++) {
+          if (RETRY_BACKOFF_MS[i] > 0) await sleep(RETRY_BACKOFF_MS[i]);
+          attempts++;
+          const result = await fireDelivery(hook.url, hdrs, body);
+          response_status = result.status;
+          errorMsg = result.error;
+          if (!shouldRetry(response_status, errorMsg)) break;
         }
 
-        const duration_ms = Date.now() - start;
+        const duration_ms = Date.now() - globalStart;
+        const logError = errorMsg
+          ? attempts > 1
+            ? `[${attempts} attempts] ${errorMsg}`
+            : errorMsg
+          : null;
 
         await supabase.from("webhook_logs").insert({
           webhook_id: hook.id,
           event,
           response_status,
           duration_ms,
-          error: errorMsg,
+          error: logError,
         });
       }),
     );
