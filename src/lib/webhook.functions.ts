@@ -6,6 +6,7 @@ export const WEBHOOK_EVENTS = [
   "post.updated",
   "post.unpublished",
   "post.deleted",
+  "cache.invalidate",
 ] as const;
 
 export type WebhookEvent = (typeof WEBHOOK_EVENTS)[number];
@@ -215,6 +216,79 @@ export const testWebhookDelivery = createServerFn({ method: "POST" })
     });
 
     return { status, duration_ms, error };
+  });
+
+// ---------------------------------------------------------------------------
+// MANUAL CACHE PURGE
+// ---------------------------------------------------------------------------
+
+export const triggerManualCachePurge = createServerFn({ method: "POST" })
+  .validator((input: { webhookId?: string }) =>
+    z.object({ webhookId: z.string().uuid().optional() }).parse(input),
+  )
+  .handler(async ({ data }): Promise<{ fired: number; results: Array<{ url: string; status: number | null; duration_ms: number; error: string | null }> }> => {
+    const { getAdminClient } = await import("./supabase.server");
+    const supabase = await getAdminClient();
+
+    let query = (supabase as any)
+      .from("webhooks")
+      .select("*")
+      .eq("active", true)
+      .contains("events", ["cache.invalidate"]);
+
+    if (data.webhookId) query = query.eq("id", data.webhookId);
+
+    const { data: hooks, error } = await query;
+    if (error || !hooks || hooks.length === 0) return { fired: 0, results: [] };
+
+    const body = JSON.stringify({
+      event: "cache.invalidate",
+      timestamp: new Date().toISOString(),
+      data: {
+        reason: "manual_purge",
+        triggered_by: "user",
+      },
+    });
+
+    const results = await Promise.all(
+      hooks.map(async (hook: Webhook) => {
+        const start = Date.now();
+        let status: number | null = null;
+        let errorMsg: string | null = null;
+
+        try {
+          const hdrs: Record<string, string> = {
+            "Content-Type": "application/json",
+            "User-Agent": "LunarCMS/1.0",
+            "X-Lunar-Event": "cache.invalidate",
+          };
+          if (hook.secret) {
+            const { createHmac } = await import("node:crypto");
+            hdrs["X-Lunar-Signature"] = "sha256=" + createHmac("sha256", hook.secret).update(body).digest("hex");
+          }
+          const res = await fetch(hook.url, {
+            method: "POST", headers: hdrs, body,
+            signal: AbortSignal.timeout(10_000),
+          });
+          status = res.status;
+        } catch (err) {
+          errorMsg = err instanceof Error ? err.message : String(err);
+        }
+
+        const duration_ms = Date.now() - start;
+        await (supabase as any).from("webhook_logs").insert({
+          webhook_id: hook.id,
+          event: "cache.invalidate",
+          response_status: status,
+          duration_ms,
+          error: errorMsg,
+        });
+
+        return { url: hook.url, status, duration_ms, error: errorMsg };
+      }),
+    );
+
+    return { fired: results.length, results };
   });
 
 // ---------------------------------------------------------------------------

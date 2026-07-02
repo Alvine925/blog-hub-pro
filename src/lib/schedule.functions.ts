@@ -31,16 +31,14 @@ export const publishScheduledPosts = createServerFn({ method: "POST" }).handler(
           category: string;
           author_name: string;
         }>) {
-          import("./webhook.functions").then(({ dispatchWebhooks }) =>
-            dispatchWebhooks("post.published", {
-              id: post.id,
-              slug: post.slug,
-              title: post.title,
-              status: "published",
-              category: post.category,
-              author_name: post.author_name,
-            }).catch(() => {}),
-          );
+          import("./webhook.functions").then(({ dispatchWebhooks }) => {
+            const payload = {
+              id: post.id, slug: post.slug, title: post.title,
+              status: "published", category: post.category, author_name: post.author_name,
+            };
+            dispatchWebhooks("post.published", payload).catch(() => {});
+            dispatchWebhooks("cache.invalidate", { ...payload, reason: "scheduled.published" }).catch(() => {});
+          });
         }
       }
 

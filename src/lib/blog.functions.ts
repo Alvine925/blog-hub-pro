@@ -295,16 +295,14 @@ export const upsertPost = createServerFn({ method: "POST" })
         .single();
       if (error) throw new Error(error.message);
       if (data.status === "published") {
-        import("./webhook.functions").then(({ dispatchWebhooks }) =>
-          dispatchWebhooks("post.updated", {
-            id: row.id,
-            slug: row.slug,
-            title: data.title,
-            status: "published",
-            category: data.category,
-            author_name: data.author_name,
-          }).catch(() => {}),
-        );
+        import("./webhook.functions").then(({ dispatchWebhooks }) => {
+          const payload = {
+            id: row.id, slug: row.slug, title: data.title,
+            status: "published", category: data.category, author_name: data.author_name,
+          };
+          dispatchWebhooks("post.updated", payload).catch(() => {});
+          dispatchWebhooks("cache.invalidate", { ...payload, reason: "post.updated" }).catch(() => {});
+        });
       }
       return { id: row.id, slug: row.slug };
     }
@@ -316,16 +314,14 @@ export const upsertPost = createServerFn({ method: "POST" })
       .single();
     if (error) throw new Error(error.message);
     if (data.status === "published") {
-      import("./webhook.functions").then(({ dispatchWebhooks }) =>
-        dispatchWebhooks("post.published", {
-          id: row.id,
-          slug: row.slug,
-          title: data.title,
-          status: "published",
-          category: data.category,
-          author_name: data.author_name,
-        }).catch(() => {}),
-      );
+      import("./webhook.functions").then(({ dispatchWebhooks }) => {
+        const payload = {
+          id: row.id, slug: row.slug, title: data.title,
+          status: "published", category: data.category, author_name: data.author_name,
+        };
+        dispatchWebhooks("post.published", payload).catch(() => {});
+        dispatchWebhooks("cache.invalidate", { ...payload, reason: "post.published" }).catch(() => {});
+      });
     }
     return { id: row.id, slug: row.slug };
   });
@@ -351,16 +347,14 @@ export const setPostStatus = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     const webhookEvent =
       data.status === "published" ? "post.published" : "post.unpublished";
-    import("./webhook.functions").then(({ dispatchWebhooks }) =>
-      dispatchWebhooks(webhookEvent, {
-        id: row.id,
-        slug: row.slug,
-        title: row.title,
-        status: data.status,
-        category: row.category,
-        author_name: row.author_name,
-      }).catch(() => {}),
-    );
+    import("./webhook.functions").then(({ dispatchWebhooks }) => {
+      const payload = {
+        id: row.id, slug: row.slug, title: row.title,
+        status: data.status, category: row.category, author_name: row.author_name,
+      };
+      dispatchWebhooks(webhookEvent, payload).catch(() => {});
+      dispatchWebhooks("cache.invalidate", { ...payload, reason: webhookEvent }).catch(() => {});
+    });
     return { ok: true };
   });
 
@@ -379,16 +373,14 @@ export const deletePost = createServerFn({ method: "POST" })
     const { error } = await supabase.from("blog_posts").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
     if (post) {
-      import("./webhook.functions").then(({ dispatchWebhooks }) =>
-        dispatchWebhooks("post.deleted", {
-          id: post.id,
-          slug: post.slug,
-          title: post.title,
-          status: post.status,
-          category: post.category,
-          author_name: post.author_name,
-        }).catch(() => {}),
-      );
+      import("./webhook.functions").then(({ dispatchWebhooks }) => {
+        const payload = {
+          id: post.id, slug: post.slug, title: post.title,
+          status: post.status, category: post.category, author_name: post.author_name,
+        };
+        dispatchWebhooks("post.deleted", payload).catch(() => {});
+        dispatchWebhooks("cache.invalidate", { ...payload, reason: "post.deleted" }).catch(() => {});
+      });
     }
     return { ok: true };
   });
