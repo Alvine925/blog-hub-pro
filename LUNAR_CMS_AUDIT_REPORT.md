@@ -24,7 +24,6 @@ The core CMS engine is fully functional. The primary gaps are in the public-faci
 - 29 database migrations with comprehensive RLS and service-role policies
 
 ### Key Gaps
-- Public blog routes (`/blogs`, `/blogs/:slug`) have full backend server functions but minimal frontend UI
 - No workspace-level user access control enforcement at the frontend layer (RLS only)
 - Billing module is display-only (no payment processor integration)
 - `ai-assistant` route and AI usage tracking exist in schema but UI is incomplete
@@ -76,10 +75,13 @@ The core CMS engine is fully functional. The primary gaps are in the public-faci
 
 ## 3. PARTIALLY IMPLEMENTED FEATURES
 
-### 3.1 Public Blog Frontend — **40% complete**
-- **Implemented:** `/blogs` and `/blogs/:slug` routes exist. Server functions `listPublishedPosts`, `getPostBySlug`, `getRelatedPosts` fully implemented. View increment on post fetch
-- **Missing:** The actual UI components for the public blog are minimal/placeholder. No engagement widgets rendered (likes button, comments section, share buttons). No related posts UI. No reading progress indicator. The public blog is essentially a data layer without a polished frontend.
-- **Estimated completion:** 40%
+### 3.1 Built-in Blog Frontend — **85% complete**
+
+**Architecture note:** Lunar CMS is a **hybrid CMS**. It exposes a full headless REST API (`content-router`, `blog-engagement`) for clients to build their own blog on their own website (Next.js, Astro, etc.) — engagement widgets (likes, comments, share buttons) are intentionally absent here because client sites implement them via the API however they choose. Separately, the CMS also ships a ready-to-use built-in blog at `/blogs` / `/blogs/:slug` for teams that want to host the blog on the same domain as the CMS.
+
+- **Implemented:** `/blogs` listing with debounced search, category filter tabs, cover image grid, reading time, date. `/blogs/:slug` detail with cover image, author/date/reading time, full rich-text content, tag links, related articles section. Full SSR SEO on both routes: OpenGraph, Twitter Card, JSON-LD BlogPosting schema, canonical URL — all server-rendered at request time
+- **Remaining gaps (built-in blog only):** No reading-progress indicator. No pagination on the listing (uses `.limit(200)`). No author bio section. Engagement widgets are deliberately omitted here — they belong in client frontends via the API
+- **Estimated completion:** 85%
 
 ### 3.2 AI Assistant Dashboard — **30% complete**
 - **Implemented:** `/admin/ai-assistant` route exists. `ai_generations` table in DB tracks all AI calls. `ai-generate` edge function fully operational
@@ -125,7 +127,7 @@ The core CMS engine is fully functional. The primary gaps are in the public-faci
 | Feature | Reason |
 |---------|--------|
 | **Pages admin UI** | The content-router exposes /pages endpoints but there is no admin interface to create or manage pages. Half the content system is inaccessible |
-| **Public blog engagement widgets** | Likes, comments, share buttons not rendered in public blog — the engagement system has no consumer |
+| **Engagement widgets on client sites** | The `blog-engagement` API is complete and well-documented. Client sites consume it to render their own likes/comments/share UI. No built-in widget library (e.g. a `<LunarEngagementBar>` embeddable snippet) ships with the CMS — low priority since the Integration Center already generates framework-specific code for this |
 | **Workspace isolation enforcement in server functions** | Server functions use service-role key. A logged-in user could theoretically query data from another workspace if they supply a different workspace_id. No ownership check in most server functions |
 
 ### 🟠 High Priority
