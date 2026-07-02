@@ -12,7 +12,7 @@ function normalizeTags(tags: unknown): string[] {
 }
 
 // ---------------------------------------------------------------------------
-// PUBLIC READS (published only)
+// PUBLIC READS (published only — no workspace filter needed; slugs are unique)
 // ---------------------------------------------------------------------------
 
 export const listPublishedPosts = createServerFn({ method: "GET" })
@@ -126,27 +126,45 @@ export const getRelatedPosts = createServerFn({ method: "GET" })
 // ADMIN OPERATIONS
 // ---------------------------------------------------------------------------
 
-export const adminListPosts = createServerFn({ method: "GET" }).handler(
-  async (): Promise<BlogPostSummary[]> => {
+/**
+ * List posts for the admin dashboard.
+ * When workspaceId is provided, results are scoped to that workspace only.
+ * Without workspaceId the query still runs but returns the global view (super-admin).
+ * All admin routes SHOULD pass workspaceId to enforce workspace isolation.
+ */
+export const adminListPosts = createServerFn({ method: "GET" })
+  .validator((input: { workspaceId?: string } | undefined) =>
+    z.object({ workspaceId: z.string().uuid().optional() }).parse(input ?? {}),
+  )
+  .handler(async ({ data }): Promise<BlogPostSummary[]> => {
     const { getAdminClient } = await import("./supabase.server");
     const supabase = await getAdminClient();
 
-    // Try with workspace join first (requires migration 20260702000020 to be applied).
-    // Fall back to plain query if the FK doesn't exist yet.
-    const { data: rows, error } = await supabase
+    let query = supabase
       .from("blog_posts")
       .select(SUMMARY_COLUMNS + ", workspace_id, workspace:workspaces(name)")
       .order("updated_at", { ascending: false })
       .limit(500);
 
+    // WORKSPACE ISOLATION: always filter by workspace when one is specified
+    if (data.workspaceId) {
+      query = query.eq("workspace_id", data.workspaceId);
+    }
+
+    const { data: rows, error } = await query;
+
     if (error) {
       // FK not yet in place — fall back without workspace join
       if (error.message.includes("relationship") || error.message.includes("schema cache")) {
-        const { data: fallback, error: fallbackError } = await supabase
+        let fallbackQuery = supabase
           .from("blog_posts")
           .select(SUMMARY_COLUMNS)
           .order("updated_at", { ascending: false })
           .limit(500);
+        if (data.workspaceId) {
+          fallbackQuery = fallbackQuery.eq("workspace_id", data.workspaceId);
+        }
+        const { data: fallback, error: fallbackError } = await fallbackQuery;
         if (fallbackError) throw new Error(fallbackError.message);
         return (fallback ?? []).map((r) => ({
           ...(r as BlogPostSummary),
@@ -160,22 +178,30 @@ export const adminListPosts = createServerFn({ method: "GET" }).handler(
       ...(r as BlogPostSummary),
       tags: normalizeTags((r as { tags: unknown }).tags),
     }));
-  },
-);
+  });
 
 export const adminGetPost = createServerFn({ method: "GET" })
-  .validator((input: { id: string }) =>
-    z.object({ id: z.string().uuid() }).parse(input),
+  .validator((input: { id: string; workspaceId?: string }) =>
+    z.object({
+      id: z.string().uuid(),
+      workspaceId: z.string().uuid().optional(),
+    }).parse(input),
   )
   .handler(async ({ data }): Promise<BlogPost | null> => {
     const { getAdminClient } = await import("./supabase.server");
     const supabase = await getAdminClient();
 
-    const { data: row, error } = await supabase
+    let query = supabase
       .from("blog_posts")
       .select("*")
-      .eq("id", data.id)
-      .maybeSingle();
+      .eq("id", data.id);
+
+    // WORKSPACE ISOLATION: scope reads to the workspace when specified
+    if (data.workspaceId) {
+      query = query.eq("workspace_id", data.workspaceId);
+    }
+
+    const { data: row, error } = await query.maybeSingle();
 
     if (error) throw new Error(error.message);
     if (!row) return null;
@@ -201,6 +227,7 @@ export const checkSlugAvailable = createServerFn({ method: "GET" })
 
 const postInputSchema = z.object({
   id: z.string().uuid().optional(),
+  workspaceId: z.string().uuid().optional(),
   title: z.string().trim().min(1, "Title is required").max(200),
   slug: z.string().trim().min(1).max(120),
   excerpt: z.string().trim().max(500).default(""),
@@ -244,7 +271,7 @@ export const upsertPost = createServerFn({ method: "POST" })
       unique = `${slug}-${attempt++}`;
     }
 
-    const record = {
+    const record: Record<string, unknown> = {
       title: data.title,
       slug: unique,
       excerpt: data.excerpt,
@@ -287,10 +314,17 @@ export const upsertPost = createServerFn({ method: "POST" })
         });
       }
 
-      const { data: row, error } = await supabase
+      // WORKSPACE ISOLATION: when workspaceId is provided, scope the update
+      // to that workspace so a user cannot modify posts belonging to another workspace.
+      let updateQuery = supabase
         .from("blog_posts")
         .update(record)
-        .eq("id", data.id)
+        .eq("id", data.id);
+      if (data.workspaceId) {
+        updateQuery = updateQuery.eq("workspace_id", data.workspaceId);
+      }
+
+      const { data: row, error } = await updateQuery
         .select("id, slug, status, title, category, published_at, workspace_id")
         .single();
       if (error) throw new Error(error.message);
@@ -308,6 +342,11 @@ export const upsertPost = createServerFn({ method: "POST" })
         });
       }
       return { id: row.id, slug: row.slug };
+    }
+
+    // INSERT: set workspace_id from the provided context
+    if (data.workspaceId) {
+      record.workspace_id = data.workspaceId;
     }
 
     const { data: row, error } = await supabase
@@ -333,9 +372,13 @@ export const upsertPost = createServerFn({ method: "POST" })
   });
 
 export const setPostStatus = createServerFn({ method: "POST" })
-  .validator((input: { id: string; status: "draft" | "published" | "scheduled" }) =>
+  .validator((input: { id: string; status: "draft" | "published" | "scheduled"; workspaceId?: string }) =>
     z
-      .object({ id: z.string().uuid(), status: z.enum(["draft", "published", "scheduled"]) })
+      .object({
+        id: z.string().uuid(),
+        status: z.enum(["draft", "published", "scheduled"]),
+        workspaceId: z.string().uuid().optional(),
+      })
       .parse(input),
   )
   .handler(async ({ data }): Promise<{ ok: true }> => {
@@ -344,10 +387,14 @@ export const setPostStatus = createServerFn({ method: "POST" })
     const update: Record<string, unknown> = { status: data.status };
     if (data.status !== "scheduled") update.scheduled_at = null;
     if (data.status === "published") update.published_at = new Date().toISOString();
-    const { data: row, error } = await supabase
-      .from("blog_posts")
-      .update(update)
-      .eq("id", data.id)
+
+    // WORKSPACE ISOLATION: scope the update to the workspace when provided
+    let updateQuery = supabase.from("blog_posts").update(update).eq("id", data.id);
+    if (data.workspaceId) {
+      updateQuery = updateQuery.eq("workspace_id", data.workspaceId);
+    }
+
+    const { data: row, error } = await updateQuery
       .select("id, slug, title, category, author_name, workspace_id")
       .single();
     if (error) throw new Error(error.message);
@@ -369,8 +416,11 @@ export const setPostStatus = createServerFn({ method: "POST" })
   });
 
 export const deletePost = createServerFn({ method: "POST" })
-  .validator((input: { id: string }) =>
-    z.object({ id: z.string().uuid() }).parse(input),
+  .validator((input: { id: string; workspaceId?: string }) =>
+    z.object({
+      id: z.string().uuid(),
+      workspaceId: z.string().uuid().optional(),
+    }).parse(input),
   )
   .handler(async ({ data }): Promise<{ ok: true }> => {
     const { getAdminClient } = await import("./supabase.server");
@@ -380,6 +430,12 @@ export const deletePost = createServerFn({ method: "POST" })
       .select("id, slug, title, status, category, author_name, workspace_id")
       .eq("id", data.id)
       .maybeSingle();
+
+    // WORKSPACE ISOLATION: verify the post belongs to the expected workspace
+    if (data.workspaceId && post && post.workspace_id !== data.workspaceId) {
+      throw new Error("Forbidden: this post does not belong to the specified workspace");
+    }
+
     const { error } = await supabase.from("blog_posts").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
     if (post) {
@@ -436,3 +492,35 @@ export const uploadCoverImage = createServerFn({ method: "POST" })
 
     return { url: signed.signedUrl };
   });
+
+export const publishScheduledPosts = createServerFn({ method: "POST" }).handler(
+  async (): Promise<{ published: number }> => {
+    const { getAdminClient } = await import("./supabase.server");
+    const supabase = await getAdminClient();
+    const now = new Date().toISOString();
+    const { data: due, error } = await supabase
+      .from("blog_posts")
+      .select("id, slug, title, category, author_name, workspace_id")
+      .eq("status", "scheduled")
+      .lte("scheduled_at", now);
+    if (error || !due || due.length === 0) return { published: 0 };
+    const ids = due.map((p) => p.id);
+    await supabase
+      .from("blog_posts")
+      .update({ status: "published", published_at: now, scheduled_at: null })
+      .in("id", ids);
+    for (const post of due) {
+      import("./webhook.functions").then(({ dispatchWebhooks, fireCacheInvalidation }) => {
+        const payload = {
+          id: post.id, slug: post.slug, title: post.title,
+          status: "published", category: post.category, author_name: post.author_name,
+        };
+        dispatchWebhooks("post.published", payload).catch(() => {});
+        if (post.workspace_id) {
+          fireCacheInvalidation("blog.published", post.workspace_id, post.slug).catch(() => {});
+        }
+      });
+    }
+    return { published: due.length };
+  },
+);

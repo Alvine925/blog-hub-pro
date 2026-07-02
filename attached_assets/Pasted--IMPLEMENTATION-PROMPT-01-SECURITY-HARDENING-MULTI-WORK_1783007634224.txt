@@ -1,0 +1,369 @@
+# IMPLEMENTATION PROMPT 01
+
+# SECURITY HARDENING, MULTI-WORKSPACE ISOLATION & REST API CONSOLIDATION
+
+## Objective
+
+You are acting as the Lead Software Architect for Lunar CMS.
+
+A comprehensive audit of the project has already been completed. This implementation phase focuses **only** on the highest-priority issues that block Lunar CMS from being production-ready.
+
+Do **not** rebuild existing functionality.
+
+Do **not** redesign the architecture.
+
+Inspect the existing codebase first, then implement only the missing functionality described below.
+
+The goal is to strengthen the platform while preserving backwards compatibility.
+
+---
+
+# IMPORTANT
+
+Authentication, API Keys, REST APIs, Developer Portal, Blog Management, Workspaces and most core systems already exist.
+
+Reuse the existing architecture.
+
+Do not create duplicate middleware, services, repositories or Edge Functions.
+
+Always extend the current implementation.
+
+---
+
+# PHASE 1 — PROJECT AUDIT
+
+Before writing code, inspect the following.
+
+* Authentication
+* API Gateway
+* Content Router
+* Middleware
+* Edge Functions
+* API Key Validation
+* Workspace Resolution
+* Services
+* Database Queries
+* Repository Layer
+* Existing Permissions
+* Existing Response Builder
+
+Determine whether each issue below already exists.
+
+Only modify code where required.
+
+---
+
+# TASK 1 — REMOVE CLIENT-SIDE SERVICE ROLE EXPOSURE
+
+The audit identified that a Service Role key is exposed or used in client-accessible code.
+
+This is a critical security issue.
+
+Inspect the project.
+
+Verify
+
+* Environment Variables
+* Frontend
+* Admin Dashboard
+* Next.js Client Components
+* React Components
+* API Calls
+* Supabase Client Initialisation
+
+The Service Role Key must never be exposed to the browser.
+
+Implement the following rules.
+
+• Service Role Key may only exist inside secure Edge Functions or server-side execution environments.
+
+• All client requests requiring privileged operations must go through authenticated server endpoints or Edge Functions.
+
+• Replace any direct Service Role usage from the frontend.
+
+• Verify no secrets are bundled into production builds.
+
+---
+
+# TASK 2 — VERIFY COMPLETE WORKSPACE ISOLATION
+
+Audit every API endpoint.
+
+Audit every database query.
+
+Audit every Edge Function.
+
+Audit every repository.
+
+Every operation must automatically resolve the workspace.
+
+Never trust values sent by the client.
+
+The client must never determine
+
+* workspace_id
+* owner_id
+* tenant_id
+
+Every request must derive the workspace from authentication or API Key validation.
+
+Verify
+
+Blogs
+
+Pages
+
+Categories
+
+Media
+
+Settings
+
+Comments
+
+Likes
+
+Views
+
+Analytics
+
+API Keys
+
+Uploads
+
+Search
+
+Everything must be isolated per workspace.
+
+---
+
+# TASK 3 — FIX GENERATE BLOG AUTHORIZATION
+
+The audit identified authorization weaknesses in the blog generation flow.
+
+Inspect
+
+* AI Blog Generation
+* AI Content Generation
+* Blog Creation
+* Blog Update
+* Scheduled Generation
+
+Verify
+
+* User owns workspace
+* User belongs to workspace
+* User has permission
+* API Key scopes are respected
+* Anonymous access is impossible
+
+Implement missing authorization.
+
+---
+
+# TASK 4 — FIX ADMIN BLOG LISTING
+
+The audit identified that
+
+adminListPosts
+
+does not correctly isolate workspaces.
+
+Inspect
+
+* Repository
+* Query Builder
+* Service Layer
+* Edge Function
+
+Ensure every query filters automatically using the authenticated workspace.
+
+Never return another customer's data.
+
+---
+
+# TASK 5 — CONSOLIDATE REST API ROUTING
+
+The audit identified two routing systems.
+
+* api-gateway
+* content-router
+
+This creates duplicated logic.
+
+Inspect both.
+
+Determine which architecture is the primary implementation.
+
+Deprecate the legacy route handling.
+
+The project must have ONE unified request lifecycle.
+
+Every endpoint must follow
+
+Incoming Request
+
+↓
+
+Authentication
+
+↓
+
+API Key Validation
+
+↓
+
+Workspace Resolution
+
+↓
+
+Permission Validation
+
+↓
+
+Validation
+
+↓
+
+Business Logic
+
+↓
+
+Content Transformer
+
+↓
+
+Response Builder
+
+↓
+
+JSON Response
+
+No endpoint should bypass this flow.
+
+---
+
+# TASK 6 — STANDARDIZE ENDPOINT REGISTRY
+
+The audit identified inconsistent endpoint registration.
+
+For example
+
+/posts
+
+instead of
+
+/blogs
+
+Audit every registered endpoint.
+
+Ensure consistency with the REST API documentation.
+
+Remove aliases only if they are deprecated safely.
+
+Maintain backwards compatibility where possible.
+
+---
+
+# TASK 7 — CENTRALIZE RESPONSE TRANSFORMATION
+
+Verify every endpoint uses the centralized ContentTransformer.
+
+Remove duplicate implementations such as
+
+stripInternals()
+
+Every response should automatically
+
+* Remove private fields
+* Remove workspace identifiers
+* Remove internal metadata
+* Remove audit fields
+
+No endpoint should manually sanitize responses.
+
+---
+
+# TASK 8 — SECURITY AUDIT
+
+Inspect the entire API.
+
+Verify protection against
+
+* SQL Injection
+* XSS
+* Broken Authorization
+* Workspace Escapes
+* Invalid API Keys
+* Invalid Payloads
+* Invalid IDs
+* Enumeration Attacks
+
+Fix any identified weaknesses.
+
+---
+
+# TASK 9 — CODE CLEANUP
+
+Inspect
+
+* Duplicate Middleware
+* Duplicate Services
+* Duplicate Validation
+* Dead Code
+* Legacy Routers
+* Unused Utilities
+
+Remove or deprecate only when safe.
+
+Do not break existing functionality.
+
+---
+
+# FINAL VERIFICATION
+
+Do not complete the task until the following are verified.
+
+✓ Service Role key is never exposed to the client.
+
+✓ Every API request resolves its workspace automatically.
+
+✓ Every query is workspace isolated.
+
+✓ AI generation endpoints enforce ownership.
+
+✓ Admin blog listing cannot leak another workspace.
+
+✓ All endpoints use the same API pipeline.
+
+✓ Endpoint Registry is consistent.
+
+✓ Response transformation is centralized.
+
+✓ Legacy routing has been safely deprecated.
+
+✓ No duplicate security logic exists.
+
+---
+
+# DELIVERABLES
+
+Provide a detailed implementation report containing
+
+• Files inspected
+
+• Files modified
+
+• Security issues fixed
+
+• Workspace isolation improvements
+
+• API routing improvements
+
+• Authorization improvements
+
+• Deprecated code removed
+
+• Remaining recommendations for the next implementation phase
+
+Do not mark the task complete until every item above has been verified and implemented.

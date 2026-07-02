@@ -46,12 +46,34 @@ function getServiceKey(): string {
   // Only accept actual service role keys — never fall back to publishable keys.
   // Falling back to a publishable key silently creates an admin client without
   // admin privileges, causing opaque RLS failures instead of a clear startup error.
+  //
+  // SECURITY: VITE_* prefixed variables are bundled into the browser by Vite.
+  // The service role key must NEVER use a VITE_ prefix. Only SUPABASE_SERVICE_ROLE_KEY
+  // (no VITE_ prefix) is accepted here.
   const key =
     env("SUPABASE_SERVICE_ROLE_KEY") ??
-    env("VITE_SUPABASE_SERVICE_ROLE") ??
     env("SUPABASE_SERVICE_ROLE");
-  if (!key) throw new Error("Missing env var: SUPABASE_SERVICE_ROLE_KEY — set it in Replit Secrets");
+  if (!key) throw new Error("Missing env var: SUPABASE_SERVICE_ROLE_KEY — set it in Replit Secrets (never use VITE_ prefix for service role keys)");
   return key;
+}
+
+/**
+ * Verify that the calling user has access to a workspace.
+ * Uses the authenticated Supabase client (RLS-enforced) to check workspace ownership.
+ * Throws a 403-style error if the user does not own the workspace.
+ */
+export async function verifyWorkspaceAccess(
+  workspaceId: string,
+  accessToken: string,
+): Promise<void> {
+  if (!accessToken) throw new Error("Forbidden: authentication required");
+  const client = getAuthenticatedClient(accessToken);
+  const { data } = await client
+    .from("workspaces")
+    .select("id")
+    .eq("id", workspaceId)
+    .maybeSingle();
+  if (!data) throw new Error("Forbidden: you do not have access to this workspace");
 }
 
 function getPublishableKey(): string {

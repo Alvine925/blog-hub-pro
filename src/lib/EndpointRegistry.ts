@@ -84,7 +84,7 @@ export const ENDPOINT_REGISTRY: EndpointDefinition[] = [
   {
     id: "list-posts",
     method: "GET",
-    path: "/posts",
+    path: "/blogs",
     title: "List Posts",
     description: "Retrieve a paginated list of published blog posts.",
     longDescription:
@@ -158,7 +158,7 @@ export const ENDPOINT_REGISTRY: EndpointDefinition[] = [
   {
     id: "get-post",
     method: "GET",
-    path: "/posts/:slug",
+    path: "/blogs/:slug",
     title: "Get Post",
     description: "Retrieve a single published post by its slug.",
     longDescription:
@@ -426,7 +426,7 @@ export const ENDPOINT_REGISTRY: EndpointDefinition[] = [
   {
     id: "get-post-likes",
     method: "GET",
-    path: "/posts/:slug/likes",
+    path: "/blogs/:slug/likes",
     title: "Get Like Status",
     description: "Get the current like count for a post and whether the requesting visitor already liked it.",
     category: "engagement",
@@ -451,7 +451,7 @@ export const ENDPOINT_REGISTRY: EndpointDefinition[] = [
   {
     id: "like-post",
     method: "POST",
-    path: "/posts/:slug/likes",
+    path: "/blogs/:slug/likes",
     title: "Like a Post",
     description: "Like a post. Idempotent per visitor (X-Visitor-Id header).",
     longDescription:
@@ -476,7 +476,7 @@ export const ENDPOINT_REGISTRY: EndpointDefinition[] = [
   {
     id: "unlike-post",
     method: "DELETE",
-    path: "/posts/:slug/likes",
+    path: "/blogs/:slug/likes",
     title: "Unlike a Post",
     description: "Remove the requesting visitor's like from a post.",
     category: "engagement",
@@ -497,7 +497,7 @@ export const ENDPOINT_REGISTRY: EndpointDefinition[] = [
   {
     id: "list-post-comments",
     method: "GET",
-    path: "/posts/:slug/comments",
+    path: "/blogs/:slug/comments",
     title: "List Comments",
     description: "Retrieve approved comments for a post, threaded by reply.",
     category: "engagement",
@@ -531,7 +531,7 @@ export const ENDPOINT_REGISTRY: EndpointDefinition[] = [
   {
     id: "create-post-comment",
     method: "POST",
-    path: "/posts/:slug/comments",
+    path: "/blogs/:slug/comments",
     title: "Submit a Comment",
     description: "Submit a comment or reply on a post. Comments default to pending moderation.",
     longDescription:
@@ -604,7 +604,7 @@ export const ENDPOINT_REGISTRY: EndpointDefinition[] = [
   {
     id: "record-post-view",
     method: "POST",
-    path: "/posts/:slug/view",
+    path: "/blogs/:slug/view",
     title: "Record a View",
     description: "Record a page view, deduped per visitor within a 30-minute window.",
     category: "engagement",
@@ -625,7 +625,7 @@ export const ENDPOINT_REGISTRY: EndpointDefinition[] = [
   {
     id: "get-post-share",
     method: "GET",
-    path: "/posts/:slug/share",
+    path: "/blogs/:slug/share",
     title: "Get Share Metadata",
     description: "Get title/description/image/url metadata for building social share links.",
     category: "engagement",
@@ -654,7 +654,7 @@ export const ENDPOINT_REGISTRY: EndpointDefinition[] = [
   {
     id: "record-post-share",
     method: "POST",
-    path: "/posts/:slug/share",
+    path: "/blogs/:slug/share",
     title: "Record a Share",
     description: "Record a share-button click for a given channel (twitter, facebook, linkedin, whatsapp, email, copy_link).",
     category: "engagement",
@@ -675,7 +675,7 @@ export const ENDPOINT_REGISTRY: EndpointDefinition[] = [
   {
     id: "get-post-stats",
     method: "GET",
-    path: "/posts/:slug/stats",
+    path: "/blogs/:slug/stats",
     title: "Get Post Stats",
     description: "Get aggregated engagement stats plus the workspace's feature flags and branding settings.",
     category: "engagement",

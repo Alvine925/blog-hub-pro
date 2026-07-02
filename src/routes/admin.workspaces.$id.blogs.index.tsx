@@ -54,10 +54,11 @@ const getEngagementCounts = createServerFn({ method: "GET" })
   });
 
 // ── Queries ───────────────────────────────────────────────────────────────────
-const listQuery = queryOptions({
-  queryKey: ["admin", "blog_posts"],
-  queryFn: () => adminListPosts(),
-});
+const listQuery = (workspaceId: string) =>
+  queryOptions({
+    queryKey: ["admin", "blog_posts", workspaceId],
+    queryFn: () => adminListPosts({ data: { workspaceId } }),
+  });
 
 const engagementQuery = (workspaceId: string) =>
   queryOptions({
@@ -69,7 +70,7 @@ const engagementQuery = (workspaceId: string) =>
 export const Route = createFileRoute("/admin/workspaces/$id/blogs/")({
   loader: ({ context, params }) =>
     Promise.all([
-      context.queryClient.ensureQueryData(listQuery),
+      context.queryClient.ensureQueryData(listQuery(params.id)),
       context.queryClient.ensureQueryData(engagementQuery(params.id)),
     ]),
   component: WorkspaceBlogs,
