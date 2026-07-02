@@ -1,0 +1,768 @@
+# IMPLEMENTATION PROMPT 01
+
+# REST API FOUNDATION
+
+## Lunar CMS Developer Platform
+
+---
+
+# IMPORTANT
+
+Before writing a single line of code, inspect the existing codebase.
+
+This CMS is already functional.
+
+The following modules already exist and MUST NOT be rebuilt.
+
+* Authentication
+* User Registration
+* Login
+* Dashboard
+* Workspace System
+* Workspace Creation
+* Website Analysis
+* AI Context
+* Collections
+* Content Management
+* Blog Editor
+* Pages
+* Categories
+* Tags
+* Media Library
+* Existing Database
+* Existing Supabase Project
+* Existing UI Components
+
+Do not replace existing functionality.
+
+Do not duplicate existing code.
+
+Do not rename existing components unless absolutely necessary.
+
+Reuse everything that already exists.
+
+The objective of this task is ONLY to implement the REST API platform that allows external applications to consume content securely.
+
+---
+
+# Objective
+
+Transform the existing CMS into a Headless CMS by implementing a secure REST API layer.
+
+External applications should be able to retrieve content using an API Key without ever connecting directly to Supabase.
+
+Every request must pass through Edge Functions where authentication, authorization, logging, analytics and validation occur.
+
+The frontend should never expose the Supabase Service Role Key.
+
+---
+
+# High Level Architecture
+
+The request flow should work exactly like this.
+
+```text
+External Website
+
+↓
+
+REST Request
+
+↓
+
+Authorization Header
+
+↓
+
+Supabase Edge Function (API Gateway)
+
+↓
+
+Validate API Key
+
+↓
+
+Resolve Workspace
+
+↓
+
+Check Permissions
+
+↓
+
+Check Rate Limits
+
+↓
+
+Validate Endpoint
+
+↓
+
+Fetch Existing CMS Data
+
+↓
+
+Return JSON Response
+
+↓
+
+Log Request
+
+↓
+
+Update Analytics
+```
+
+No request should bypass the API Gateway.
+
+---
+
+# How External Websites Will Work
+
+Assume a customer owns:
+
+https://myagency.com
+
+Inside Lunar CMS they create content.
+
+The Workspace already exists.
+
+The user generates an API Key.
+
+Example:
+
+```text
+pk_live_R8Y2KJ29M4...
+```
+
+Inside their Next.js website they install the SDK (to be implemented later) or call the REST API directly.
+
+Example request:
+
+```http
+GET https://api.yourdomain.com/v1/blogs
+
+Authorization:
+Bearer pk_live_xxxxxxxxxxxxx
+```
+
+The external website DOES NOT send:
+
+* workspace_id
+* project_id
+* collection_id
+
+Only the API Key.
+
+The API Key should be enough to identify the workspace.
+
+---
+
+# API Authentication Flow
+
+When a request arrives:
+
+Step 1
+
+Read
+
+Authorization Header
+
+Reject immediately if missing.
+
+Expected format:
+
+Bearer pk_live_xxxxxxxxx
+
+or
+
+Bearer sk_live_xxxxxxxxx
+
+---
+
+Step 2
+
+Extract the token.
+
+Never trust the client.
+
+Validate format.
+
+Reject malformed tokens.
+
+---
+
+Step 3
+
+Hash the incoming token using the same hashing algorithm used during storage.
+
+Never compare plaintext.
+
+---
+
+Step 4
+
+Lookup the hashed key in the database.
+
+If not found
+
+Return
+
+401 Unauthorized
+
+---
+
+Step 5
+
+Check
+
+Active
+
+Not Expired
+
+Not Revoked
+
+Workspace Exists
+
+Workspace Active
+
+---
+
+Step 6
+
+Resolve Workspace
+
+Example
+
+```text
+API Key
+
+↓
+
+Workspace ID
+
+↓
+
+Workspace
+
+↓
+
+Existing Collections
+
+↓
+
+Existing Content
+```
+
+The client should never know the Workspace ID.
+
+Everything is automatic.
+
+---
+
+Step 7
+
+Check Permissions
+
+Example
+
+Publishable Key
+
+Can:
+
+Read Blogs
+
+Read Pages
+
+Read Media
+
+Read Events
+
+Cannot:
+
+Create Blogs
+
+Delete Blogs
+
+Manage Users
+
+Generate API Keys
+
+Secret Keys can perform write operations.
+
+---
+
+Step 8
+
+Apply Rate Limiting
+
+Free
+
+100/hour
+
+Starter
+
+1000/hour
+
+Pro
+
+10000/hour
+
+Business
+
+Configurable
+
+---
+
+Step 9
+
+Continue to Endpoint
+
+---
+
+Step 10
+
+Log Request
+
+Every request.
+
+Even failed requests.
+
+---
+
+# API Key Generation
+
+Create an Edge Function
+
+generate-api-key
+
+Responsibilities
+
+Generate cryptographically secure random token.
+
+Example
+
+pk_live_xxxxxxxxxxxxxxxxx
+
+or
+
+sk_live_xxxxxxxxxxxxxxxxx
+
+Never store the raw key.
+
+Store only
+
+SHA-256 hash
+
+Return plaintext only once.
+
+If the user loses it they must generate another.
+
+Display warning.
+
+"This key cannot be viewed again."
+
+Exactly like GitHub.
+
+---
+
+# Required Database Tables
+
+Inspect the existing schema first.
+
+Only create these tables if they do not already exist.
+
+---
+
+api_keys
+
+Purpose
+
+Store API credentials.
+
+Columns
+
+id
+
+workspace_id
+
+name
+
+description
+
+hashed_key
+
+key_prefix
+
+key_type
+
+permissions (jsonb)
+
+status
+
+expires_at
+
+last_used_at
+
+created_by
+
+created_at
+
+updated_at
+
+Indexes
+
+workspace_id
+
+hashed_key
+
+status
+
+---
+
+api_request_logs
+
+Purpose
+
+Track every request.
+
+Columns
+
+id
+
+workspace_id
+
+api_key_id
+
+endpoint
+
+method
+
+status_code
+
+duration_ms
+
+request_size
+
+response_size
+
+ip_address
+
+country
+
+user_agent
+
+created_at
+
+Indexes
+
+workspace_id
+
+api_key_id
+
+created_at
+
+endpoint
+
+---
+
+api_rate_limits
+
+Purpose
+
+Track request windows.
+
+Columns
+
+id
+
+workspace_id
+
+api_key_id
+
+window_start
+
+request_count
+
+limit
+
+created_at
+
+---
+
+# Required Edge Functions
+
+Inspect existing Edge Functions first.
+
+Reuse shared utilities.
+
+Only create what does not already exist.
+
+---
+
+validate-api-key
+
+Responsibilities
+
+Validate Authorization header
+
+Hash token
+
+Lookup database
+
+Check expiration
+
+Resolve Workspace
+
+Return authenticated context
+
+---
+
+api-gateway
+
+This becomes the entry point.
+
+Every REST request must go through this function.
+
+Responsibilities
+
+Validate
+
+Authenticate
+
+Resolve Workspace
+
+Route Request
+
+Log Request
+
+Return Response
+
+---
+
+log-api-request
+
+Called after every request.
+
+Store
+
+Duration
+
+Endpoint
+
+Workspace
+
+API Key
+
+Response Size
+
+Status
+
+IP
+
+---
+
+update-api-usage
+
+Updates
+
+Daily Requests
+
+Monthly Requests
+
+Bandwidth
+
+Most Used Endpoints
+
+Average Response Time
+
+---
+
+# Folder Structure
+
+Create only if missing.
+
+```
+supabase/functions/
+
+api-gateway/
+
+validate-api-key/
+
+generate-api-key/
+
+log-api-request/
+
+update-api-usage/
+```
+
+Shared utilities
+
+```
+supabase/functions/_shared/
+
+auth.ts
+
+workspace.ts
+
+permissions.ts
+
+response.ts
+
+logger.ts
+
+errors.ts
+
+validation.ts
+```
+
+Do not duplicate helper functions.
+
+---
+
+# API Response Standard
+
+Every response must follow one format.
+
+Success
+
+```json
+{
+    "success": true,
+    "data": {},
+    "meta": {}
+}
+```
+
+Errors
+
+```json
+{
+    "success": false,
+    "error": {
+        "code": "INVALID_API_KEY",
+        "message": "The supplied API key is invalid."
+    }
+}
+```
+
+Never expose stack traces.
+
+Never expose SQL errors.
+
+Never expose internal IDs.
+
+---
+
+# Security Requirements
+
+Never expose:
+
+Service Role Key
+
+OpenAI Keys
+
+Gemini Keys
+
+Workspace IDs
+
+Internal Database IDs
+
+Supabase Secrets
+
+Never store raw API Keys.
+
+Never trust frontend validation.
+
+Validate every request server-side.
+
+Apply Row Level Security to new tables.
+
+Use constant-time comparison when checking hashes.
+
+Reject requests with invalid Authorization headers before querying content.
+
+---
+
+# External Website Developer Experience
+
+The goal is to make integration extremely simple.
+
+Example:
+
+```typescript
+const response = await fetch(
+"https://api.yourdomain.com/v1/blogs",
+{
+headers:{
+Authorization:`Bearer ${process.env.NEXT_PUBLIC_LUNAR_KEY}`
+}
+}
+)
+
+const blogs=await response.json()
+```
+
+The developer should not need to know:
+
+Workspace ID
+
+Collection IDs
+
+Database IDs
+
+Project IDs
+
+The API Key should resolve everything automatically.
+
+---
+
+# Implementation Rules
+
+Inspect existing project architecture first.
+
+Reuse services.
+
+Reuse types.
+
+Reuse Supabase client.
+
+Reuse authentication utilities.
+
+Do not duplicate database queries.
+
+Keep business logic inside Edge Functions.
+
+Keep responses consistent.
+
+Use TypeScript throughout.
+
+Write clean, modular, reusable code.
+
+---
+
+# Acceptance Criteria
+
+This implementation is complete only when:
+
+✓ Users can generate secure API Keys.
+
+✓ Keys are stored only as hashes.
+
+✓ API Gateway authenticates every request.
+
+✓ Workspace resolution is automatic.
+
+✓ External applications authenticate using only Bearer tokens.
+
+✓ Unauthorized requests return 401.
+
+✓ Invalid keys never reveal why validation failed.
+
+✓ Every request is logged.
+
+✓ API usage metrics are updated automatically.
+
+✓ Existing CMS functionality remains untouched.
+
+✓ The REST API foundation is production-ready and can support future endpoints without architectural changes.
