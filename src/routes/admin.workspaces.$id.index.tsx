@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
+import { useState } from "react";
 import {
   FileText, Layers, ImageIcon, Sparkles, Key, Clock, Activity,
   Plus, Eye, Send, FilePen, ArrowRight, Zap, TrendingUp,
@@ -8,6 +9,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { GenerateBlogDialog } from "@/components/blog/GenerateBlogDialog";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 interface RecentPost {
@@ -198,13 +200,16 @@ function WorkspaceOverview() {
     opportunities = [],
   } = data as any;
 
+  const [generateDialogOpen, setGenerateDialogOpen] = useState(false);
+  const [selectedOpportunity, setSelectedOpportunity] = useState<ContentOpportunity | null>(null);
+
   const base  = `/admin/workspaces/${id}`;
   const total = Math.max(stats.postsTotal, 1);
 
   const hasIntel = !!(intel?.website_url || intel?.industry || competitors.length || keywords.length || opportunities.length);
 
   const QUICK_ACTIONS = [
-    { label: "New Blog Post",  desc: "Write and publish content",  to: "/admin/blogs/new",     icon: FileText,  primary: true },
+    { label: "New Blog Post",  desc: "Write and publish content",  to: `${base}/blogs/new`,    icon: FileText,  primary: true },
     { label: "New Collection", desc: "Define a content type",      to: `${base}/collections`,  icon: Layers     },
     { label: "Upload Media",   desc: "Add images and files",       to: `${base}/media`,        icon: ImageIcon  },
     { label: "AI Assistant",   desc: "Generate content with AI",   to: `${base}/ai-assistant`, icon: Sparkles   },
@@ -217,6 +222,13 @@ function WorkspaceOverview() {
   const allKeywords   = keywords.map((k: any) => k.keyword);
 
   return (
+    <>
+    <GenerateBlogDialog
+      open={generateDialogOpen}
+      onOpenChange={setGenerateDialogOpen}
+      opportunity={selectedOpportunity}
+      workspaceId={id}
+    />
     <div className="min-h-full space-y-12 px-8 py-8">
 
       {/* ── Header ── */}
@@ -226,7 +238,8 @@ function WorkspaceOverview() {
           <p className="mt-0.5 text-sm text-muted-foreground">Content, activity, and site intelligence for this workspace.</p>
         </div>
         <Link
-          to="/admin/blogs/new"
+          to="/admin/workspaces/$id/blogs/new"
+          params={{ id }}
           className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary/90 transition-colors shrink-0"
         >
           <Plus className="h-4 w-4" /> New Post
@@ -453,12 +466,22 @@ function WorkspaceOverview() {
                       {opp.reason && (
                         <p className="mt-1 text-[11px] text-muted-foreground line-clamp-2">{opp.reason}</p>
                       )}
-                      <Link
-                        to="/admin/blogs/new"
-                        className="mt-1.5 inline-flex items-center gap-1 text-[11px] font-medium text-primary hover:underline"
-                      >
-                        Write this post <ChevronRight className="h-2.5 w-2.5" />
-                      </Link>
+                      <div className="mt-2 flex items-center gap-3">
+                        <button
+                          type="button"
+                          onClick={() => { setSelectedOpportunity(opp); setGenerateDialogOpen(true); }}
+                          className="inline-flex items-center gap-1 rounded-md bg-primary px-2 py-1 text-[11px] font-semibold text-white hover:bg-primary/90 transition-colors"
+                        >
+                          <Sparkles className="h-2.5 w-2.5" /> Generate Blog
+                        </button>
+                        <Link
+                          to="/admin/workspaces/$id/blogs/new"
+                          params={{ id }}
+                          className="inline-flex items-center gap-1 text-[11px] font-medium text-muted-foreground hover:text-primary transition-colors"
+                        >
+                          Write manually <ChevronRight className="h-2.5 w-2.5" />
+                        </Link>
+                      </div>
                     </div>
                   );
                 })}
@@ -490,7 +513,8 @@ function WorkspaceOverview() {
                 <FileText className="mx-auto h-7 w-7 text-muted-foreground/25" />
                 <p className="text-sm text-muted-foreground">No posts yet — create your first.</p>
                 <Link
-                  to="/admin/blogs/new"
+                  to="/admin/workspaces/$id/blogs/new"
+                  params={{ id }}
                   className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-white hover:bg-primary/90 transition-colors mt-1"
                 >
                   <Plus className="h-3 w-3" /> Write first post
@@ -578,5 +602,6 @@ function WorkspaceOverview() {
         </div>
       </div>
     </div>
+    </>
   );
 }

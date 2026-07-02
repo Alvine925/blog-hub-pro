@@ -7,7 +7,7 @@ import { marked } from "marked";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Loader2, Upload, Eye, X, FileCode, Sparkles, Wand2, Clock,
-  History, ChevronDown, ChevronUp,
+  History, ChevronDown, ChevronUp, ImageIcon,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -53,9 +53,11 @@ import { listPostVersions } from "@/lib/version.functions";
 
 interface BlogPostFormProps {
   initial?: BlogPost;
+  /** When set, redirects back to the workspace blogs list after save */
+  workspaceId?: string;
 }
 
-export function BlogPostForm({ initial }: BlogPostFormProps) {
+export function BlogPostForm({ initial, workspaceId }: BlogPostFormProps) {
   const navigate = useNavigate();
   const upsert = useServerFn(upsertPost);
   const upload = useServerFn(uploadCoverImage);
@@ -107,6 +109,7 @@ export function BlogPostForm({ initial }: BlogPostFormProps) {
 
   // UI state
   const [uploading, setUploading] = useState(false);
+  const [generatingImage, setGeneratingImage] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [slugStatus, setSlugStatus] = useState<"idle" | "checking" | "ok" | "taken">("idle");
   const [markdownOpen, setMarkdownOpen] = useState(false);
@@ -204,6 +207,41 @@ export function BlogPostForm({ initial }: BlogPostFormProps) {
     setTagInput("");
   }
 
+  async function generateCoverImage() {
+    if (!title.trim() && !content.trim()) {
+      toast.error("Add a title or some content first so AI can generate a relevant image");
+      return;
+    }
+    setGeneratingImage(true);
+    const toastId = toast.loading("Generating cover image…");
+    try {
+      const { data, error } = await supabase.functions.invoke("generate-cover-image", {
+        body: {
+          title:   title.trim() || "Blog post",
+          excerpt: excerpt.trim() || null,
+          topic:   tags[0] ?? null,
+          category,
+        },
+      });
+      if (error) throw new Error(error.message);
+      if (data?.error) throw new Error(data.error);
+      if (!data?.image_url) {
+        const reasons: string[] = [];
+        if (data?.hf_error)   reasons.push(`HuggingFace: ${data.hf_error}`);
+        if (data?.serp_error) reasons.push(`SERP: ${data.serp_error}`);
+        const detail = reasons.length ? `\n${reasons.join("\n")}` : "";
+        throw new Error(`Image generation returned nothing.${detail}`);
+      }
+      setCoverImage(data.image_url as string);
+      const source = data.source === "ai_generated" ? "AI image generated ✓" : "Cover image found ✓";
+      toast.success(source, { id: toastId });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Image generation failed", { id: toastId });
+    } finally {
+      setGeneratingImage(false);
+    }
+  }
+
   async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -260,7 +298,11 @@ export function BlogPostForm({ initial }: BlogPostFormProps) {
         : opts.status === "scheduled" ? "Post scheduled"
         : "Draft saved",
       );
-      navigate({ to: "/admin/blogs" });
+      if (workspaceId) {
+        navigate({ to: "/admin/workspaces/$id/blogs", params: { id: workspaceId } });
+      } else {
+        navigate({ to: "/admin/blogs" });
+      }
     },
     onError: (err) => toast.error(err instanceof Error ? err.message : "Save failed"),
   });
@@ -534,10 +576,30 @@ export function BlogPostForm({ initial }: BlogPostFormProps) {
           )}
           <Input value={coverImage} onChange={(e) => setCoverImage(e.target.value)} placeholder="Paste image URL" />
           <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleFile} />
-          <Button variant="outline" className="w-full" onClick={() => fileRef.current?.click()} disabled={uploading} type="button">
-            {uploading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
-            Upload Image
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              className="flex-1"
+              onClick={() => fileRef.current?.click()}
+              disabled={uploading || generatingImage}
+              type="button"
+            >
+              {uploading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
+              Upload
+            </Button>
+            <Button
+              variant="outline"
+              className="flex-1"
+              onClick={generateCoverImage}
+              disabled={uploading || generatingImage}
+              type="button"
+            >
+              {generatingImage
+                ? <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                : <ImageIcon className="mr-2 h-4 w-4" />}
+              {generatingImage ? "Generating…" : "Generate"}
+            </Button>
+          </div>
         </div>
 
         {/* Version history (edit only) */}
