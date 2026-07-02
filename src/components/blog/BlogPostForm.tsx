@@ -266,6 +266,8 @@ export function BlogPostForm({ initial, workspaceId }: BlogPostFormProps) {
     }
   }
 
+  const isEdit = Boolean(initial?.id);
+
   const mutation = useMutation({
     mutationFn: (opts: { status: "draft" | "published" | "scheduled"; scheduledAt?: string }) =>
       upsert({
@@ -295,14 +297,17 @@ export function BlogPostForm({ initial, workspaceId }: BlogPostFormProps) {
       }),
     onSuccess: (_res, opts) => {
       toast.success(
-        opts.status === "published" ? "Post published"
+        opts.status === "published" ? (isEdit ? "Changes saved" : "Post published")
         : opts.status === "scheduled" ? "Post scheduled"
         : "Draft saved",
       );
-      if (workspaceId) {
-        navigate({ to: "/admin/workspaces/$id/blogs", params: { id: workspaceId } });
-      } else {
-        navigate({ to: "/admin/blogs" });
+      // In edit mode stay on the page; only navigate away when creating
+      if (!isEdit) {
+        if (workspaceId) {
+          navigate({ to: "/admin/workspaces/$id/blogs", params: { id: workspaceId } });
+        } else {
+          navigate({ to: "/admin/blogs" });
+        }
       }
     },
     onError: (err) => toast.error(err instanceof Error ? err.message : "Save failed"),
@@ -508,7 +513,11 @@ export function BlogPostForm({ initial, workspaceId }: BlogPostFormProps) {
           <div className="flex flex-col gap-2 pt-1">
             <Button onClick={submit} disabled={saving}>
               {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {publishMode === "publish" ? "Publish Now" : publishMode === "schedule" ? "Schedule" : "Save Draft"}
+              {isEdit
+                ? publishMode === "schedule" ? "Schedule" : "Save Changes"
+                : publishMode === "publish" ? "Publish Now"
+                : publishMode === "schedule" ? "Schedule"
+                : "Save Draft"}
             </Button>
             <Button variant="ghost" onClick={() => setPreviewOpen(true)} type="button">
               <Eye className="mr-2 h-4 w-4" /> Preview
