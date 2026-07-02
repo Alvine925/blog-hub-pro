@@ -6,3 +6,9 @@ id = "gsMDs4ZtDTdOV9ptuw1Vf"
 uri = "file://DEMO_BLOG_PROMPT.md"
 type = "text"
 title = "Demo Blog Prompt (External CMS Consumer)"
+
+[[outputs]]
+id = "zzZaZgTPY-FAcCuInN8dP"
+uri = "file://LUNAR_CMS_AUDIT_REPORT.md"
+type = "text"
+title = "Lunar CMS — Master Implementation Audit Report"

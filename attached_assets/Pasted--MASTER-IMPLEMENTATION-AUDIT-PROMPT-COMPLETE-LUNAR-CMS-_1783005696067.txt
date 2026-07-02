@@ -1,0 +1,514 @@
+# MASTER IMPLEMENTATION AUDIT PROMPT
+
+# COMPLETE LUNAR CMS FEATURE & ARCHITECTURE AUDIT
+
+## Objective
+
+You are acting as a **Senior Software Architect, Technical Lead, Solution Architect, QA Engineer, and Code Auditor**.
+
+Your task is **NOT** to implement new functionality immediately.
+
+Your first responsibility is to perform a **comprehensive audit** of the entire Lunar CMS codebase and determine the current implementation status of every major feature that has been designed during this project.
+
+This is a verification exercise.
+
+Do not assume a feature exists simply because a document or prompt was created for it.
+
+Inspect the actual source code, database schema, Edge Functions, API routes, middleware, UI, and integrations.
+
+Your goal is to produce an accurate implementation report.
+
+---
+
+# IMPORTANT
+
+Do not modify any files during this audit.
+
+Do not generate code.
+
+Do not create new files.
+
+Do not delete anything.
+
+Do not refactor anything.
+
+Only inspect, analyse and report.
+
+---
+
+# PROJECT CONTEXT
+
+Lunar CMS is a headless CMS.
+
+It provides content through REST APIs to external websites.
+
+External websites render the UI.
+
+Lunar CMS owns the content, APIs, authentication, analytics, and engagement data.
+
+The system is built around:
+
+* Workspaces
+* Authentication
+* REST APIs
+* API Keys
+* Developer Portal
+* API Documentation
+* Blog Management
+* Content Management
+* External Website Integrations
+
+The audit should verify the implementation of every major subsystem.
+
+---
+
+# PHASE 1 — PROJECT STRUCTURE AUDIT
+
+Inspect the complete project.
+
+Review
+
+* Frontend
+* Admin Dashboard
+* Workspace Dashboard
+* API Routes
+* Edge Functions
+* Database Schema
+* Middleware
+* Services
+* Utilities
+* Hooks
+* Components
+* API Documentation
+* Developer Portal
+* Storage
+* Authentication
+* Environment Configuration
+
+Produce a high-level overview of the architecture.
+
+---
+
+# PHASE 2 — AUTHENTICATION
+
+Verify
+
+* User Authentication
+* Workspace Authentication
+* Session Management
+* Protected Routes
+* API Authentication
+* API Keys
+* API Key Validation
+* Workspace Resolution
+* Permission Validation
+
+Report
+
+* Implemented
+* Partial
+* Missing
+
+---
+
+# PHASE 3 — WORKSPACES
+
+Verify
+
+* Workspace Creation
+* Workspace Switching
+* Workspace Isolation
+* Workspace Settings
+* Branding Settings
+* Domain Association
+* Generated URLs
+* Workspace Ownership
+
+---
+
+# PHASE 4 — CONTENT MANAGEMENT
+
+Verify implementation of
+
+* Blogs
+* Pages
+* Categories
+* Tags
+* Authors
+* Media
+* SEO
+* Slugs
+* Featured Images
+* Publishing Workflow
+* Drafts
+* Scheduled Publishing
+* Search
+* Filtering
+* Pagination
+
+---
+
+# PHASE 5 — BLOG SYSTEM
+
+Verify
+
+* Blog Listing
+* Blog Detail
+* Rich Text
+* SEO Metadata
+* Related Posts
+* Reading Time
+* Word Count
+* Featured Posts
+* Search
+* Categories
+* Tags
+
+---
+
+# PHASE 6 — BLOG ENGAGEMENT
+
+Verify implementation of
+
+* Likes
+* Remove Like
+* Like Counts
+* Duplicate Like Prevention
+* Comments
+* Nested Comments
+* Guest Comments
+* Comment Moderation
+* Comment Approval
+* Spam Handling Hooks
+* View Tracking
+* View Statistics
+* Social Share Metadata
+* Feature Flags
+* Powered by Lunar CMS
+* Analytics Collection
+
+---
+
+# PHASE 7 — REST API
+
+Verify
+
+* API Gateway
+* Authentication
+* Workspace Resolution
+* Endpoint Registry
+* Response Builder
+* Content Transformer
+* Pagination
+* Error Responses
+* API Documentation
+* API Explorer
+* Code Example Generator
+* AI Documentation Assistant
+* Endpoint Consistency
+* Cache Invalidation
+
+---
+
+# PHASE 8 — DEVELOPER EXPERIENCE
+
+Verify
+
+* Developer Documentation
+* API Explorer
+* Try It Functionality
+* Code Snippet Generator
+* Framework Examples
+* AI Prompt Generator
+* Cursor Prompt Generator
+* Loveable Prompt Generator
+* Windsurf Prompt Generator
+* Bolt Prompt Generator
+* Replit Prompt Generator
+
+---
+
+# PHASE 9 — EXTERNAL WEBSITE INTEGRATION
+
+Verify
+
+* External websites can authenticate using API Keys.
+* Content can be retrieved securely.
+* Blog detail endpoints return complete data.
+* Related posts are available.
+* Feature flags are exposed.
+* Branding information is exposed.
+* Social sharing metadata is exposed.
+* Engagement endpoints are available.
+* Public APIs never expose internal fields.
+
+---
+
+# PHASE 10 — DATABASE
+
+Inspect the schema.
+
+Verify tables supporting
+
+* Blogs
+* Pages
+* Categories
+* Tags
+* Media
+* API Keys
+* Workspaces
+* Likes
+* Comments
+* Views
+* Analytics
+* Settings
+* Branding
+
+Report any missing tables or incomplete relationships.
+
+---
+
+# PHASE 11 — EDGE FUNCTIONS
+
+Inspect every Edge Function.
+
+Determine
+
+* Purpose
+* Status
+* Whether it is still used
+* Whether duplicate functionality exists
+* Whether responsibilities overlap
+
+Report unused or redundant functions.
+
+---
+
+# PHASE 12 — ADMIN DASHBOARD
+
+Verify
+
+* Dashboard
+* Blog Management
+* Page Management
+* Categories
+* Comments Moderation
+* Analytics
+* Branding
+* API Management
+* Documentation Access
+* Developer Tools
+
+---
+
+# PHASE 13 — SECURITY
+
+Verify
+
+* Workspace Isolation
+* Authentication
+* Authorization
+* Input Validation
+* Output Sanitization
+* XSS Protection
+* SQL Injection Protection
+* API Key Security
+* Internal Field Filtering
+* Permission Checks
+
+Identify any security risks.
+
+---
+
+# PHASE 14 — PERFORMANCE
+
+Inspect
+
+* Duplicate Queries
+* N+1 Queries
+* Missing Indexes
+* Missing Pagination
+* Cache Usage
+* Cache Invalidation
+* Large Payloads
+* Duplicate Services
+
+Recommend improvements.
+
+---
+
+# PHASE 15 — CODE QUALITY
+
+Inspect
+
+* Duplicate Components
+* Duplicate Services
+* Dead Code
+* Unused Files
+* Unused Hooks
+* Naming Consistency
+* Folder Structure
+* TypeScript Usage
+* Modularity
+* Separation of Concerns
+
+---
+
+# FINAL REPORT
+
+Produce a comprehensive report with the following sections.
+
+## 1. Executive Summary
+
+Provide an overall assessment of the project.
+
+Estimate overall completion percentage.
+
+---
+
+## 2. Fully Implemented Features
+
+List every feature that is fully implemented and production-ready.
+
+---
+
+## 3. Partially Implemented Features
+
+For each feature include
+
+* Current implementation
+* Missing functionality
+* Estimated completion percentage
+
+---
+
+## 4. Missing Features
+
+List features that have not yet been implemented.
+
+Group them by priority.
+
+---
+
+## 5. Database Audit
+
+List
+
+* Existing tables
+* Missing tables
+* Recommended indexes
+* Relationship issues
+
+---
+
+## 6. REST API Audit
+
+List
+
+* Existing endpoints
+* Missing endpoints
+* Inconsistent endpoints
+* Endpoints requiring refactoring
+
+---
+
+## 7. Edge Function Audit
+
+List
+
+* Existing Edge Functions
+* Purpose
+* Status
+* Missing Edge Functions
+* Duplicate Edge Functions
+
+---
+
+## 8. Dashboard Audit
+
+List implemented and missing dashboard modules.
+
+---
+
+## 9. Security Audit
+
+Identify
+
+* Vulnerabilities
+* Missing validation
+* Permission issues
+* Workspace isolation issues
+* API security concerns
+
+Rate each finding by severity.
+
+---
+
+## 10. Performance Audit
+
+Identify
+
+* Slow areas
+* Optimisation opportunities
+* Duplicate logic
+* Cache issues
+
+---
+
+## 11. Code Quality Audit
+
+Identify
+
+* Duplicate code
+* Refactoring opportunities
+* Architectural inconsistencies
+* Maintainability concerns
+
+---
+
+## 12. Priority Roadmap
+
+Create a prioritised implementation roadmap.
+
+Use categories:
+
+* 🔴 Critical
+* 🟠 High
+* 🟡 Medium
+* 🟢 Low
+
+Explain why each item has that priority.
+
+---
+
+## 13. Final Completion Score
+
+Provide estimated completion percentages for:
+
+* Authentication
+* Workspace Management
+* Content Management
+* Blog System
+* Blog Engagement
+* REST API
+* Developer Portal
+* External Website Integration
+* Database
+* Security
+* Performance
+* Overall Project
+
+Include a short explanation for each score.
+
+---
+
+# SUCCESS CRITERIA
+
+The audit is complete only when:
+
+* Every major feature discussed throughout this project has been inspected.
+* No assumptions have been made without checking the code.
+* The report clearly distinguishes between implemented, partially implemented, and missing functionality.
+* Duplicate implementations and architectural inconsistencies have been identified.
+* Security and performance issues have been highlighted.
+* The report provides a clear roadmap for completing Lunar CMS to a production-ready standard without writing or modifying any code during the audit.
