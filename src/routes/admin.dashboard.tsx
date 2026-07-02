@@ -3,6 +3,7 @@ import { queryOptions, useSuspenseQuery, useQuery } from "@tanstack/react-query"
 import {
   FileText, Eye, Send, FilePen, ArrowRight, Clock, Plus,
   BarChart2, Sparkles, Activity, TrendingUp, Globe, Target, Lightbulb,
+  Key, Zap, AlertCircle,
 } from "lucide-react";
 import { getDashboardStats } from "@/lib/apikey.functions";
 import { publishScheduledPosts } from "@/lib/schedule.functions";
@@ -183,11 +184,11 @@ function Dashboard() {
       {/* Stats bar — flat, no cards */}
       <div className="flex divide-x divide-border border-y border-border">
         {[
-          { label: "Total Posts", value: stats.total },
-          { label: "Published", value: stats.published, green: true },
-          { label: "Drafts", value: stats.drafts },
-          { label: "Scheduled", value: stats.scheduled, amber: true },
-          { label: "Total Views", value: stats.totalViews.toLocaleString() },
+          { label: "Total Posts",  value: stats.total },
+          { label: "Published",    value: stats.published, green: true },
+          { label: "Drafts",       value: stats.drafts },
+          { label: "Scheduled",    value: stats.scheduled, amber: true },
+          { label: "Total Views",  value: stats.totalViews.toLocaleString() },
         ].map(({ label, value, green, amber }) => (
           <div key={label} className="flex-1 px-5 py-5">
             <p className={cn(
@@ -201,6 +202,41 @@ function Dashboard() {
           </div>
         ))}
       </div>
+
+      {/* API usage strip */}
+      {"apiRequestsToday" in stats && (
+        <div className="flex items-center gap-6 rounded-lg border border-border bg-muted/20 px-5 py-4">
+          <div className="flex items-center gap-2">
+            <Zap className="h-3.5 w-3.5 text-primary" />
+            <span className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">API Today</span>
+          </div>
+          <div className="flex divide-x divide-border">
+            <div className="pr-6">
+              <p className="text-lg font-bold tabular-nums">{(stats.apiRequestsToday as number).toLocaleString()}</p>
+              <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Requests</p>
+            </div>
+            <div className="px-6">
+              <p className={cn(
+                "text-lg font-bold tabular-nums",
+                (stats.apiErrorsToday as number) > 0 && "text-destructive",
+              )}>
+                {(stats.apiErrorsToday as number).toLocaleString()}
+              </p>
+              <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Errors</p>
+            </div>
+            <div className="pl-6">
+              <p className="text-lg font-bold tabular-nums text-emerald-600">{(stats.activeKeys as number)}</p>
+              <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Active Keys</p>
+            </div>
+          </div>
+          <Link
+            to="/admin/api-keys"
+            className="ml-auto flex items-center gap-1 text-xs text-primary hover:underline"
+          >
+            <Key className="h-3.5 w-3.5" /> Manage keys
+          </Link>
+        </div>
+      )}
 
       {/* Intelligence */}
       <WorkspaceIntelligencePanel />

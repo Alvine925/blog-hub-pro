@@ -4,3 +4,4 @@
 - [Edge function AI fallback](edge-fn-ai-fallback.md) — all AI edge functions use Lovable gateway primary → Mistral fallback; never accept workspace_id from client.
 - [Vite SSR env loading](vite-ssr-env-loading.md) — Vite does NOT inject .env vars into process.env in SSR; use fs.readFileSync to parse .env as fallback; supabase.server.ts handles this.
 - [TanStack Start route import paths](tanstack-start-route-imports.md) — relative imports like ../lib/x in route files resolve wrong in SSR virtual modules; always use @/lib/x alias in route files; ./x works fine in src/lib/*.ts files.
+- [API platform schema](api-platform-schema.md) — api_keys upgraded with status/key_type/permissions/workspace_id; generate-api-key edge fn now issues pk_live_/sk_live_ keys; workspace api-keys page had raw-key storage bug — fixed to use edge fn.
