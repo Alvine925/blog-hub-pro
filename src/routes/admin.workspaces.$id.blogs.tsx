@@ -1,10 +1,10 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import { queryOptions, useSuspenseQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2, Clock, Eye, Send, BarChart2, Heart, MessageSquare, Share2 } from "lucide-react";
+import { Plus, Pencil, Trash2, Clock, Eye, Send, Heart, MessageSquare, Share2 } from "lucide-react";
 import { adminListPosts, deletePost, setPostStatus } from "@/lib/blog.functions";
 import { formatBlogDate, type BlogPostSummary } from "@/lib/blog-types";
 import { cn } from "@/lib/utils";
@@ -87,6 +87,7 @@ function WorkspaceBlogs() {
   const { data: posts } = useSuspenseQuery(listQuery);
   const { data: engagement } = useSuspenseQuery(engagementQuery(workspaceId));
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const doDelete = useServerFn(deletePost);
   const doStatus = useServerFn(setPostStatus);
   const [pendingDelete, setPendingDelete] = useState<BlogPostSummary | null>(null);
@@ -122,7 +123,8 @@ function WorkspaceBlogs() {
           <p className="mt-0.5 text-sm text-muted-foreground">{posts.length} posts total</p>
         </div>
         <Link
-          to="/admin/blogs/new"
+          to="/admin/workspaces/$id/blogs/new"
+          params={{ id: workspaceId }}
           className="flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
         >
           <Plus className="h-3.5 w-3.5" /> New Post
@@ -134,7 +136,8 @@ function WorkspaceBlogs() {
         <div className="flex flex-col items-center gap-3 py-20 border-y border-border text-center">
           <p className="text-sm text-muted-foreground">No posts yet.</p>
           <Link
-            to="/admin/blogs/new"
+            to="/admin/workspaces/$id/blogs/new"
+            params={{ id: workspaceId }}
             className="flex items-center gap-1.5 text-sm font-medium text-primary hover:underline"
           >
             <Plus className="h-3.5 w-3.5" /> Write your first post
@@ -155,16 +158,21 @@ function WorkspaceBlogs() {
           {posts.map((post) => {
             const eng = engagement[post.id] ?? { likes: 0, comments: 0, shares: 0 };
             return (
-              <div key={post.id} className="group flex items-center gap-3 border-b border-border py-3 last:border-0">
+              <div
+                key={post.id}
+                onClick={() =>
+                  navigate({
+                    to: "/admin/workspaces/$id/blogs/$postId",
+                    params: { id: workspaceId, postId: post.id },
+                  })
+                }
+                className="group flex items-center gap-3 border-b border-border py-3 last:border-0 cursor-pointer hover:bg-muted/30 -mx-2 px-2 rounded-lg transition-colors"
+              >
                 {/* Title */}
                 <div className="flex-1 min-w-0">
-                  <Link
-                    to="/admin/blogs/$id"
-                    params={{ id: post.id }}
-                    className="block truncate text-sm font-medium hover:text-primary transition-colors"
-                  >
+                  <p className="truncate text-sm font-medium group-hover:text-primary transition-colors">
                     {post.title || "Untitled"}
-                  </Link>
+                  </p>
                   {post.category && (
                     <span className="text-xs text-muted-foreground">{post.category}</span>
                   )}
@@ -211,21 +219,16 @@ function WorkspaceBlogs() {
                   <Eye className="h-3 w-3" />{post.views.toLocaleString()}
                 </span>
 
-                {/* Actions */}
-                <div className="w-24 shrink-0 flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                {/* Actions — stop propagation so clicks don't bubble to row */}
+                <div
+                  className="w-20 shrink-0 flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                  onClick={(e) => e.stopPropagation()}
+                >
                   <Link
-                    to="/admin/blog-stats/$postId"
-                    params={{ postId: post.id }}
-                    className="flex h-7 w-7 items-center justify-center rounded text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
-                    title="View analytics"
-                  >
-                    <BarChart2 className="h-3.5 w-3.5" />
-                  </Link>
-                  <Link
-                    to="/admin/blogs/$id"
-                    params={{ id: post.id }}
+                    to="/admin/workspaces/$id/blogs/$postId/edit"
+                    params={{ id: workspaceId, postId: post.id }}
                     className="flex h-7 w-7 items-center justify-center rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-                    title="Edit"
+                    title="Edit post"
                   >
                     <Pencil className="h-3.5 w-3.5" />
                   </Link>
