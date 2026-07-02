@@ -4,13 +4,17 @@ import {
 import { createServerFn } from "@tanstack/react-start";
 import {
   LayoutDashboard, FileText, Layers, ImageIcon, Key, Webhook,
-  BarChart2, Bell, Users, Settings, Code2, Moon, Sparkles,
-  ChevronLeft, ExternalLink, LogOut, Plus, Search, ChevronRight,
+  BarChart2, Bell, Settings, Code2, Sparkles,
+  ChevronLeft, ExternalLink, LogOut, Plus, Search, ChevronRight, Info,
 } from "lucide-react";
+import { useState } from "react";
 import { cn } from "@/lib/utils";
 import type { Workspace } from "@/lib/workspace.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
+} from "@/components/ui/dialog";
 
 // ── Server fn ─────────────────────────────────────────────────────────────────
 const getWorkspaceById = createServerFn({ method: "GET" })
@@ -130,6 +134,7 @@ function WorkspaceSidebar({ workspace }: { workspace: Workspace }) {
   const navigate  = useNavigate();
   const groups    = buildNav(id);
   const gradient  = wsGradient(workspace.name);
+  const [showAbout, setShowAbout] = useState(false);
 
   function isActive(to: string) {
     const base = `/admin/workspaces/${id}`;
@@ -144,17 +149,10 @@ function WorkspaceSidebar({ workspace }: { workspace: Workspace }) {
   }
 
   return (
+    <>
     <aside className="flex h-screen w-60 shrink-0 flex-col border-r border-border bg-white">
 
-      {/* ── Lunar brand ── */}
-      <div className="flex h-14 items-center gap-2.5 border-b border-border px-4 shrink-0">
-        <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary shadow-sm">
-          <Moon className="h-4 w-4 text-white" />
-        </div>
-        <span className="text-sm font-bold tracking-tight">Lunar CMS</span>
-      </div>
-
-      {/* ── Workspace identity ── */}
+      {/* ── Workspace header ── */}
       <div className="shrink-0 border-b border-border px-4 py-3">
         <Link
           to="/admin/workspaces"
@@ -208,6 +206,16 @@ function WorkspaceSidebar({ workspace }: { workspace: Workspace }) {
 
       {/* ── Footer ── */}
       <div className="shrink-0 border-t border-border px-2 py-2 space-y-0.5">
+        {workspace.description && (
+          <button
+            type="button"
+            onClick={() => setShowAbout(true)}
+            className="flex w-full items-center gap-2.5 rounded-md px-2.5 py-2 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+          >
+            <Info className="h-4 w-4 shrink-0" />
+            About
+          </button>
+        )}
         <Link
           to="/blogs"
           className="flex items-center gap-2.5 rounded-md px-2.5 py-2 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
@@ -225,6 +233,32 @@ function WorkspaceSidebar({ workspace }: { workspace: Workspace }) {
         </button>
       </div>
     </aside>
+
+    {/* ── About dialog ── */}
+    <Dialog open={showAbout} onOpenChange={setShowAbout}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <div className={cn(
+              "flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br text-xs font-bold text-white",
+              gradient,
+            )}>
+              {workspace.name.slice(0, 2).toUpperCase()}
+            </div>
+            {workspace.name}
+          </DialogTitle>
+          {workspace.slug && (
+            <p className="font-mono text-[11px] text-muted-foreground">{workspace.slug}</p>
+          )}
+        </DialogHeader>
+        <DialogDescription asChild>
+          <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">
+            {workspace.description}
+          </p>
+        </DialogDescription>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 }
 
