@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import {
   Plus, Trash2, Copy, Key, AlertTriangle, Loader2,
   Eye, EyeOff, Shield, Globe, ChevronDown, ChevronUp,
-  Terminal, Lock,
+  Terminal, Lock, Link2, Check,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -104,18 +104,116 @@ function PermissionChips({ permissions }: { permissions: string[] }) {
   );
 }
 
+// ── API Base URL ──────────────────────────────────────────────────────────────
+
+const SUPABASE_URL =
+  (typeof import.meta !== "undefined" && (import.meta as Record<string, unknown>).env
+    ? (import.meta as { env: Record<string, string> }).env.VITE_SUPABASE_URL
+    : "") ?? "";
+
+const CONTENT_ROUTER_URL = SUPABASE_URL
+  ? `${SUPABASE_URL}/functions/v1/content-router`
+  : "";
+
+function CopyableUrl({ label, url, note }: { label: string; url: string; note: string }) {
+  const [copied, setCopied] = useState(false);
+
+  function handleCopy() {
+    if (!url) return;
+    navigator.clipboard.writeText(url).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  }
+
+  return (
+    <div className="space-y-1.5">
+      <div className="flex items-center gap-2">
+        <p className="text-xs font-semibold text-foreground">{label}</p>
+        <span className="text-[10px] text-muted-foreground">{note}</span>
+      </div>
+      <div className="flex items-center gap-2">
+        <div className="flex flex-1 items-center gap-2 rounded-lg border border-border bg-muted/40 px-3 py-2 min-w-0">
+          <Link2 className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+          {url ? (
+            <code className="truncate text-xs font-mono text-foreground">{url}</code>
+          ) : (
+            <span className="text-xs text-muted-foreground italic">Supabase URL not configured</span>
+          )}
+        </div>
+        <Button
+          size="sm"
+          variant="outline"
+          className="shrink-0 h-9 gap-1.5"
+          onClick={handleCopy}
+          disabled={!url}
+        >
+          {copied ? (
+            <><Check className="h-3.5 w-3.5 text-emerald-600" /> Copied</>
+          ) : (
+            <><Copy className="h-3.5 w-3.5" /> Copy</>
+          )}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+function ApiBaseUrl() {
+  return (
+    <div className="rounded-lg border border-border bg-background p-5 space-y-4">
+      <div className="flex items-center gap-2">
+        <Link2 className="h-4 w-4 text-muted-foreground" />
+        <h2 className="text-sm font-semibold">Base API URL</h2>
+        <span className="ml-auto rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 uppercase tracking-wide">
+          Live
+        </span>
+      </div>
+
+      <p className="text-xs text-muted-foreground">
+        Use this URL as the base for all API requests. Append the resource path after it and pass your API key
+        as a <code className="rounded bg-muted px-1 text-[11px] font-mono">Bearer</code> token.
+      </p>
+
+      <CopyableUrl
+        label="Content Router"
+        url={CONTENT_ROUTER_URL}
+        note="— Recommended · full endpoint set"
+      />
+
+      <div className="rounded-lg bg-muted/50 p-3 space-y-1.5">
+        <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Quick example</p>
+        <pre className="overflow-x-auto text-[11px] font-mono text-foreground leading-relaxed whitespace-pre-wrap break-all">{CONTENT_ROUTER_URL
+          ? `fetch("${CONTENT_ROUTER_URL}/blogs", {\n  headers: { Authorization: "Bearer YOUR_API_KEY" }\n})`
+          : `fetch("<BASE_URL>/blogs", {\n  headers: { Authorization: "Bearer YOUR_API_KEY" }\n})`
+        }</pre>
+      </div>
+    </div>
+  );
+}
+
 // ── Gateway reference ─────────────────────────────────────────────────────────
 
 const ENDPOINTS = [
-  { method: "GET", path: "/api-gateway/blogs",              desc: "List published posts. Params: page, limit, search, category, featured" },
-  { method: "GET", path: "/api-gateway/blogs/:slug",        desc: "Single post by slug including full content" },
-  { method: "GET", path: "/api-gateway/media",              desc: "List media files. Params: page, limit" },
-  { method: "GET", path: "/api-gateway/collections",        desc: "List all collections" },
-  { method: "GET", path: "/api-gateway/collections/:slug",  desc: "Published entries in a collection" },
+  { method: "GET", path: "/blogs",                   desc: "List published posts. Params: page, limit, search, category, tag, featured, sort, order" },
+  { method: "GET", path: "/blogs/featured",           desc: "Featured published posts. Params: limit (max 50)" },
+  { method: "GET", path: "/blogs/latest",             desc: "Most recent posts. Params: limit (max 50)" },
+  { method: "GET", path: "/blogs/:slug",              desc: "Single post by slug — includes full content" },
+  { method: "GET", path: "/blogs/:slug/related",      desc: "Related posts by category + tags. Params: limit" },
+  { method: "GET", path: "/pages",                    desc: "List published pages. Params: page, limit" },
+  { method: "GET", path: "/pages/:slug",              desc: "Single page by slug" },
+  { method: "GET", path: "/categories",               desc: "All categories with post counts. Params: sort (name|post_count)" },
+  { method: "GET", path: "/tags",                     desc: "All tags with post counts" },
+  { method: "GET", path: "/media",                    desc: "List media files. Params: page, limit, folder, mime_type" },
+  { method: "GET", path: "/collections",              desc: "List all collections" },
+  { method: "GET", path: "/collections/:slug",        desc: "Published entries in a collection" },
+  { method: "GET", path: "/search?q=",                desc: "Search across blogs, pages, categories. Params: q (required), page, limit" },
 ];
 
 function GatewayReference() {
   const [open, setOpen] = useState(false);
+  const baseUrl = CONTENT_ROUTER_URL || "<BASE_URL>";
+
   return (
     <section>
       <button
@@ -124,7 +222,7 @@ function GatewayReference() {
       >
         <div className="flex items-center gap-2">
           <Terminal className="h-4 w-4 text-muted-foreground" />
-          <span className="text-sm font-medium">API Gateway Reference</span>
+          <span className="text-sm font-medium">API Endpoint Reference</span>
         </div>
         {open ? (
           <ChevronUp className="h-4 w-4 text-muted-foreground" />
@@ -136,9 +234,9 @@ function GatewayReference() {
       {open && (
         <div className="space-y-6 py-5">
           <p className="text-sm text-muted-foreground">
-            All endpoints are served by the <code className="rounded bg-muted px-1 py-0.5 text-xs">api-gateway</code> Edge
-            Function. Use your API key as a Bearer token. The key automatically resolves your workspace — callers never
-            need workspace IDs.
+            All endpoints are served by the <code className="rounded bg-muted px-1 py-0.5 text-xs">content-router</code> Edge
+            Function. Use your API key as a Bearer token — the key automatically resolves your workspace.
+            Callers never need to send workspace or tenant IDs.
           </p>
 
           <div className="space-y-0 divide-y divide-border rounded-lg border border-border overflow-hidden">
@@ -158,18 +256,25 @@ function GatewayReference() {
           <div>
             <p className="mb-2 text-xs font-medium text-muted-foreground uppercase tracking-wide">Example — fetch all posts</p>
             <pre className="overflow-x-auto rounded-lg border border-border bg-slate-950 px-4 py-4 text-xs font-mono text-slate-100 leading-relaxed">{`const response = await fetch(
-  "https://<project>.supabase.co/functions/v1/api-gateway/blogs",
+  "${baseUrl}/blogs",
   { headers: { Authorization: \`Bearer \${process.env.LUNAR_API_KEY}\` } }
 );
 
-const { data, meta } = await response.json();
-// data = array of posts, meta = { page, limit, total, totalPages }`}</pre>
+const { data, meta, links } = await response.json();
+// data  = array of posts
+// meta  = { page, limit, total, totalPages }
+// links = { first, previous, next, last }`}</pre>
           </div>
 
           <div>
             <p className="mb-2 text-xs font-medium text-muted-foreground uppercase tracking-wide">Response format</p>
             <pre className="overflow-x-auto rounded-lg border border-border bg-slate-950 px-4 py-4 text-xs font-mono text-slate-100 leading-relaxed">{`// Success
-{ "success": true, "data": [...], "meta": { "page": 1, "total": 42 } }
+{
+  "success": true,
+  "data": [...],
+  "meta": { "page": 1, "limit": 20, "total": 42, "totalPages": 3 },
+  "links": { "first": "...", "previous": null, "next": "...", "last": "..." }
+}
 
 // Error
 { "success": false, "error": { "code": "INVALID_API_KEY", "message": "..." } }`}</pre>
@@ -489,6 +594,9 @@ function ApiKeysPage() {
           </div>
         ))}
       </div>
+
+      {/* Base API URL */}
+      <ApiBaseUrl />
 
       {/* Gateway reference (collapsible) */}
       <GatewayReference />
