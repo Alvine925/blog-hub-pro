@@ -323,14 +323,18 @@ function BlogStatsPage() {
           { label: "Tracked Page Views", value: totalPageViews.toLocaleString(), icon: TrendingUp },
           { label: "Avg. Read Time", value: pageViews.avgDuration > 0 ? fmtDuration(pageViews.avgDuration) : "—", icon: Clock },
           { label: "API Requests", value: apiRequests.total.toLocaleString(), icon: Activity },
-          { label: "Slug", value: `/${post.slug}`, icon: Globe },
-        ].map(({ label, value, icon: Icon }) => (
+          { label: "Slug", value: `/${post.slug}`, icon: Globe, isSlug: true },
+        ].map(({ label, value, icon: Icon, isSlug }) => (
           <div key={label} className="flex-1 px-5 py-5 min-w-0">
             <div className="flex items-center gap-1.5 mb-1">
               <Icon className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-              <p className="text-[10px] uppercase tracking-wide text-muted-foreground truncate">{label}</p>
+              <p className="text-[10px] uppercase tracking-wide text-muted-foreground">{label}</p>
             </div>
-            <p className="text-2xl font-bold tabular-nums truncate">{value}</p>
+            {isSlug ? (
+              <p className="text-sm font-mono text-foreground break-all leading-snug mt-1">{value}</p>
+            ) : (
+              <p className="text-2xl font-bold tabular-nums">{value}</p>
+            )}
           </div>
         ))}
       </div>
