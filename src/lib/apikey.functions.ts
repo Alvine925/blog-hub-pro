@@ -101,28 +101,12 @@ export const deleteApiKey = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
-/** Node.js server-side API key validation (used by internal REST handlers). */
-export async function validateApiKey(raw: string): Promise<boolean> {
-  const { createHash } = await import("node:crypto");
-  const { getAdminClient } = await import("./supabase.server");
-  const supabase = await getAdminClient();
-  const hash = createHash("sha256").update(raw).digest("hex");
-  const { data, error } = await supabase
-    .from("api_keys")
-    .select("id, status, revoked_at, expires_at")
-    .eq("key_hash", hash)
-    .maybeSingle();
-  if (error || !data) return false;
-  // Check new status column, fall back to revoked_at for pre-migration rows
-  const isRevoked = data.status === "revoked" || Boolean(data.revoked_at);
-  const isExpired = data.expires_at && new Date(data.expires_at) <= new Date();
-  if (isRevoked || isExpired) return false;
-  await supabase
-    .from("api_keys")
-    .update({ last_used_at: new Date().toISOString() })
-    .eq("id", data.id);
-  return true;
-}
+/**
+ * Node.js server-side API key validation.
+ * Implemented in apikey.server.ts — imported here for backwards compatibility.
+ * Do not add any browser-side logic to this re-export.
+ */
+export { validateApiKey } from "./apikey.server";
 
 // ── API request log viewer ───────────────────────────────────────────────────
 

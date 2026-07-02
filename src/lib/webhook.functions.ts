@@ -451,7 +451,7 @@ export async function dispatchWebhooks(
   payload: Record<string, unknown>,
 ): Promise<void> {
   try {
-    const { getAdminClient } = await import("./supabase.server");
+    const { getAdminClient } = await import("./webhook.server");
     const supabase = await getAdminClient();
 
     const { data: hooks, error } = await supabase
