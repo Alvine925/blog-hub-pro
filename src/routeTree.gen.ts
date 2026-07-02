@@ -55,6 +55,7 @@ import { Route as AdminWorkspacesIdApiKeysRouteImport } from './routes/admin.wor
 import { Route as AdminWorkspacesIdApiExplorerRouteImport } from './routes/admin.workspaces.$id.api-explorer'
 import { Route as AdminWorkspacesIdAnalyticsRouteImport } from './routes/admin.workspaces.$id.analytics'
 import { Route as AdminWorkspacesIdAiAssistantRouteImport } from './routes/admin.workspaces.$id.ai-assistant'
+import { Route as AdminWorkspacesIdAboutRouteImport } from './routes/admin.workspaces.$id.about'
 
 const SignupRoute = SignupRouteImport.update({
   id: '/signup',
@@ -294,6 +295,11 @@ const AdminWorkspacesIdAiAssistantRoute =
     path: '/ai-assistant',
     getParentRoute: () => AdminWorkspacesIdRoute,
   } as any)
+const AdminWorkspacesIdAboutRoute = AdminWorkspacesIdAboutRouteImport.update({
+  id: '/about',
+  path: '/about',
+  getParentRoute: () => AdminWorkspacesIdRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -330,6 +336,7 @@ export interface FileRoutesByFullPath {
   '/admin/collections/$id': typeof AdminCollectionsIdRoute
   '/admin/workspaces/$id': typeof AdminWorkspacesIdRouteWithChildren
   '/admin/blogs/': typeof AdminBlogsIndexRoute
+  '/admin/workspaces/$id/about': typeof AdminWorkspacesIdAboutRoute
   '/admin/workspaces/$id/ai-assistant': typeof AdminWorkspacesIdAiAssistantRoute
   '/admin/workspaces/$id/analytics': typeof AdminWorkspacesIdAnalyticsRoute
   '/admin/workspaces/$id/api-explorer': typeof AdminWorkspacesIdApiExplorerRoute
@@ -375,6 +382,7 @@ export interface FileRoutesByTo {
   '/admin/blogs/new': typeof AdminBlogsNewRoute
   '/admin/collections/$id': typeof AdminCollectionsIdRoute
   '/admin/blogs': typeof AdminBlogsIndexRoute
+  '/admin/workspaces/$id/about': typeof AdminWorkspacesIdAboutRoute
   '/admin/workspaces/$id/ai-assistant': typeof AdminWorkspacesIdAiAssistantRoute
   '/admin/workspaces/$id/analytics': typeof AdminWorkspacesIdAnalyticsRoute
   '/admin/workspaces/$id/api-explorer': typeof AdminWorkspacesIdApiExplorerRoute
@@ -424,6 +432,7 @@ export interface FileRoutesById {
   '/admin/collections/$id': typeof AdminCollectionsIdRoute
   '/admin/workspaces/$id': typeof AdminWorkspacesIdRouteWithChildren
   '/admin/blogs/': typeof AdminBlogsIndexRoute
+  '/admin/workspaces/$id/about': typeof AdminWorkspacesIdAboutRoute
   '/admin/workspaces/$id/ai-assistant': typeof AdminWorkspacesIdAiAssistantRoute
   '/admin/workspaces/$id/analytics': typeof AdminWorkspacesIdAnalyticsRoute
   '/admin/workspaces/$id/api-explorer': typeof AdminWorkspacesIdApiExplorerRoute
@@ -474,6 +483,7 @@ export interface FileRouteTypes {
     | '/admin/collections/$id'
     | '/admin/workspaces/$id'
     | '/admin/blogs/'
+    | '/admin/workspaces/$id/about'
     | '/admin/workspaces/$id/ai-assistant'
     | '/admin/workspaces/$id/analytics'
     | '/admin/workspaces/$id/api-explorer'
@@ -519,6 +529,7 @@ export interface FileRouteTypes {
     | '/admin/blogs/new'
     | '/admin/collections/$id'
     | '/admin/blogs'
+    | '/admin/workspaces/$id/about'
     | '/admin/workspaces/$id/ai-assistant'
     | '/admin/workspaces/$id/analytics'
     | '/admin/workspaces/$id/api-explorer'
@@ -567,6 +578,7 @@ export interface FileRouteTypes {
     | '/admin/collections/$id'
     | '/admin/workspaces/$id'
     | '/admin/blogs/'
+    | '/admin/workspaces/$id/about'
     | '/admin/workspaces/$id/ai-assistant'
     | '/admin/workspaces/$id/analytics'
     | '/admin/workspaces/$id/api-explorer'
@@ -915,6 +927,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminWorkspacesIdAiAssistantRouteImport
       parentRoute: typeof AdminWorkspacesIdRoute
     }
+    '/admin/workspaces/$id/about': {
+      id: '/admin/workspaces/$id/about'
+      path: '/about'
+      fullPath: '/admin/workspaces/$id/about'
+      preLoaderRoute: typeof AdminWorkspacesIdAboutRouteImport
+      parentRoute: typeof AdminWorkspacesIdRoute
+    }
   }
 }
 
@@ -930,6 +949,7 @@ const AdminCollectionsRouteWithChildren =
   AdminCollectionsRoute._addFileChildren(AdminCollectionsRouteChildren)
 
 interface AdminWorkspacesIdRouteChildren {
+  AdminWorkspacesIdAboutRoute: typeof AdminWorkspacesIdAboutRoute
   AdminWorkspacesIdAiAssistantRoute: typeof AdminWorkspacesIdAiAssistantRoute
   AdminWorkspacesIdAnalyticsRoute: typeof AdminWorkspacesIdAnalyticsRoute
   AdminWorkspacesIdApiExplorerRoute: typeof AdminWorkspacesIdApiExplorerRoute
@@ -945,6 +965,7 @@ interface AdminWorkspacesIdRouteChildren {
 }
 
 const AdminWorkspacesIdRouteChildren: AdminWorkspacesIdRouteChildren = {
+  AdminWorkspacesIdAboutRoute: AdminWorkspacesIdAboutRoute,
   AdminWorkspacesIdAiAssistantRoute: AdminWorkspacesIdAiAssistantRoute,
   AdminWorkspacesIdAnalyticsRoute: AdminWorkspacesIdAnalyticsRoute,
   AdminWorkspacesIdApiExplorerRoute: AdminWorkspacesIdApiExplorerRoute,

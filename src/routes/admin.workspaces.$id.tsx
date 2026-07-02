@@ -7,14 +7,10 @@ import {
   BarChart2, Bell, Settings, Code2, Sparkles,
   ChevronLeft, ExternalLink, LogOut, Plus, Search, ChevronRight, Info,
 } from "lucide-react";
-import { useState } from "react";
 import { cn } from "@/lib/utils";
 import type { Workspace } from "@/lib/workspace.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
-} from "@/components/ui/dialog";
 
 // ── Server fn ─────────────────────────────────────────────────────────────────
 const getWorkspaceById = createServerFn({ method: "GET" })
@@ -68,7 +64,8 @@ function buildNav(id: string): NavGroup[] {
     {
       group: "Overview",
       items: [
-        { label: "Dashboard", to: base, icon: LayoutDashboard },
+        { label: "Dashboard", to: base,          icon: LayoutDashboard },
+        { label: "About",     to: `${base}/about`, icon: Info           },
       ],
     },
     {
@@ -134,7 +131,13 @@ function WorkspaceSidebar({ workspace }: { workspace: Workspace }) {
   const navigate  = useNavigate();
   const groups    = buildNav(id);
   const gradient  = wsGradient(workspace.name);
-  const [showAbout, setShowAbout] = useState(false);
+
+  // Derive workspace icon: scraped logo → Google favicon → gradient initials
+  const ws = workspace as any;
+  const logoUrl: string | null = ws.ai_context?.logoUrl ?? null;
+  const faviconUrl: string | null = ws.website_url
+    ? `https://www.google.com/s2/favicons?domain=${(() => { try { return new URL(ws.website_url).hostname; } catch { return ws.website_url; } })()}&sz=64`
+    : null;
 
   function isActive(to: string) {
     const base = `/admin/workspaces/${id}`;
@@ -149,7 +152,6 @@ function WorkspaceSidebar({ workspace }: { workspace: Workspace }) {
   }
 
   return (
-    <>
     <aside className="flex h-screen w-60 shrink-0 flex-col border-r border-border bg-white">
 
       {/* ── Workspace header ── */}
@@ -161,10 +163,32 @@ function WorkspaceSidebar({ workspace }: { workspace: Workspace }) {
           <ChevronLeft className="h-3 w-3" /> All workspaces
         </Link>
         <div className="flex items-center gap-3">
-          <div className={cn(
-            "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br text-sm font-bold text-white shadow-sm",
-            gradient,
-          )}>
+          {/* Logo image (scraped or favicon) – falls back to gradient initials */}
+          {(logoUrl || faviconUrl) ? (
+            <img
+              src={logoUrl ?? faviconUrl!}
+              alt={workspace.name}
+              className="h-9 w-9 shrink-0 rounded-lg object-contain bg-muted p-0.5"
+              onError={(e) => {
+                const img = e.currentTarget;
+                if (faviconUrl && img.src !== faviconUrl) {
+                  img.src = faviconUrl;
+                } else {
+                  img.style.display = "none";
+                  const sib = img.nextElementSibling as HTMLElement | null;
+                  if (sib) sib.style.display = "flex";
+                }
+              }}
+            />
+          ) : null}
+          {/* Gradient initials fallback (hidden when image loads) */}
+          <div
+            className={cn(
+              "h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br text-sm font-bold text-white shadow-sm",
+              gradient,
+            )}
+            style={{ display: (logoUrl || faviconUrl) ? "none" : "flex" }}
+          >
             {workspace.name.slice(0, 2).toUpperCase()}
           </div>
           <div className="min-w-0">
@@ -206,16 +230,6 @@ function WorkspaceSidebar({ workspace }: { workspace: Workspace }) {
 
       {/* ── Footer ── */}
       <div className="shrink-0 border-t border-border px-2 py-2 space-y-0.5">
-        {workspace.description && (
-          <button
-            type="button"
-            onClick={() => setShowAbout(true)}
-            className="flex w-full items-center gap-2.5 rounded-md px-2.5 py-2 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-          >
-            <Info className="h-4 w-4 shrink-0" />
-            About
-          </button>
-        )}
         <Link
           to="/blogs"
           className="flex items-center gap-2.5 rounded-md px-2.5 py-2 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
@@ -233,32 +247,6 @@ function WorkspaceSidebar({ workspace }: { workspace: Workspace }) {
         </button>
       </div>
     </aside>
-
-    {/* ── About dialog ── */}
-    <Dialog open={showAbout} onOpenChange={setShowAbout}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <div className={cn(
-              "flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br text-xs font-bold text-white",
-              gradient,
-            )}>
-              {workspace.name.slice(0, 2).toUpperCase()}
-            </div>
-            {workspace.name}
-          </DialogTitle>
-          {workspace.slug && (
-            <p className="font-mono text-[11px] text-muted-foreground">{workspace.slug}</p>
-          )}
-        </DialogHeader>
-        <DialogDescription asChild>
-          <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">
-            {workspace.description}
-          </p>
-        </DialogDescription>
-      </DialogContent>
-    </Dialog>
-    </>
   );
 }
 

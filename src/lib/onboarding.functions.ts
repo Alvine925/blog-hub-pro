@@ -61,6 +61,8 @@ export interface WebsiteIntelligence {
   suggestedTags: string[];
   suggestedCategories: string[];
   brandSummary: string;
+  logoUrl?: string | null;
+  siteImages?: string[];
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -111,6 +113,8 @@ const websiteIntelligenceSchema = z.object({
   suggestedTags: z.array(z.string()).default([]),
   suggestedCategories: z.array(z.string()).default([]),
   brandSummary: z.string().default(""),
+  logoUrl: z.string().nullable().optional(),
+  siteImages: z.array(z.string()).default([]),
 });
 
 // ── getOnboardingState ────────────────────────────────────────────────────────
@@ -232,6 +236,8 @@ export const createOnboardingWorkspace = createServerFn({ method: "POST" })
           products:            intel.products,
           suggestedCategories: intel.suggestedCategories,
           suggestedTags:       intel.suggestedTags,
+          logoUrl:             intel.logoUrl ?? null,
+          siteImages:          intel.siteImages ?? [],
         },
         content_pillars:       intel.contentPillars || [],
         selected_collections:  data.selectedCollections,

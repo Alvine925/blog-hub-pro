@@ -62,7 +62,13 @@ function normalizeUrl(url: string): string {
   }
 }
 
-async function firecrawlScrape(url: string, firecrawlKey: string): Promise<string> {
+interface ScrapeResult {
+  content: string;
+  logoUrl: string | null;
+  images: string[];
+}
+
+async function firecrawlScrape(url: string, firecrawlKey: string): Promise<ScrapeResult> {
   const res = await fetch("https://api.firecrawl.dev/v1/scrape", {
     method: "POST",
     headers: {
@@ -83,11 +89,20 @@ async function firecrawlScrape(url: string, firecrawlKey: string): Promise<strin
   }
 
   const data = await res.json();
-  return (data?.data?.markdown ?? data?.markdown ?? "").slice(0, 8000);
+  const content = (data?.data?.markdown ?? data?.markdown ?? "").slice(0, 8000);
+
+  // Extract logo/images from metadata
+  const meta = data?.data?.metadata ?? {};
+  const logoUrl = meta?.ogImage ?? meta?.favicon ?? null;
+
+  // Collect images from metadata or content
+  const images: string[] = [];
+  if (meta?.ogImage) images.push(meta.ogImage);
+
+  return { content, logoUrl, images };
 }
 
 async function serpSearch(query: string, serpKey: string): Promise<string> {
-  // Try SerpAPI format
   const url = `https://serpapi.com/search.json?q=${encodeURIComponent(query)}&api_key=${serpKey}&num=10`;
   try {
     const res = await fetch(url);
@@ -117,13 +132,13 @@ Deno.serve(async (req) => {
 
     // ── 1. Crawl the website ─────────────────────────────────────────────────
     let websiteContent = "";
+    let logoUrl: string | null = null;
+    const siteImages: string[] = [];
 
     if (firecrawlKey) {
       try {
-        // Crawl homepage + common pages
         const pages = [normalizedUrl];
         try {
-          // Also try to crawl about/services pages
           const mapRes = await fetch("https://api.firecrawl.dev/v1/map", {
             method: "POST",
             headers: { Authorization: `Bearer ${firecrawlKey}`, "Content-Type": "application/json" },
@@ -141,15 +156,29 @@ Deno.serve(async (req) => {
         const contents = await Promise.allSettled(
           pages.map((p) => firecrawlScrape(p, firecrawlKey))
         );
-        websiteContent = contents
-          .filter((r): r is PromiseFulfilledResult<string> => r.status === "fulfilled")
-          .map((r) => r.value)
+
+        const fulfilled = contents.filter(
+          (r): r is PromiseFulfilledResult<ScrapeResult> => r.status === "fulfilled"
+        );
+
+        websiteContent = fulfilled
+          .map((r) => r.value.content)
           .join("\n\n---\n\n")
           .slice(0, 12000);
+
+        // Prefer homepage logo, then any page
+        for (const r of fulfilled) {
+          if (r.value.logoUrl && !logoUrl) logoUrl = r.value.logoUrl;
+          siteImages.push(...r.value.images);
+        }
       } catch (e) {
         console.error("Firecrawl error:", e);
       }
     }
+
+    // Always have a reliable favicon fallback
+    const faviconFallback = `https://www.google.com/s2/favicons?domain=${domain}&sz=128`;
+    const finalLogoUrl = logoUrl ?? faviconFallback;
 
     // ── 2. SERP competitor search ────────────────────────────────────────────
     let serpResults = "";
@@ -225,11 +254,14 @@ Provide at least 3 competitors, 5 content opportunities, and 4 content pillars. 
     try {
       intelligence = JSON.parse(raw);
     } catch {
-      // Try to extract JSON from the response
       const match = raw.match(/\{[\s\S]+\}/);
       if (!match) throw new Error("AI returned invalid JSON");
       intelligence = JSON.parse(match[0]);
     }
+
+    // Inject logo and images into intelligence (not from AI, from scraping)
+    intelligence.logoUrl = finalLogoUrl;
+    intelligence.siteImages = siteImages.slice(0, 6);
 
     return Response.json(
       { success: true, url: normalizedUrl, domain, intelligence },
