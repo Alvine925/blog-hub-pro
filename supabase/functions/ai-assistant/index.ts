@@ -167,11 +167,20 @@ async function callAI(messages: ChatMessage[]): Promise<string> {
 
 async function verifyUser(authHeader: string | null): Promise<boolean> {
   if (!authHeader?.startsWith("Bearer ")) return false;
-  const token = authHeader.slice(7);
+  const token = authHeader.slice(7).trim();
+  if (!token) return false;
 
   // Accept service-role token directly (used in dev/test)
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
-  if (token === serviceKey) return true;
+  if (serviceKey && token === serviceKey) return true;
+
+  // Accept the project's anon / publishable key for trusted server-to-server
+  // calls (the app's server function proxies requests using this key because
+  // the service-role key is not available in the app runtime).
+  const anonKey        = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
+  const publishableKey = Deno.env.get("SUPABASE_PUBLISHABLE_KEY") ?? "";
+  if (anonKey && token === anonKey) return true;
+  if (publishableKey && token === publishableKey) return true;
 
   try {
     const url  = Deno.env.get("SUPABASE_URL") ?? "";
