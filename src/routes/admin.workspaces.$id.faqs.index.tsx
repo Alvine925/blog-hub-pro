@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { queryOptions, useSuspenseQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useState, useEffect, useRef } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
 import {
   Pencil, Trash2, Send, Sparkles, X, Save, Plus,
@@ -9,7 +9,6 @@ import {
 } from "lucide-react";
 import { GenerateContentDialog } from "@/components/ai/GenerateContentDialog";
 import { adminListFaqs, upsertFaq, deleteFaq, setFaqStatus, type Faq } from "@/lib/faq.functions";
-import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -48,20 +47,8 @@ function WorkspaceFaqs() {
   const [generateOpen, setGenerateOpen] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkBusy, setBulkBusy] = useState(false);
-  const [autoGenerating, setAutoGenerating] = useState(false);
-  const autoTriggeredRef = useRef(false);
-
-  useEffect(() => {
-    if (faqs.length === 0 && !autoTriggeredRef.current) {
-      autoTriggeredRef.current = true;
-      setAutoGenerating(true);
-      supabase.functions
-        .invoke("generate-faqs", { body: { workspace_id: workspaceId, count: 10 } })
-        .then(() => queryClient.invalidateQueries({ queryKey: ["admin", "faqs", workspaceId] }))
-        .catch((err) => toast.error("Auto-generation failed: " + (err?.message ?? "Unknown error")))
-        .finally(() => setAutoGenerating(false));
-    }
-  }, []);
+  // Auto-generation removed: content is generated manually via "Generate with AI"
+  // to ensure all generated FAQs are reviewed before publishing.
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ["admin", "faqs"] });
 
@@ -170,15 +157,7 @@ function WorkspaceFaqs() {
         </div>
       )}
 
-      {autoGenerating ? (
-        <div className="flex flex-col items-center gap-4 py-20 border-y border-border text-center">
-          <Loader2 className="h-7 w-7 animate-spin text-primary" />
-          <div>
-            <p className="text-sm font-medium">Generating FAQs…</p>
-            <p className="text-xs text-muted-foreground mt-1">AI is analysing your workspace to write Q&amp;A pairs. This takes about 20–40 seconds.</p>
-          </div>
-        </div>
-      ) : faqs.length === 0 ? (
+      {faqs.length === 0 ? (
         <div className="flex flex-col items-center gap-3 py-20 border-y border-border text-center">
           <Sparkles className="h-6 w-6 text-muted-foreground/50" />
           <p className="text-sm text-muted-foreground">No FAQs yet. Use "Generate with AI" to create your first batch.</p>

@@ -42,7 +42,11 @@ import { Route as AdminApiKeysRouteImport } from './routes/admin.api-keys'
 import { Route as AdminApiExplorerRouteImport } from './routes/admin.api-explorer'
 import { Route as AdminAnalyticsRouteImport } from './routes/admin.analytics'
 import { Route as AdminAiAssistantRouteImport } from './routes/admin.ai-assistant'
+import { Route as AdminProductsIndexRouteImport } from './routes/admin.products.index'
+import { Route as AdminNewsIndexRouteImport } from './routes/admin.news.index'
+import { Route as AdminFaqsIndexRouteImport } from './routes/admin.faqs.index'
 import { Route as AdminBlogsIndexRouteImport } from './routes/admin.blogs.index'
+import { Route as AdminArticlesIndexRouteImport } from './routes/admin.articles.index'
 import { Route as AdminWorkspacesIdRouteImport } from './routes/admin.workspaces.$id'
 import { Route as AdminCollectionsIdRouteImport } from './routes/admin.collections.$id'
 import { Route as AdminBlogsNewRouteImport } from './routes/admin.blogs.new'
@@ -258,9 +262,29 @@ const AdminAiAssistantRoute = AdminAiAssistantRouteImport.update({
   path: '/ai-assistant',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminProductsIndexRoute = AdminProductsIndexRouteImport.update({
+  id: '/products/',
+  path: '/products/',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminNewsIndexRoute = AdminNewsIndexRouteImport.update({
+  id: '/news/',
+  path: '/news/',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminFaqsIndexRoute = AdminFaqsIndexRouteImport.update({
+  id: '/faqs/',
+  path: '/faqs/',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminBlogsIndexRoute = AdminBlogsIndexRouteImport.update({
   id: '/blogs/',
   path: '/blogs/',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminArticlesIndexRoute = AdminArticlesIndexRouteImport.update({
+  id: '/articles/',
+  path: '/articles/',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminWorkspacesIdRoute = AdminWorkspacesIdRouteImport.update({
@@ -587,7 +611,11 @@ export interface FileRoutesByFullPath {
   '/admin/blogs/new': typeof AdminBlogsNewRoute
   '/admin/collections/$id': typeof AdminCollectionsIdRoute
   '/admin/workspaces/$id': typeof AdminWorkspacesIdRouteWithChildren
+  '/admin/articles/': typeof AdminArticlesIndexRoute
   '/admin/blogs/': typeof AdminBlogsIndexRoute
+  '/admin/faqs/': typeof AdminFaqsIndexRoute
+  '/admin/news/': typeof AdminNewsIndexRoute
+  '/admin/products/': typeof AdminProductsIndexRoute
   '/admin/workspaces/$id/about': typeof AdminWorkspacesIdAboutRoute
   '/admin/workspaces/$id/ai-assistant': typeof AdminWorkspacesIdAiAssistantRoute
   '/admin/workspaces/$id/analytics': typeof AdminWorkspacesIdAnalyticsRoute
@@ -669,7 +697,11 @@ export interface FileRoutesByTo {
   '/admin/blogs/$id': typeof AdminBlogsIdRoute
   '/admin/blogs/new': typeof AdminBlogsNewRoute
   '/admin/collections/$id': typeof AdminCollectionsIdRoute
+  '/admin/articles': typeof AdminArticlesIndexRoute
   '/admin/blogs': typeof AdminBlogsIndexRoute
+  '/admin/faqs': typeof AdminFaqsIndexRoute
+  '/admin/news': typeof AdminNewsIndexRoute
+  '/admin/products': typeof AdminProductsIndexRoute
   '/admin/workspaces/$id/about': typeof AdminWorkspacesIdAboutRoute
   '/admin/workspaces/$id/ai-assistant': typeof AdminWorkspacesIdAiAssistantRoute
   '/admin/workspaces/$id/analytics': typeof AdminWorkspacesIdAnalyticsRoute
@@ -747,7 +779,11 @@ export interface FileRoutesById {
   '/admin/blogs/new': typeof AdminBlogsNewRoute
   '/admin/collections/$id': typeof AdminCollectionsIdRoute
   '/admin/workspaces/$id': typeof AdminWorkspacesIdRouteWithChildren
+  '/admin/articles/': typeof AdminArticlesIndexRoute
   '/admin/blogs/': typeof AdminBlogsIndexRoute
+  '/admin/faqs/': typeof AdminFaqsIndexRoute
+  '/admin/news/': typeof AdminNewsIndexRoute
+  '/admin/products/': typeof AdminProductsIndexRoute
   '/admin/workspaces/$id/about': typeof AdminWorkspacesIdAboutRoute
   '/admin/workspaces/$id/ai-assistant': typeof AdminWorkspacesIdAiAssistantRoute
   '/admin/workspaces/$id/analytics': typeof AdminWorkspacesIdAnalyticsRoute
@@ -834,7 +870,11 @@ export interface FileRouteTypes {
     | '/admin/blogs/new'
     | '/admin/collections/$id'
     | '/admin/workspaces/$id'
+    | '/admin/articles/'
     | '/admin/blogs/'
+    | '/admin/faqs/'
+    | '/admin/news/'
+    | '/admin/products/'
     | '/admin/workspaces/$id/about'
     | '/admin/workspaces/$id/ai-assistant'
     | '/admin/workspaces/$id/analytics'
@@ -916,7 +956,11 @@ export interface FileRouteTypes {
     | '/admin/blogs/$id'
     | '/admin/blogs/new'
     | '/admin/collections/$id'
+    | '/admin/articles'
     | '/admin/blogs'
+    | '/admin/faqs'
+    | '/admin/news'
+    | '/admin/products'
     | '/admin/workspaces/$id/about'
     | '/admin/workspaces/$id/ai-assistant'
     | '/admin/workspaces/$id/analytics'
@@ -993,7 +1037,11 @@ export interface FileRouteTypes {
     | '/admin/blogs/new'
     | '/admin/collections/$id'
     | '/admin/workspaces/$id'
+    | '/admin/articles/'
     | '/admin/blogs/'
+    | '/admin/faqs/'
+    | '/admin/news/'
+    | '/admin/products/'
     | '/admin/workspaces/$id/about'
     | '/admin/workspaces/$id/ai-assistant'
     | '/admin/workspaces/$id/analytics'
@@ -1283,11 +1331,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminAiAssistantRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/products/': {
+      id: '/admin/products/'
+      path: '/products'
+      fullPath: '/admin/products/'
+      preLoaderRoute: typeof AdminProductsIndexRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/news/': {
+      id: '/admin/news/'
+      path: '/news'
+      fullPath: '/admin/news/'
+      preLoaderRoute: typeof AdminNewsIndexRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/faqs/': {
+      id: '/admin/faqs/'
+      path: '/faqs'
+      fullPath: '/admin/faqs/'
+      preLoaderRoute: typeof AdminFaqsIndexRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/blogs/': {
       id: '/admin/blogs/'
       path: '/blogs'
       fullPath: '/admin/blogs/'
       preLoaderRoute: typeof AdminBlogsIndexRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/articles/': {
+      id: '/admin/articles/'
+      path: '/articles'
+      fullPath: '/admin/articles/'
+      preLoaderRoute: typeof AdminArticlesIndexRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/workspaces/$id': {
@@ -1888,7 +1964,11 @@ interface AdminRouteChildren {
   AdminBlogStatsPostIdRoute: typeof AdminBlogStatsPostIdRoute
   AdminBlogsIdRoute: typeof AdminBlogsIdRoute
   AdminBlogsNewRoute: typeof AdminBlogsNewRoute
+  AdminArticlesIndexRoute: typeof AdminArticlesIndexRoute
   AdminBlogsIndexRoute: typeof AdminBlogsIndexRoute
+  AdminFaqsIndexRoute: typeof AdminFaqsIndexRoute
+  AdminNewsIndexRoute: typeof AdminNewsIndexRoute
+  AdminProductsIndexRoute: typeof AdminProductsIndexRoute
 }
 
 const AdminRouteChildren: AdminRouteChildren = {
@@ -1914,7 +1994,11 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminBlogStatsPostIdRoute: AdminBlogStatsPostIdRoute,
   AdminBlogsIdRoute: AdminBlogsIdRoute,
   AdminBlogsNewRoute: AdminBlogsNewRoute,
+  AdminArticlesIndexRoute: AdminArticlesIndexRoute,
   AdminBlogsIndexRoute: AdminBlogsIndexRoute,
+  AdminFaqsIndexRoute: AdminFaqsIndexRoute,
+  AdminNewsIndexRoute: AdminNewsIndexRoute,
+  AdminProductsIndexRoute: AdminProductsIndexRoute,
 }
 
 const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)

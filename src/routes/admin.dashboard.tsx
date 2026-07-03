@@ -1,10 +1,11 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { AiAssistant } from "@/components/dashboard/AiAssistant";
+import { createServerFn } from "@tanstack/react-start";
 import { queryOptions, useSuspenseQuery, useQuery } from "@tanstack/react-query";
 import {
   FileText, Eye, ArrowRight, Clock,
   BarChart2, Activity, Globe, Target, Lightbulb,
-  Key, Zap, FolderOpen,
+  Key, Zap, FolderOpen, Newspaper, BookOpen, HelpCircle, Package,
 } from "lucide-react";
 import { getDashboardStats } from "@/lib/apikey.functions";
 import { publishScheduledPosts } from "@/lib/schedule.functions";
@@ -13,6 +14,60 @@ import { getWorkspaceIntelligence } from "@/lib/onboarding.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 
+// ── All-content overview ──────────────────────────────────────────────────────
+interface ContentItem {
+  id: string;
+  title: string;
+  status: string;
+  updated_at: string;
+  workspace_id: string | null;
+  workspace_name: string | null;
+  type: "news" | "article" | "faq" | "product";
+}
+
+const getAllRecentContent = createServerFn({ method: "GET" }).handler(async (): Promise<{
+  news: ContentItem[];
+  articles: ContentItem[];
+  faqs: ContentItem[];
+  products: ContentItem[];
+}> => {
+  const { getAdminClient } = await import("@/lib/supabase.server");
+  const db = getAdminClient() as any;
+
+  const [newsRes, artRes, faqRes, prodRes] = await Promise.all([
+    db.from("news")
+      .select("id,title,status,updated_at,workspace_id,workspace:workspaces(name)")
+      .order("updated_at", { ascending: false }).limit(8),
+    db.from("articles")
+      .select("id,title,status,updated_at,workspace_id,workspace:workspaces(name)")
+      .order("updated_at", { ascending: false }).limit(8),
+    db.from("faqs")
+      .select("id,question,status,updated_at,workspace_id,workspace:workspaces(name)")
+      .order("updated_at", { ascending: false }).limit(8),
+    db.from("products")
+      .select("id,name,status,updated_at,workspace_id,workspace:workspaces(name)")
+      .order("updated_at", { ascending: false }).limit(8),
+  ]);
+
+  const toItem = (row: any, type: ContentItem["type"], titleKey = "title") => ({
+    id: row.id,
+    title: row[titleKey] ?? "Untitled",
+    status: row.status ?? "draft",
+    updated_at: row.updated_at,
+    workspace_id: row.workspace_id ?? null,
+    workspace_name: row.workspace?.name ?? null,
+    type,
+  });
+
+  return {
+    news:     (newsRes.data  ?? []).map((r: any) => toItem(r, "news")),
+    articles: (artRes.data   ?? []).map((r: any) => toItem(r, "article")),
+    faqs:     (faqRes.data   ?? []).map((r: any) => toItem(r, "faq", "question")),
+    products: (prodRes.data  ?? []).map((r: any) => toItem(r, "product", "name")),
+  };
+});
+
+// ── Queries ───────────────────────────────────────────────────────────────────
 const statsQuery = queryOptions({
   queryKey: ["admin", "dashboard"],
   queryFn: () => getDashboardStats(),
@@ -28,6 +83,13 @@ const intelligenceQuery = queryOptions({
   staleTime: 5 * 60 * 1000,
 });
 
+const contentQuery = queryOptions({
+  queryKey: ["admin", "dashboard-content"],
+  queryFn: () => getAllRecentContent(),
+  staleTime: 2 * 60 * 1000,
+});
+
+// ── Route ─────────────────────────────────────────────────────────────────────
 export const Route = createFileRoute("/admin/dashboard")({
   head: () => ({ meta: [{ title: "Dashboard — Lunar CMS" }] }),
   loader: async ({ context }) => {
@@ -40,6 +102,7 @@ export const Route = createFileRoute("/admin/dashboard")({
   ),
 });
 
+// ── Helpers ───────────────────────────────────────────────────────────────────
 function StatusDot({ status }: { status: string }) {
   return (
     <span className={cn(
@@ -50,6 +113,7 @@ function StatusDot({ status }: { status: string }) {
   );
 }
 
+// ── Workspace Intelligence ────────────────────────────────────────────────────
 function WorkspaceIntelligencePanel() {
   const { data } = useQuery(intelligenceQuery);
   if (!data?.workspace) return null;
@@ -64,7 +128,6 @@ function WorkspaceIntelligencePanel() {
 
   return (
     <section className="space-y-8">
-      {/* Workspace overview */}
       <div>
         <div className="flex items-center gap-2 border-b border-border pb-3 mb-0">
           <Globe className="h-3.5 w-3.5 text-muted-foreground" />
@@ -108,7 +171,6 @@ function WorkspaceIntelligencePanel() {
         )}
       </div>
 
-      {/* Competitors + Opportunities */}
       <div className="grid gap-8 lg:grid-cols-2">
         {competitors.length > 0 && (
           <div>
@@ -142,7 +204,7 @@ function WorkspaceIntelligencePanel() {
                 <Lightbulb className="h-3.5 w-3.5 text-amber-500" />
                 <h3 className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">Opportunities</h3>
               </div>
-              <Link to="/admin/blogs/new" className="text-xs text-primary hover:underline">Create post →</Link>
+              <Link to="/admin/workspaces" className="text-xs text-primary hover:underline">Open workspace →</Link>
             </div>
             {opportunities.slice(0, 5).map((co) => (
               <div key={co.id} className="flex items-center gap-2.5 border-b border-border py-3 last:border-0">
@@ -163,11 +225,85 @@ function WorkspaceIntelligencePanel() {
   );
 }
 
+// ── Content section (mini-list) ───────────────────────────────────────────────
+interface ContentSectionProps {
+  icon: React.ComponentType<{ className?: string }>;
+  title: string;
+  items: ContentItem[];
+  viewAllTo: string;
+  getDetailLink: (item: ContentItem) => { to: string; params: Record<string, string> };
+  getEditLink: (item: ContentItem) => { to: string; params: Record<string, string> };
+}
+
+function ContentSection({ icon: Icon, title, items, viewAllTo, getDetailLink, getEditLink }: ContentSectionProps) {
+  if (items.length === 0) return null;
+  return (
+    <section>
+      <div className="flex items-center justify-between border-b border-border pb-3">
+        <div className="flex items-center gap-2">
+          <Icon className="h-3.5 w-3.5 text-muted-foreground" />
+          <h2 className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">{title}</h2>
+        </div>
+        <Link to={viewAllTo as "/"} className="flex items-center gap-1 text-xs text-primary hover:underline">
+          View all <ArrowRight className="h-3 w-3" />
+        </Link>
+      </div>
+      {items.slice(0, 5).map((item) => {
+        const hasWorkspace = Boolean(item.workspace_id);
+        const detail = hasWorkspace ? getDetailLink(item) : null;
+        const edit = hasWorkspace ? getEditLink(item) : null;
+        return (
+          <div key={item.id} className="flex items-center gap-3 border-b border-border py-3 last:border-0">
+            <StatusDot status={item.status} />
+            {detail ? (
+              <Link
+                to={detail.to as "/"}
+                params={detail.params}
+                className="min-w-0 flex-1 truncate text-sm font-medium hover:text-primary transition-colors"
+              >
+                {item.title || "Untitled"}
+              </Link>
+            ) : (
+              <span className="min-w-0 flex-1 truncate text-sm font-medium text-muted-foreground">
+                {item.title || "Untitled"}
+              </span>
+            )}
+            {item.workspace_name && (
+              <span className="shrink-0 text-[10px] text-muted-foreground/60 hidden md:block">
+                {item.workspace_name}
+              </span>
+            )}
+            {edit && (
+              <Link
+                to={edit.to as "/"}
+                params={edit.params}
+                className="shrink-0 text-[10px] text-primary hover:underline hidden sm:block"
+              >
+                Edit
+              </Link>
+            )}
+            <span className={cn(
+              "shrink-0 text-xs",
+              item.status === "published" ? "text-emerald-600" :
+              item.status === "scheduled" ? "text-amber-600" : "text-muted-foreground",
+            )}>
+              {item.status}
+            </span>
+            <span className="shrink-0 text-xs text-muted-foreground">{formatBlogDate(item.updated_at)}</span>
+          </div>
+        );
+      })}
+    </section>
+  );
+}
+
+// ── Dashboard ─────────────────────────────────────────────────────────────────
 function Dashboard() {
   const { data: stats } = useSuspenseQuery(statsQuery);
+  const { data: content } = useQuery(contentQuery);
 
   return (
-    <div className="space-y-10">
+    <div className="space-y-10 p-8">
       {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <div>
@@ -182,7 +318,7 @@ function Dashboard() {
         </Link>
       </div>
 
-      {/* Stats bar — flat, no cards */}
+      {/* Stats bar */}
       <div className="flex divide-x divide-border border-y border-border">
         {[
           { label: "Total Posts",  value: stats.total },
@@ -245,6 +381,7 @@ function Dashboard() {
       {/* Content + Actions */}
       <div className="grid gap-10 lg:grid-cols-[1fr_280px]">
         <div className="space-y-10">
+
           {/* Top Posts */}
           <section>
             <div className="flex items-center justify-between border-b border-border pb-3">
@@ -317,7 +454,6 @@ function Dashboard() {
               stats.recent.map((post) => (
                 <div key={post.id} className="flex items-center gap-3 border-b border-border py-3 last:border-0">
                   <StatusDot status={post.status} />
-                  {/* Title links to the workspace editor if we have a workspace_id */}
                   {post.workspace_id ? (
                     <Link
                       to="/admin/workspaces/$id/blogs/$postId/edit"
@@ -351,6 +487,78 @@ function Dashboard() {
               ))
             )}
           </section>
+
+          {/* News */}
+          {content && (
+            <ContentSection
+              icon={Newspaper}
+              title="Recent News"
+              items={content.news}
+              viewAllTo="/admin/news"
+              getDetailLink={(item) => ({
+                to: "/admin/workspaces/$id/news/$newsId",
+                params: { id: item.workspace_id ?? "", newsId: item.id },
+              })}
+              getEditLink={(item) => ({
+                to: "/admin/workspaces/$id/news/$newsId/edit",
+                params: { id: item.workspace_id ?? "", newsId: item.id },
+              })}
+            />
+          )}
+
+          {/* Articles */}
+          {content && (
+            <ContentSection
+              icon={BookOpen}
+              title="Recent Articles"
+              items={content.articles}
+              viewAllTo="/admin/articles"
+              getDetailLink={(item) => ({
+                to: "/admin/workspaces/$id/articles/$articleId",
+                params: { id: item.workspace_id ?? "", articleId: item.id },
+              })}
+              getEditLink={(item) => ({
+                to: "/admin/workspaces/$id/articles/$articleId/edit",
+                params: { id: item.workspace_id ?? "", articleId: item.id },
+              })}
+            />
+          )}
+
+          {/* FAQs */}
+          {content && (
+            <ContentSection
+              icon={HelpCircle}
+              title="Recent FAQs"
+              items={content.faqs}
+              viewAllTo="/admin/faqs"
+              getDetailLink={(item) => ({
+                to: "/admin/workspaces/$id/faqs/$faqId",
+                params: { id: item.workspace_id ?? "", faqId: item.id },
+              })}
+              getEditLink={(item) => ({
+                to: "/admin/workspaces/$id/faqs/$faqId/edit",
+                params: { id: item.workspace_id ?? "", faqId: item.id },
+              })}
+            />
+          )}
+
+          {/* Products */}
+          {content && (
+            <ContentSection
+              icon={Package}
+              title="Recent Products"
+              items={content.products}
+              viewAllTo="/admin/products"
+              getDetailLink={(item) => ({
+                to: "/admin/workspaces/$id/products/$productId",
+                params: { id: item.workspace_id ?? "", productId: item.id },
+              })}
+              getEditLink={(item) => ({
+                to: "/admin/workspaces/$id/products/$productId/edit",
+                params: { id: item.workspace_id ?? "", productId: item.id },
+              })}
+            />
+          )}
         </div>
 
         {/* AI Assistant */}

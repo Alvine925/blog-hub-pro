@@ -1,0 +1,428 @@
+# PROMPT – IMPLEMENT SOCIAL SHARING SUPPORT IN LUNAR CMS REST API
+
+## Objective
+
+Extend the Lunar CMS REST API to fully support social sharing for all content types.
+
+This functionality is **not responsible for rendering the share buttons or modal**. Those belong to the client website.
+
+Instead, Lunar CMS should expose all the metadata required for client websites to easily implement professional social sharing.
+
+This feature must work for:
+
+* Blog Posts
+* Articles
+* News
+* Products
+* Future content types
+
+The implementation should be API-first and automatically available through all REST endpoints.
+
+---
+
+# IMPORTANT ARCHITECTURE
+
+Lunar CMS is the Content Provider.
+
+The client website is responsible for:
+
+* Rendering the page
+* Rendering share buttons
+* Opening the share modal
+* Setting page metadata
+* Sharing its own URL
+
+Lunar CMS is responsible for providing all metadata required to accomplish this.
+
+The API should never generate Facebook or LinkedIn URLs.
+
+The API should never open share dialogs.
+
+The API should never return links pointing back to Lunar CMS.
+
+The shared URL must always be the client's website URL.
+
+---
+
+# IMPLEMENT SHARE METADATA
+
+Every content response should expose a dedicated object named:
+
+```json
+social
+```
+
+Example
+
+```json
+{
+  "social": {
+    "title": "...",
+    "description": "...",
+    "image": "...",
+    "alt": "...",
+    "hashtags": [],
+    "twitterCard": "summary_large_image",
+    "type": "article"
+  }
+}
+```
+
+The values should be generated using the following priority.
+
+Title
+
+1. social_title
+2. seo_title
+3. title
+
+Description
+
+1. social_description
+2. seo_description
+3. excerpt
+4. short description
+
+Image
+
+1. social_image
+2. featured_image
+3. cover_image
+
+Alt Text
+
+Use the featured image alt text.
+
+Twitter Card
+
+Default
+
+```
+summary_large_image
+```
+
+Open Graph Type
+
+Blog
+
+```
+article
+```
+
+Products
+
+```
+product
+```
+
+News
+
+```
+article
+```
+
+Articles
+
+```
+article
+```
+
+FAQs
+
+```
+website
+```
+
+---
+
+# DATABASE
+
+Review every content table.
+
+If the following columns do not exist, create migrations.
+
+social_title
+
+social_description
+
+social_image
+
+social_image_alt
+
+social_hashtags
+
+open_graph_type
+
+twitter_card
+
+These should be optional.
+
+When empty, automatically derive values using the fallback rules.
+
+---
+
+# CONTENT GENERATION
+
+When AI generates content it should also generate:
+
+* Social Title
+* Social Description
+* Suggested Hashtags
+* Suggested Social Image Prompt
+
+These should be stored alongside the content.
+
+---
+
+# API RESPONSES
+
+Update every endpoint.
+
+Blogs
+
+Articles
+
+News
+
+Products
+
+FAQs
+
+Single item endpoints
+
+Collection endpoints
+
+Search endpoints
+
+Responses should now include
+
+```json
+social
+```
+
+without requiring additional API calls.
+
+---
+
+# API VERSIONING
+
+This is a backward-compatible enhancement.
+
+Do not break existing integrations.
+
+Only extend the response.
+
+---
+
+# API DOCUMENTATION
+
+Update the Developer Documentation.
+
+Document
+
+Social Metadata
+
+Purpose
+
+Fields
+
+Fallback Rules
+
+Response Examples
+
+Best Practices
+
+Explain that developers should use this metadata to populate Open Graph tags and build their share interfaces.
+
+---
+
+# CLIENT IMPLEMENTATION GUIDES
+
+Update the documentation with a new section:
+
+## Social Sharing
+
+Explain that Lunar CMS does **not** render share buttons.
+
+Instead, developers should:
+
+1. Fetch the content.
+2. Use the returned social object.
+3. Populate Open Graph and Twitter Card meta tags.
+4. Share the current page URL on their own website.
+
+---
+
+# FRAMEWORK EXAMPLES
+
+Provide complete integration examples for:
+
+Next.js
+
+React
+
+Vue
+
+Nuxt
+
+Laravel
+
+PHP
+
+Flutter
+
+React Native
+
+Angular
+
+Show how to:
+
+* Read the social object.
+* Populate metadata.
+* Display share buttons.
+* Share the client's page URL.
+
+---
+
+# SHARE COMPONENTS
+
+Generate reusable share components for:
+
+React
+
+Next.js
+
+Vue
+
+Laravel Blade
+
+Flutter
+
+These components should consume the API response and automatically use:
+
+social.title
+
+social.description
+
+social.image
+
+Current Page URL
+
+The share URL should always be:
+
+```
+window.location.href
+```
+
+or the framework equivalent.
+
+Never use a Lunar CMS URL.
+
+---
+
+# OPEN GRAPH SUPPORT
+
+Document how developers should generate
+
+og:title
+
+og:description
+
+og:image
+
+og:type
+
+twitter:title
+
+twitter:description
+
+twitter:image
+
+twitter:card
+
+using the returned API data.
+
+---
+
+# SEO
+
+Ensure every content type exposes enough metadata for:
+
+Facebook
+
+LinkedIn
+
+X (Twitter)
+
+WhatsApp
+
+Telegram
+
+Slack
+
+Discord
+
+Google Discover
+
+without requiring additional API requests.
+
+---
+
+# FUTURE CONTENT TYPES
+
+The implementation must automatically support future modules.
+
+If new content types such as:
+
+Events
+
+Courses
+
+Testimonials
+
+Services
+
+Downloads
+
+Portfolios
+
+are added later, they should automatically expose the same social metadata structure.
+
+Avoid duplicating logic.
+
+Create a reusable SocialMetadata service/helper that every content transformer uses.
+
+---
+
+# TESTING
+
+Verify that:
+
+✓ Every content type exposes the social object.
+
+✓ Missing fields correctly use fallback values.
+
+✓ Existing endpoints remain backward compatible.
+
+✓ Documentation has been updated.
+
+✓ Framework examples are available.
+
+✓ Share metadata is available from a single API request.
+
+✓ The implementation is reusable and easily extendable.
+
+---
+
+# DELIVERABLES
+
+Provide a report containing:
+
+1. Database changes made.
+2. API endpoints updated.
+3. Shared SocialMetadata service created.
+4. Documentation pages added or updated.
+5. Framework integration examples created.
+6. Tests completed.
+7. Any issues discovered during implementation.
+8. Confirmation that Lunar CMS now exposes complete social sharing metadata through the REST API while leaving the actual sharing experience to client websites.

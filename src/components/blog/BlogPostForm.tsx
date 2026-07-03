@@ -283,6 +283,7 @@ export function BlogPostForm({ initial, workspaceId }: BlogPostFormProps) {
       upsert({
         data: {
           id: initial?.id,
+          workspaceId: workspaceId,
           title,
           slug: slugify(slug || title),
           excerpt,
@@ -346,11 +347,10 @@ export function BlogPostForm({ initial, workspaceId }: BlogPostFormProps) {
 
         {/* Draft from idea — new posts only */}
         {!isEdit && (
-          <div className="flex items-center gap-3 rounded-xl border border-dashed border-primary/30 bg-primary/5 px-4 py-3">
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-primary">Have an idea?</p>
-              <p className="text-xs text-muted-foreground">Describe it and AI will draft a title, outline, and opening paragraph instantly.</p>
-            </div>
+          <div className="flex items-center justify-between gap-3 rounded-lg border border-border bg-muted/20 px-4 py-3">
+            <p className="text-sm text-muted-foreground">
+              Starting from scratch? Describe your idea and get a draft title, outline, and opening paragraph.
+            </p>
             <DraftFromIdeaPanel
               workspaceId={workspaceId}
               onDraftReady={({ title: t, excerpt: e, content: c }) => {

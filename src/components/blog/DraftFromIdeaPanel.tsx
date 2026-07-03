@@ -1,27 +1,26 @@
 /**
  * DraftFromIdeaPanel
  *
- * A floating "Draft from idea" dialog on the New Post page.
- * The user describes their idea; AI returns a title, excerpt,
- * outline, and first paragraph which are auto-filled into the form.
- * When workspaceId is provided the prompt and examples are tailored
- * to the workspace's industry, audience, and brand voice.
+ * A "Draft from idea" dialog on the New Post page.
+ * Phase-based: input → generating → result.
+ * After generation the input section collapses — only the result is shown.
  */
 
 import { useState, useEffect } from "react";
 import { createServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Sparkles, Loader2, Lightbulb, X } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+
+// ── Types ─────────────────────────────────────────────────────────────────────
 
 interface DraftResult {
   title: string;
@@ -36,7 +35,6 @@ interface WorkspaceContext {
   targetAudience: string | null;
   brandVoice: string | null;
   primaryTopics: string[];
-  suggestedCategories: string[];
   description: string | null;
 }
 
@@ -45,12 +43,9 @@ interface DraftFromIdeaPanelProps {
   workspaceId?: string;
 }
 
-const GENERIC_EXAMPLES = [
-  "A beginner's guide to building with AI APIs in 2025",
-  "Why serverless is the right choice for early-stage startups",
-  "10 Tailwind CSS tricks most developers don't know",
-  "How we cut our infrastructure costs by 60% using edge computing",
-];
+type Phase = "input" | "generating" | "result";
+
+// ── Server fn ─────────────────────────────────────────────────────────────────
 
 const getWorkspaceContext = createServerFn({ method: "GET" })
   .validator((input: { workspaceId: string }) => input)
@@ -71,7 +66,6 @@ const getWorkspaceContext = createServerFn({ method: "GET" })
         targetAudience: ws.target_audience ?? null,
         brandVoice: ws.brand_voice ?? null,
         primaryTopics: (ws.content_pillars as string[] | null) ?? (aiCtx?.primaryTopics as string[] | null) ?? [],
-        suggestedCategories: (aiCtx?.suggestedCategories as string[] | null) ?? [],
         description: ws.description ?? null,
       };
     } catch {
@@ -79,11 +73,18 @@ const getWorkspaceContext = createServerFn({ method: "GET" })
     }
   });
 
-function buildIdeaExamples(ctx: WorkspaceContext | null): string[] {
-  if (!ctx || !ctx.industry) return GENERIC_EXAMPLES;
-  const industry = ctx.industry;
-  const audience = ctx.targetAudience ?? "customers";
-  const topics = ctx.primaryTopics?.slice(0, 2) ?? [];
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+const GENERIC_EXAMPLES = [
+  "A beginner's guide to building with AI APIs in 2025",
+  "Why serverless is the right choice for early-stage startups",
+  "10 Tailwind CSS tricks most developers don't know",
+  "How we cut infrastructure costs by 60% using edge computing",
+];
+
+function buildExamples(ctx: WorkspaceContext | null): string[] {
+  if (!ctx?.industry) return GENERIC_EXAMPLES;
+  const { industry, targetAudience: audience = "customers", primaryTopics: topics = [] } = ctx;
   const examples: string[] = [];
   if (topics[0]) examples.push(`The ultimate guide to ${topics[0].toLowerCase()} for ${audience}`);
   if (topics[1]) examples.push(`Top trends in ${topics[1].toLowerCase()} your business needs to know`);
@@ -93,64 +94,47 @@ function buildIdeaExamples(ctx: WorkspaceContext | null): string[] {
 }
 
 function buildSystemPrompt(ctx: WorkspaceContext | null): string {
-  const contextLines: string[] = [];
+  const lines: string[] = [];
   if (ctx) {
-    if (ctx.name) contextLines.push(`Company/Workspace: ${ctx.name}`);
-    if (ctx.industry) contextLines.push(`Industry: ${ctx.industry}`);
-    if (ctx.targetAudience) contextLines.push(`Target audience: ${ctx.targetAudience}`);
-    if (ctx.brandVoice) contextLines.push(`Brand voice: ${ctx.brandVoice}`);
-    if (ctx.description) contextLines.push(`About: ${ctx.description}`);
-    if (ctx.primaryTopics?.length) contextLines.push(`Key topics: ${ctx.primaryTopics.slice(0, 5).join(", ")}`);
+    if (ctx.name)           lines.push(`Company: ${ctx.name}`);
+    if (ctx.industry)       lines.push(`Industry: ${ctx.industry}`);
+    if (ctx.targetAudience) lines.push(`Target audience: ${ctx.targetAudience}`);
+    if (ctx.brandVoice)     lines.push(`Brand voice: ${ctx.brandVoice}`);
+    if (ctx.description)    lines.push(`About: ${ctx.description}`);
+    if (ctx.primaryTopics?.length) lines.push(`Key topics: ${ctx.primaryTopics.slice(0, 5).join(", ")}`);
   }
-
-  const contextBlock = contextLines.length
-    ? `\n\nWORKSPACE CONTEXT (use this to tailor the draft):\n${contextLines.join("\n")}\n`
+  const ctx_block = lines.length
+    ? `\n\nWORKSPACE CONTEXT:\n${lines.join("\n")}\n`
     : "";
 
-  return `You are a professional blog post drafter. Given a rough idea, return ONLY valid JSON — no markdown fences, no prose, no extra text. Raw JSON only.${contextBlock}
-Return an object with this exact shape:
+  return `You are a professional blog post drafter. Return ONLY valid JSON — no markdown fences, no prose.${ctx_block}
+Return:
 {
-  "title": "A compelling, specific blog post title tailored to the workspace context",
-  "excerpt": "A 1–2 sentence teaser that speaks directly to the target audience",
-  "outline": [
-    "Introduction — brief description of what this section covers",
-    "Section 1: [name] — brief description",
-    "Section 2: [name] — brief description",
-    "Section 3: [name] — brief description",
-    "Conclusion — key takeaway and call to action"
-  ],
-  "first_paragraph": "A full, engaging opening paragraph (3–5 sentences) written in the brand voice that hooks the reader"
+  "title": "A compelling, specific post title",
+  "excerpt": "1–2 sentence teaser for the target audience",
+  "outline": ["Introduction — ...", "Section 1: ... — ...", "Section 2: ... — ...", "Conclusion — ..."],
+  "first_paragraph": "Engaging 3–5 sentence opening paragraph in the brand voice"
 }`;
 }
 
 function outlineToHtml(outline: string[], firstParagraph: string): string {
   const lines: string[] = [];
-
-  if (firstParagraph) {
-    lines.push(`<p>${firstParagraph}</p>`);
-    lines.push("");
-  }
-
-  outline.forEach((section) => {
+  if (firstParagraph) { lines.push(`<p>${firstParagraph}</p>`); lines.push(""); }
+  for (const section of outline) {
     const clean = section.replace(/^#+\s*/, "").replace(/^\d+\.\s*/, "").trim();
-    const isHeading = section.match(/^#{1,3}\s/) || section.match(/^(Introduction|Conclusion|Section\s)/i);
-
-    if (isHeading || clean.length < 80) {
-      lines.push(`<h2>${clean}</h2>`);
-      lines.push("<p></p>");
-    } else {
-      lines.push(`<p>${clean}</p>`);
-    }
-  });
-
+    const isHeading = /^(Introduction|Conclusion|Section\s)/i.test(section) || section.match(/^#{1,3}\s/) || clean.length < 80;
+    lines.push(isHeading ? `<h2>${clean}</h2><p></p>` : `<p>${clean}</p>`);
+  }
   return lines.join("\n");
 }
 
+// ── Component ─────────────────────────────────────────────────────────────────
+
 export function DraftFromIdeaPanel({ onDraftReady, workspaceId }: DraftFromIdeaPanelProps) {
   const [open, setOpen] = useState(false);
+  const [phase, setPhase] = useState<Phase>("input");
   const [idea, setIdea] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [preview, setPreview] = useState<DraftResult | null>(null);
+  const [result, setResult] = useState<DraftResult | null>(null);
   const [wsContext, setWsContext] = useState<WorkspaceContext | null>(null);
 
   useEffect(() => {
@@ -160,35 +144,42 @@ export function DraftFromIdeaPanel({ onDraftReady, workspaceId }: DraftFromIdeaP
       .catch(() => {});
   }, [workspaceId]);
 
-  const examples = buildIdeaExamples(wsContext);
+  const examples = buildExamples(wsContext);
   const systemPrompt = buildSystemPrompt(wsContext);
+
+  function reset() {
+    setPhase("input");
+    setIdea("");
+    setResult(null);
+  }
+
+  function handleClose() {
+    setOpen(false);
+    // Delay state reset so the dialog close animation completes cleanly
+    setTimeout(reset, 300);
+  }
 
   async function handleGenerate() {
     const trimmed = idea.trim();
     if (!trimmed) { toast.error("Describe your idea first"); return; }
 
-    setLoading(true);
-    setPreview(null);
+    setPhase("generating");
+    setResult(null);
 
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      const authHeaders = session?.access_token
+      const headers = session?.access_token
         ? { Authorization: `Bearer ${session.access_token}` }
         : {};
       const { data, error } = await supabase.functions.invoke("ai-generate", {
-        body: {
-          task: "custom",
-          system_prompt: systemPrompt,
-          prompt: trimmed,
-        },
-        headers: authHeaders,
+        body: { task: "custom", system_prompt: systemPrompt, prompt: trimmed },
+        headers,
       });
 
       if (error) throw new Error(error.message);
       if (data?.error) throw new Error(data.error);
 
       const raw: string = data.result ?? "";
-
       let parsed: DraftResult | null = null;
       try {
         const cleaned = raw.replace(/^```(?:json)?\n?/m, "").replace(/\n?```$/m, "").trim();
@@ -203,158 +194,202 @@ export function DraftFromIdeaPanel({ onDraftReady, workspaceId }: DraftFromIdeaP
         };
       }
 
-      setPreview(parsed);
-      if (data.simulated) {
-        toast.info("Showing simulated draft — connect AI for real drafts", { duration: 4000 });
-      }
+      setResult(parsed);
+      setPhase("result");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Draft generation failed");
-    } finally {
-      setLoading(false);
+      setPhase("input");
     }
   }
 
   function handleApply() {
-    if (!preview) return;
-    const content = outlineToHtml(preview.outline, preview.first_paragraph);
-    onDraftReady({ title: preview.title, excerpt: preview.excerpt, content });
+    if (!result) return;
+    const content = outlineToHtml(result.outline, result.first_paragraph);
+    onDraftReady({ title: result.title, excerpt: result.excerpt, content });
     setOpen(false);
-    setPreview(null);
-    setIdea("");
-    toast.success("Draft applied — continue writing from here!");
-  }
-
-  function handleClose() {
-    setOpen(false);
-    setPreview(null);
-    setIdea("");
+    setTimeout(reset, 300);
+    toast.success("Draft applied — continue writing from here.");
   }
 
   const placeholderHint = wsContext?.industry
     ? `e.g. A practical guide to ${wsContext.industry.toLowerCase()} trends for ${wsContext.targetAudience ?? "your audience"}…`
-    : "e.g. A practical guide to reducing API costs using caching strategies in Next.js apps…";
+    : "e.g. A guide to reducing API costs using caching strategies in Next.js…";
 
   return (
     <>
-      <Button
+      {/* ── Trigger ────────────────────────────────────────────────────────── */}
+      <button
         type="button"
-        variant="outline"
-        size="sm"
         onClick={() => setOpen(true)}
-        className="gap-2 border-dashed border-primary/40 text-primary hover:border-primary hover:bg-primary/5"
+        className="text-sm font-medium text-muted-foreground underline-offset-4 hover:text-foreground hover:underline transition-colors"
       >
-        <Lightbulb className="h-4 w-4" />
         Draft from idea
-      </Button>
+      </button>
 
+      {/* ── Dialog ─────────────────────────────────────────────────────────── */}
       <Dialog open={open} onOpenChange={(v) => { if (!v) handleClose(); }}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Sparkles className="h-5 w-5 text-primary" />
-              Draft from idea
-              {wsContext?.name && (
-                <span className="text-xs font-normal text-muted-foreground ml-1">
-                  — tailored to {wsContext.name}
-                </span>
+        <DialogContent className="max-w-xl p-0 overflow-hidden">
+          <div className="flex flex-col">
+
+            {/* Header */}
+            <DialogHeader className="px-6 pt-5 pb-4 border-b border-border">
+              <div className="flex items-baseline gap-2">
+                <DialogTitle className="text-base font-semibold tracking-tight">
+                  Draft from idea
+                </DialogTitle>
+                {wsContext?.name && (
+                  <span className="text-xs text-muted-foreground">
+                    — tailored to {wsContext.name}
+                  </span>
+                )}
+              </div>
+            </DialogHeader>
+
+            {/* Body */}
+            <div className="px-6 py-5 space-y-5 max-h-[75vh] overflow-y-auto">
+
+              {/* Workspace context — always visible */}
+              {wsContext && (wsContext.industry || wsContext.targetAudience || wsContext.brandVoice) && (
+                <div className="rounded-lg bg-muted/40 px-4 py-3 text-xs text-muted-foreground space-y-0.5">
+                  {wsContext.industry && (
+                    <p><span className="font-medium text-foreground">Industry:</span> {wsContext.industry}</p>
+                  )}
+                  {wsContext.targetAudience && (
+                    <p><span className="font-medium text-foreground">Audience:</span> {wsContext.targetAudience}</p>
+                  )}
+                  {wsContext.brandVoice && (
+                    <p><span className="font-medium text-foreground">Tone:</span> {wsContext.brandVoice}</p>
+                  )}
+                </div>
               )}
-            </DialogTitle>
-          </DialogHeader>
 
-          <div className="space-y-5 pt-1">
-            {wsContext && (wsContext.industry || wsContext.targetAudience) && (
-              <div className="rounded-lg border border-border/60 bg-muted/30 px-4 py-3 text-xs text-muted-foreground space-y-1">
-                {wsContext.industry && <p><span className="font-medium text-foreground">Industry:</span> {wsContext.industry}</p>}
-                {wsContext.targetAudience && <p><span className="font-medium text-foreground">Audience:</span> {wsContext.targetAudience}</p>}
-                {wsContext.brandVoice && <p><span className="font-medium text-foreground">Tone:</span> {wsContext.brandVoice}</p>}
-              </div>
-            )}
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Describe your idea</label>
-              <Textarea
-                value={idea}
-                onChange={(e) => setIdea(e.target.value)}
-                placeholder={placeholderHint}
-                rows={4}
-                className="resize-none"
-                disabled={loading}
-              />
-              <div className="flex flex-wrap gap-1.5">
-                {examples.map((ex) => (
-                  <button
-                    key={ex}
-                    type="button"
-                    onClick={() => setIdea(ex)}
-                    className="rounded-full border border-border/60 px-2.5 py-0.5 text-xs text-muted-foreground hover:border-primary/40 hover:text-foreground transition-colors"
-                  >
-                    {ex}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <Button
-              onClick={handleGenerate}
-              disabled={loading || !idea.trim()}
-              className="gap-2 w-full"
-            >
-              {loading
-                ? <><Loader2 className="h-4 w-4 animate-spin" /> Drafting…</>
-                : <><Sparkles className="h-4 w-4" /> Generate draft</>}
-            </Button>
-
-            {preview && (
-              <div className="space-y-4 rounded-xl border border-border bg-muted/20 p-5">
-                <div>
-                  <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground mb-1">Title</p>
-                  <p className="text-base font-semibold">{preview.title}</p>
-                </div>
-
-                {preview.excerpt && (
-                  <div>
-                    <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground mb-1">Excerpt</p>
-                    <p className="text-sm text-muted-foreground">{preview.excerpt}</p>
+              {/* ── INPUT PHASE ─────────────────────────────────────────────── */}
+              {phase === "input" && (
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Describe your idea</label>
+                    <Textarea
+                      value={idea}
+                      onChange={(e) => setIdea(e.target.value)}
+                      placeholder={placeholderHint}
+                      rows={4}
+                      className="resize-none text-sm"
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) handleGenerate();
+                      }}
+                    />
                   </div>
-                )}
 
-                <div>
-                  <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground mb-2">Outline</p>
-                  <div className="space-y-1">
-                    {preview.outline.map((section, i) => (
-                      <div key={i} className="flex items-start gap-2">
-                        <Badge variant="secondary" className="text-[10px] min-w-[1.5rem] justify-center shrink-0 mt-0.5">
-                          {i + 1}
-                        </Badge>
-                        <p className="text-sm">{section.replace(/^#+\s*/, "").replace(/^\d+\.\s*/, "")}</p>
-                      </div>
-                    ))}
+                  {/* Example suggestions */}
+                  <div className="space-y-1.5">
+                    <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground/60">
+                      Suggestions
+                    </p>
+                    <div className="flex flex-col gap-1">
+                      {examples.map((ex) => (
+                        <button
+                          key={ex}
+                          type="button"
+                          onClick={() => setIdea(ex)}
+                          className="text-left text-xs text-muted-foreground px-3 py-2 rounded-md border border-border/50 hover:border-border hover:text-foreground hover:bg-muted/30 transition-colors"
+                        >
+                          {ex}
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                </div>
 
-                {preview.first_paragraph && (
-                  <div>
-                    <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground mb-1">Opening paragraph</p>
-                    <p className="text-sm text-muted-foreground leading-relaxed">{preview.first_paragraph}</p>
-                  </div>
-                )}
-
-                <div className="flex gap-2 pt-2">
-                  <Button onClick={handleApply} className="flex-1 gap-2">
-                    <Sparkles className="h-4 w-4" />
-                    Apply draft to editor
-                  </Button>
                   <Button
-                    variant="outline"
-                    onClick={() => { setPreview(null); }}
-                    className="gap-1.5"
+                    onClick={handleGenerate}
+                    disabled={!idea.trim()}
+                    className="w-full"
+                    size="sm"
                   >
-                    <X className="h-4 w-4" />
-                    Regenerate
+                    Generate draft
                   </Button>
                 </div>
-              </div>
-            )}
+              )}
+
+              {/* ── GENERATING PHASE ────────────────────────────────────────── */}
+              {phase === "generating" && (
+                <div className="flex flex-col items-center justify-center gap-3 py-16 text-center">
+                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium">Writing your draft…</p>
+                    <p className="text-xs text-muted-foreground">This takes about 10–20 seconds.</p>
+                  </div>
+                </div>
+              )}
+
+              {/* ── RESULT PHASE ────────────────────────────────────────────── */}
+              {phase === "result" && result && (
+                <div className="space-y-5">
+
+                  {/* Title */}
+                  <div>
+                    <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground mb-1.5">
+                      Title
+                    </p>
+                    <p className="text-lg font-semibold leading-snug">{result.title}</p>
+                  </div>
+
+                  {/* Excerpt */}
+                  {result.excerpt && (
+                    <div>
+                      <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground mb-1.5">
+                        Excerpt
+                      </p>
+                      <p className="text-sm text-muted-foreground leading-relaxed">{result.excerpt}</p>
+                    </div>
+                  )}
+
+                  {/* Outline */}
+                  {result.outline.length > 0 && (
+                    <div>
+                      <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground mb-2">
+                        Outline
+                      </p>
+                      <ol className="space-y-1.5">
+                        {result.outline.map((section, i) => (
+                          <li key={i} className="flex items-start gap-2.5 text-sm">
+                            <span className="shrink-0 mt-0.5 w-5 h-5 rounded-full bg-muted flex items-center justify-center text-[10px] font-bold text-muted-foreground tabular-nums">
+                              {i + 1}
+                            </span>
+                            <span>{section.replace(/^#+\s*/, "").replace(/^\d+\.\s*/, "")}</span>
+                          </li>
+                        ))}
+                      </ol>
+                    </div>
+                  )}
+
+                  {/* Opening paragraph */}
+                  {result.first_paragraph && (
+                    <div>
+                      <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground mb-1.5">
+                        Opening paragraph
+                      </p>
+                      <p className="text-sm text-muted-foreground leading-relaxed italic">
+                        {result.first_paragraph}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Actions */}
+                  <div className="flex gap-2 pt-1 border-t border-border">
+                    <Button onClick={handleApply} size="sm" className="flex-1">
+                      Use this draft
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setPhase("input")}
+                    >
+                      Try another idea
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </DialogContent>
       </Dialog>

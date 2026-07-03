@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { queryOptions, useSuspenseQuery, useQueryClient, useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useState, useMemo, useEffect, useRef } from "react";
+import { useState, useMemo } from "react";
 import { toast } from "sonner";
 import {
   Plus, Pencil, Trash2, Send, Eye, Clock, BookOpen, Heart, MessageSquare,
@@ -10,7 +10,6 @@ import {
 import { GenerateContentDialog } from "@/components/ai/GenerateContentDialog";
 import { adminListArticles, deleteArticle, setArticleStatus, type ArticleSummary } from "@/lib/article.functions";
 import { getBatchContentEngagementStats } from "@/lib/engagement.functions";
-import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -60,8 +59,6 @@ function WorkspaceArticles() {
   const [generateOpen, setGenerateOpen] = useState(false);
   const [selected, setSelected]       = useState<Set<string>>(new Set());
   const [bulkBusy, setBulkBusy]       = useState(false);
-  const [autoGenerating, setAutoGenerating] = useState(false);
-  const autoTriggeredRef = useRef(false);
 
   const articleIds = useMemo(() => articles.map((a) => a.id), [articles]);
   const doGetBatchStats = useServerFn(getBatchContentEngagementStats);
@@ -72,17 +69,8 @@ function WorkspaceArticles() {
     staleTime: 60_000,
   });
 
-  useEffect(() => {
-    if (articles.length === 0 && !autoTriggeredRef.current) {
-      autoTriggeredRef.current = true;
-      setAutoGenerating(true);
-      supabase.functions
-        .invoke("generate-articles", { body: { workspace_id: workspaceId, count: 10 } })
-        .then(() => queryClient.invalidateQueries({ queryKey: ["admin", "articles", workspaceId] }))
-        .catch((err) => toast.error("Auto-generation failed: " + (err?.message ?? "Unknown error")))
-        .finally(() => setAutoGenerating(false));
-    }
-  }, []);
+  // Auto-generation removed: content is generated manually via "Generate with AI"
+  // to ensure all generated articles are reviewed before publishing.
 
   function toggleSelect(id: string) {
     setSelected((prev) => {
@@ -165,15 +153,7 @@ function WorkspaceArticles() {
         </div>
       )}
 
-      {autoGenerating ? (
-        <div className="flex flex-col items-center gap-4 py-20 border-y border-border text-center">
-          <Loader2 className="h-7 w-7 animate-spin text-primary" />
-          <div>
-            <p className="text-sm font-medium">Generating articles…</p>
-            <p className="text-xs text-muted-foreground mt-1">AI is writing long-form guides and tutorials for your workspace. This takes about 20–40 seconds.</p>
-          </div>
-        </div>
-      ) : articles.length === 0 ? (
+      {articles.length === 0 ? (
         <div className="flex flex-col items-center gap-3 py-20 border-y border-border text-center">
           <BookOpen className="h-8 w-8 text-muted-foreground/40" />
           <p className="text-sm text-muted-foreground">No articles yet.</p>

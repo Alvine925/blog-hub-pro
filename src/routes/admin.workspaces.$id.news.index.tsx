@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { queryOptions, useSuspenseQuery, useQueryClient, useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useState, useMemo, useEffect, useRef } from "react";
+import { useState, useMemo } from "react";
 import { toast } from "sonner";
 import {
   Pencil, Trash2, Send, Newspaper, ExternalLink, X, Save, Plus,
@@ -10,7 +10,6 @@ import {
 import { GenerateContentDialog } from "@/components/ai/GenerateContentDialog";
 import { adminListNews, upsertNews, deleteNews, setNewsStatus, type NewsItem } from "@/lib/news.functions";
 import { getBatchContentEngagementStats } from "@/lib/engagement.functions";
-import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -50,8 +49,6 @@ function WorkspaceNews() {
   const [generateOpen, setGenerateOpen] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkBusy, setBulkBusy] = useState(false);
-  const [autoGenerating, setAutoGenerating] = useState(false);
-  const autoTriggeredRef = useRef(false);
 
   const newsIds = useMemo(() => news.map((n) => n.id), [news]);
   const doGetBatchStats = useServerFn(getBatchContentEngagementStats);
@@ -62,17 +59,8 @@ function WorkspaceNews() {
     staleTime: 60_000,
   });
 
-  useEffect(() => {
-    if (news.length === 0 && !autoTriggeredRef.current) {
-      autoTriggeredRef.current = true;
-      setAutoGenerating(true);
-      supabase.functions
-        .invoke("generate-news", { body: { workspace_id: workspaceId, count: 10 } })
-        .then(() => queryClient.invalidateQueries({ queryKey: ["admin", "news", workspaceId] }))
-        .catch((err) => toast.error("Auto-generation failed: " + (err?.message ?? "Unknown error")))
-        .finally(() => setAutoGenerating(false));
-    }
-  }, []);
+  // Auto-generation removed: content is generated manually via "Generate with AI"
+  // to ensure all generated items are reviewed before publishing.
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ["admin", "news"] });
 
@@ -204,15 +192,7 @@ function WorkspaceNews() {
         </div>
       )}
 
-      {autoGenerating ? (
-        <div className="flex flex-col items-center gap-4 py-20 border-y border-border text-center">
-          <Loader2 className="h-7 w-7 animate-spin text-primary" />
-          <div>
-            <p className="text-sm font-medium">Generating news articles…</p>
-            <p className="text-xs text-muted-foreground mt-1">AI is researching industry trends for your workspace. This takes about 20–40 seconds.</p>
-          </div>
-        </div>
-      ) : news.length === 0 ? (
+      {news.length === 0 ? (
         <div className="flex flex-col items-center gap-3 py-20 border-y border-border text-center">
           <Newspaper className="h-6 w-6 text-muted-foreground/50" />
           <p className="text-sm text-muted-foreground">No news yet. Use "Generate with AI" to create your first batch.</p>

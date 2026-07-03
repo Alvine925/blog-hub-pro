@@ -91,6 +91,10 @@ const globalNav: Array<{ group: string; items: NavItem[] }> = [
     group: "Content",
     items: [
       { label: "Blog Posts",  to: "/admin/blogs",        icon: FileText        },
+      { label: "News",        to: "/admin/news",         icon: FileText        },
+      { label: "Articles",    to: "/admin/articles",     icon: BookOpen        },
+      { label: "FAQs",        to: "/admin/faqs",         icon: HelpCircle      },
+      { label: "Products",    to: "/admin/products",     icon: FileText        },
       { label: "Comments",    to: "/admin/comments",     icon: MessageSquare   },
       { label: "Templates",   to: "/admin/collections",  icon: Moon            },
       { label: "Media",       to: "/admin/media",        icon: Moon            },

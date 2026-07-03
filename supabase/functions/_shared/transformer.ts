@@ -9,7 +9,14 @@
  *   workspace_id · user_id · owner_id · storage_path · deleted_at
  *   internal_notes · internal_status · private_metadata · draft_content
  *   audit fields (created_by, updated_by)
+ *
+ * Every content transformer now appends a `social` object built by the
+ * shared SocialMetadata service (see ./_shared/social.ts).
  */
+
+import { buildSocialMetadata, type SocialMetadata } from "./social.ts";
+
+export type { SocialMetadata };
 
 // ── Blog ─────────────────────────────────────────────────────────────────────
 
@@ -26,6 +33,7 @@ export interface PublicBlogSummary {
   views: number;
   published_at: string | null;
   updated_at: string;
+  social: SocialMetadata;
 }
 
 export interface PublicBlogDetail extends PublicBlogSummary {
@@ -48,6 +56,7 @@ export function toBlogSummary(row: Record<string, unknown>): PublicBlogSummary {
     views:        Number(row.views) || 0,
     published_at: (row.published_at as string | null) ?? null,
     updated_at:   row.updated_at as string,
+    social:       buildSocialMetadata(row, "article"),
   };
 }
 
@@ -72,6 +81,7 @@ export interface PublicPage {
   meta_description: string | null;
   published_at: string | null;
   updated_at: string;
+  social: SocialMetadata;
 }
 
 export function toPage(row: Record<string, unknown>): PublicPage {
@@ -85,6 +95,7 @@ export function toPage(row: Record<string, unknown>): PublicPage {
     meta_description: (row.meta_description as string | null) ?? null,
     published_at:     (row.published_at as string | null) ?? null,
     updated_at:       row.updated_at as string,
+    social:           buildSocialMetadata(row, "website"),
   };
 }
 
@@ -203,6 +214,7 @@ export interface PublicFaq {
   featured: boolean;
   sort_order: number;
   updated_at: string;
+  social: SocialMetadata;
 }
 
 export function toFaq(row: Record<string, unknown>): PublicFaq {
@@ -214,6 +226,7 @@ export function toFaq(row: Record<string, unknown>): PublicFaq {
     featured:    Boolean(row.featured),
     sort_order:  Number(row.sort_order) || 0,
     updated_at:  row.updated_at as string,
+    social:      buildSocialMetadata(row, "website"),
   };
 }
 
@@ -232,6 +245,7 @@ export interface PublicNewsSummary {
   views: number;
   published_at: string | null;
   updated_at: string;
+  social: SocialMetadata;
 }
 
 export interface PublicNewsDetail extends PublicNewsSummary {
@@ -254,6 +268,7 @@ export function toNewsSummary(row: Record<string, unknown>): PublicNewsSummary {
     views:        Number(row.views) || 0,
     published_at: (row.published_at as string | null) ?? null,
     updated_at:   row.updated_at as string,
+    social:       buildSocialMetadata(row, "article"),
   };
 }
 
@@ -266,10 +281,136 @@ export function toNewsDetail(row: Record<string, unknown>): PublicNewsDetail {
   };
 }
 
+// ── Article ───────────────────────────────────────────────────────────────────
+
+export interface PublicArticleSummary {
+  id: string;
+  slug: string;
+  title: string;
+  excerpt: string;
+  image: string | null;
+  category: string;
+  tags: string[];
+  author: string;
+  article_type: string;
+  status: string;
+  featured: boolean;
+  reading_time: number;
+  word_count: number;
+  views: number;
+  published_at: string | null;
+  updated_at: string;
+  social: SocialMetadata;
+}
+
+export interface PublicArticleDetail extends PublicArticleSummary {
+  content: string;
+  seo_title: string | null;
+  meta_description: string | null;
+}
+
+export function toArticleSummary(row: Record<string, unknown>): PublicArticleSummary {
+  return {
+    id:           row.id as string,
+    slug:         row.slug as string,
+    title:        (row.title as string) || "",
+    excerpt:      (row.excerpt as string) || "",
+    image:        (row.cover_image as string | null) ?? null,
+    category:     (row.category as string) || "General",
+    tags:         Array.isArray(row.tags) ? (row.tags as string[]) : [],
+    author:       (row.author_name as string) || "Admin",
+    article_type: (row.article_type as string) || "guide",
+    status:       (row.status as string) || "published",
+    featured:     Boolean(row.featured),
+    reading_time: Number(row.reading_time) || 1,
+    word_count:   Number(row.word_count) || 0,
+    views:        Number(row.views) || 0,
+    published_at: (row.published_at as string | null) ?? null,
+    updated_at:   row.updated_at as string,
+    social:       buildSocialMetadata(row, "article"),
+  };
+}
+
+export function toArticleDetail(row: Record<string, unknown>): PublicArticleDetail {
+  return {
+    ...toArticleSummary(row),
+    content:          (row.content as string) || "",
+    seo_title:        (row.seo_title as string | null) ?? null,
+    meta_description: (row.meta_description as string | null) ?? null,
+  };
+}
+
+// ── Product ───────────────────────────────────────────────────────────────────
+
+export interface PublicProductSummary {
+  id: string;
+  slug: string;
+  name: string;
+  description: string;
+  image: string | null;
+  category: string;
+  brand: string | null;
+  sku: string | null;
+  price: number | null;
+  compare_price: number | null;
+  currency: string;
+  status: string;
+  featured: boolean;
+  tags: string[];
+  views: number;
+  sort_order: number;
+  updated_at: string;
+  social: SocialMetadata;
+}
+
+export interface PublicProductDetail extends PublicProductSummary {
+  content: string;
+  gallery: string[];
+  specifications: Record<string, unknown>[];
+  features: string[];
+  seo_title: string | null;
+  meta_description: string | null;
+}
+
+export function toProductSummary(row: Record<string, unknown>): PublicProductSummary {
+  return {
+    id:            row.id as string,
+    slug:          row.slug as string,
+    name:          (row.name as string) || "",
+    description:   (row.description as string) || "",
+    image:         (row.cover_image as string | null) ?? null,
+    category:      (row.category as string) || "General",
+    brand:         (row.brand as string | null) ?? null,
+    sku:           (row.sku as string | null) ?? null,
+    price:         row.price != null ? Number(row.price) : null,
+    compare_price: row.compare_price != null ? Number(row.compare_price) : null,
+    currency:      (row.currency as string) || "USD",
+    status:        (row.status as string) || "published",
+    featured:      Boolean(row.featured),
+    tags:          Array.isArray(row.tags) ? (row.tags as string[]) : [],
+    views:         Number(row.views) || 0,
+    sort_order:    Number(row.sort_order) || 0,
+    updated_at:    row.updated_at as string,
+    social:        buildSocialMetadata(row, "product"),
+  };
+}
+
+export function toProductDetail(row: Record<string, unknown>): PublicProductDetail {
+  return {
+    ...toProductSummary(row),
+    content:         (row.content as string) || "",
+    gallery:         Array.isArray(row.gallery) ? (row.gallery as string[]) : [],
+    specifications:  Array.isArray(row.specifications) ? (row.specifications as Record<string, unknown>[]) : [],
+    features:        Array.isArray(row.features) ? (row.features as string[]) : [],
+    seo_title:       (row.seo_title as string | null) ?? null,
+    meta_description:(row.meta_description as string | null) ?? null,
+  };
+}
+
 // ── Search result ─────────────────────────────────────────────────────────────
 
 export interface PublicSearchResult {
-  type: "blog" | "collection" | "category" | "tag";
+  type: "blog" | "collection" | "category" | "tag" | "news" | "article" | "product";
   title: string;
   slug: string;
   excerpt: string | null;

@@ -2,12 +2,11 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import { queryOptions, useSuspenseQuery, useQueryClient, useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useState, useEffect, useRef } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
 import { Plus, Pencil, Trash2, Clock, Eye, Send, Heart, MessageSquare, Share2, Sparkles, Loader2 } from "lucide-react";
 import { adminListPosts, deletePost, setPostStatus } from "@/lib/blog.functions";
 import { formatBlogDate, type BlogPostSummary } from "@/lib/blog-types";
-import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -95,21 +94,9 @@ function WorkspaceBlogs() {
   const [pendingDelete, setPendingDelete] = useState<BlogPostSummary | null>(null);
   const [busy, setBusy] = useState(false);
   const [showGenerate, setShowGenerate] = useState(false);
-  const [autoGenerating, setAutoGenerating] = useState(false);
-  const autoTriggeredRef = useRef(false);
 
-  useEffect(() => {
-    if (posts.length === 0 && !autoTriggeredRef.current) {
-      autoTriggeredRef.current = true;
-      setAutoGenerating(true);
-      supabase.functions
-        .invoke("generate-blog-post", { body: { workspace_id: workspaceId, batch: true, count: 10 } })
-        .then(() => queryClient.invalidateQueries({ queryKey: ["admin", "blog_posts", workspaceId] }))
-        .catch((err) => toast.error("Auto-generation failed: " + (err?.message ?? "Unknown error")))
-        .finally(() => setAutoGenerating(false));
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  // Auto-generation removed: content is generated manually via "Generate with AI"
+  // to ensure all generated posts are reviewed before publishing.
 
   async function handleDelete() {
     if (!pendingDelete) return;
@@ -159,15 +146,7 @@ function WorkspaceBlogs() {
       </div>
 
       {/* Table */}
-      {autoGenerating ? (
-        <div className="flex flex-col items-center gap-4 py-20 border-y border-border text-center">
-          <Loader2 className="h-7 w-7 animate-spin text-primary" />
-          <div>
-            <p className="text-sm font-medium">Generating blog posts…</p>
-            <p className="text-xs text-muted-foreground mt-1">AI is writing industry-relevant posts for your workspace. This takes about 20–40 seconds.</p>
-          </div>
-        </div>
-      ) : posts.length === 0 ? (
+      {posts.length === 0 ? (
         <div className="flex flex-col items-center gap-3 py-20 border-y border-border text-center">
           <p className="text-sm text-muted-foreground">No posts yet.</p>
           <Link
