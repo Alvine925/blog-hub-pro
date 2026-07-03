@@ -1,15 +1,16 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { queryOptions, useSuspenseQuery, useQueryClient } from "@tanstack/react-query";
+import { queryOptions, useSuspenseQuery, useQueryClient, useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { toast } from "sonner";
 import {
-  Plus, Pencil, Trash2, Send, Eye, Tag, DollarSign, Package,
+  Plus, Pencil, Trash2, Send, Eye, Tag, DollarSign, Package, Heart, MessageSquare,
 } from "lucide-react";
 import {
   adminListProducts, deleteProduct, setProductStatus,
   type ProductSummary,
 } from "@/lib/product.functions";
+import { getBatchContentEngagementStats } from "@/lib/engagement.functions";
 import { cn } from "@/lib/utils";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -57,6 +58,16 @@ function WorkspaceProducts() {
   const doStatus            = useServerFn(setProductStatus);
   const [pending, setPending] = useState<ProductSummary | null>(null);
   const [busy, setBusy]       = useState(false);
+
+  // Batch engagement stats — one request for all items, no N+1
+  const productIds = useMemo(() => products.map((p) => p.id), [products]);
+  const doGetBatchStats = useServerFn(getBatchContentEngagementStats);
+  const { data: batchStats } = useQuery({
+    queryKey: ["batch-engagement-stats", "products", workspaceId, productIds.join(",")],
+    queryFn: () => doGetBatchStats({ data: { workspaceId, contentType: "products", ids: productIds } }),
+    enabled: productIds.length > 0,
+    staleTime: 60_000,
+  });
 
   async function handleDelete() {
     if (!pending) return;
@@ -149,6 +160,20 @@ function WorkspaceProducts() {
                     {product.brand && (
                       <span className="text-xs text-muted-foreground">{product.brand}</span>
                     )}
+                    <div className="mt-0.5 flex items-center gap-3 text-[10px] text-muted-foreground/60">
+                      <span className="flex items-center gap-0.5">
+                        <Eye className="h-2.5 w-2.5" />
+                        {(batchStats?.[product.id]?.views ?? product.views ?? 0).toLocaleString()}
+                      </span>
+                      <span className="flex items-center gap-0.5">
+                        <Heart className="h-2.5 w-2.5" />
+                        {(batchStats?.[product.id]?.likes ?? 0).toLocaleString()}
+                      </span>
+                      <span className="flex items-center gap-0.5">
+                        <MessageSquare className="h-2.5 w-2.5" />
+                        {(batchStats?.[product.id]?.comments ?? 0).toLocaleString()}
+                      </span>
+                    </div>
                   </div>
                 </div>
               </div>

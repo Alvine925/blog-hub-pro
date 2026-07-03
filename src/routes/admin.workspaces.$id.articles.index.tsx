@@ -1,13 +1,14 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { queryOptions, useSuspenseQuery, useQueryClient } from "@tanstack/react-query";
+import { queryOptions, useSuspenseQuery, useQueryClient, useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2, Send, Eye, Clock, BookOpen } from "lucide-react";
+import { Plus, Pencil, Trash2, Send, Eye, Clock, BookOpen, Heart, MessageSquare } from "lucide-react";
 import {
   adminListArticles, deleteArticle, setArticleStatus,
   type ArticleSummary,
 } from "@/lib/article.functions";
+import { getBatchContentEngagementStats } from "@/lib/engagement.functions";
 import { cn } from "@/lib/utils";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -59,6 +60,16 @@ function WorkspaceArticles() {
   const doStatus            = useServerFn(setArticleStatus);
   const [pending, setPending] = useState<ArticleSummary | null>(null);
   const [busy, setBusy]       = useState(false);
+
+  // Batch engagement stats — one request for all items, no N+1
+  const articleIds = useMemo(() => articles.map((a) => a.id), [articles]);
+  const doGetBatchStats = useServerFn(getBatchContentEngagementStats);
+  const { data: batchStats } = useQuery({
+    queryKey: ["batch-engagement-stats", "articles", workspaceId, articleIds.join(",")],
+    queryFn: () => doGetBatchStats({ data: { workspaceId, contentType: "articles", ids: articleIds } }),
+    enabled: articleIds.length > 0,
+    staleTime: 60_000,
+  });
 
   async function handleDelete() {
     if (!pending) return;
@@ -142,6 +153,20 @@ function WorkspaceArticles() {
                 {article.category && (
                   <span className="text-xs text-muted-foreground">{article.category}</span>
                 )}
+                <div className="mt-0.5 flex items-center gap-3 text-[10px] text-muted-foreground/60">
+                  <span className="flex items-center gap-0.5">
+                    <Eye className="h-2.5 w-2.5" />
+                    {(batchStats?.[article.id]?.views ?? article.views ?? 0).toLocaleString()}
+                  </span>
+                  <span className="flex items-center gap-0.5">
+                    <Heart className="h-2.5 w-2.5" />
+                    {(batchStats?.[article.id]?.likes ?? 0).toLocaleString()}
+                  </span>
+                  <span className="flex items-center gap-0.5">
+                    <MessageSquare className="h-2.5 w-2.5" />
+                    {(batchStats?.[article.id]?.comments ?? 0).toLocaleString()}
+                  </span>
+                </div>
               </div>
 
               {/* Status */}

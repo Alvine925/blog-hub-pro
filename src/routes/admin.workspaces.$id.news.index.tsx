@@ -1,10 +1,11 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { queryOptions, useSuspenseQuery, useQueryClient } from "@tanstack/react-query";
+import { queryOptions, useSuspenseQuery, useQueryClient, useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { toast } from "sonner";
-import { Pencil, Trash2, Send, Newspaper, ExternalLink, X, Save, Plus } from "lucide-react";
+import { Pencil, Trash2, Send, Newspaper, ExternalLink, X, Save, Plus, Eye, Heart, MessageSquare } from "lucide-react";
 import { adminListNews, upsertNews, deleteNews, setNewsStatus, type NewsItem } from "@/lib/news.functions";
+import { getBatchContentEngagementStats } from "@/lib/engagement.functions";
 import { cn } from "@/lib/utils";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -40,6 +41,16 @@ function WorkspaceNews() {
   const [editing, setEditing] = useState<NewsItem | null>(null);
   const [form, setForm] = useState({ title: "", excerpt: "", content: "", category: "General" });
   const [busy, setBusy] = useState(false);
+
+  // Batch engagement stats — one request for all items, no N+1
+  const newsIds = useMemo(() => news.map((n) => n.id), [news]);
+  const doGetBatchStats = useServerFn(getBatchContentEngagementStats);
+  const { data: batchStats } = useQuery({
+    queryKey: ["batch-engagement-stats", "news", workspaceId, newsIds.join(",")],
+    queryFn: () => doGetBatchStats({ data: { workspaceId, contentType: "news", ids: newsIds } }),
+    enabled: newsIds.length > 0,
+    staleTime: 60_000,
+  });
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ["admin", "news"] });
 
@@ -135,6 +146,20 @@ function WorkspaceNews() {
               <div className="flex-1 min-w-0">
                 <p className="truncate text-sm font-medium">{item.title}</p>
                 <p className="truncate text-xs text-muted-foreground">{item.excerpt}</p>
+                <div className="mt-0.5 flex items-center gap-3 text-[10px] text-muted-foreground/60">
+                  <span className="flex items-center gap-0.5">
+                    <Eye className="h-2.5 w-2.5" />
+                    {(batchStats?.[item.id]?.views ?? 0).toLocaleString()}
+                  </span>
+                  <span className="flex items-center gap-0.5">
+                    <Heart className="h-2.5 w-2.5" />
+                    {(batchStats?.[item.id]?.likes ?? 0).toLocaleString()}
+                  </span>
+                  <span className="flex items-center gap-0.5">
+                    <MessageSquare className="h-2.5 w-2.5" />
+                    {(batchStats?.[item.id]?.comments ?? 0).toLocaleString()}
+                  </span>
+                </div>
               </div>
               <span className="w-28 shrink-0 text-xs text-muted-foreground hidden sm:flex items-center gap-1">
                 {item.source_name ?? "AI trend"}

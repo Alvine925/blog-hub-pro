@@ -389,3 +389,99 @@ export const deleteContentCommentFn = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true };
   });
+
+// ── Batch engagement stats for list pages ─────────────────────────────────────
+
+/**
+ * Fetch engagement stats for multiple content items in a single batch.
+ * Returns a map of contentId → { likes, comments, views, shares }.
+ * Uses 4 queries total regardless of item count — avoids N+1 problem.
+ */
+export const getBatchContentEngagementStats = createServerFn({ method: "GET" })
+  .validator((d: { workspaceId: string; contentType: ContentEngagementType; ids: string[] }) => d)
+  .handler(async ({ data }): Promise<Record<string, ContentEngagementStats>> => {
+    if (data.ids.length === 0) return {};
+    const { getAdminClient } = await import("./supabase.server");
+    const db  = getAdminClient() as any;
+    const cfg = CONTENT_ENGAGEMENT_CONFIG[data.contentType];
+
+    const [likesRes, commentsRes, viewsRes, sharesRes] = await Promise.all([
+      db.from(cfg.likesTable)   .select(cfg.idCol).eq("workspace_id", data.workspaceId).in(cfg.idCol, data.ids),
+      db.from(cfg.commentsTable).select(cfg.idCol).eq("workspace_id", data.workspaceId).in(cfg.idCol, data.ids).eq("status", "approved"),
+      db.from(cfg.viewsTable)   .select(cfg.idCol).eq("workspace_id", data.workspaceId).in(cfg.idCol, data.ids),
+      db.from(cfg.sharesTable)  .select(cfg.idCol).eq("workspace_id", data.workspaceId).in(cfg.idCol, data.ids),
+    ]);
+
+    function tally(rows: Record<string, string>[] | null): Record<string, number> {
+      const map: Record<string, number> = {};
+      for (const r of (rows ?? [])) {
+        const id = r[cfg.idCol];
+        map[id] = (map[id] ?? 0) + 1;
+      }
+      return map;
+    }
+
+    const likes    = tally(likesRes.data);
+    const comments = tally(commentsRes.data);
+    const views    = tally(viewsRes.data);
+    const shares   = tally(sharesRes.data);
+
+    const result: Record<string, ContentEngagementStats> = {};
+    for (const id of data.ids) {
+      result[id] = {
+        likes:    likes[id]    ?? 0,
+        comments: comments[id] ?? 0,
+        views:    views[id]    ?? 0,
+        shares:   shares[id]   ?? 0,
+      };
+    }
+    return result;
+  });
+
+// ── Global content comments (cross-workspace, for admin moderation panel) ─────
+
+export interface ContentAdminCommentGlobal extends ContentAdminComment {
+  workspace_id: string;
+}
+
+/** List content-type comments across ALL workspaces — for the global admin moderation page. */
+export const listAdminContentCommentsGlobal = createServerFn({ method: "GET" })
+  .validator((d: { contentType: ContentEngagementType; status: string; page: number; limit: number }) => d)
+  .handler(async ({ data }): Promise<{ rows: ContentAdminCommentGlobal[]; total: number }> => {
+    const { getAdminClient } = await import("./supabase.server");
+    const db  = getAdminClient() as any;
+    const cfg = CONTENT_ENGAGEMENT_CONFIG[data.contentType];
+    const offset = (data.page - 1) * data.limit;
+
+    const joinSelect = `id, workspace_id, ${cfg.idCol}, parent_id, author_name, author_email, author_website, content, status, created_at, moderated_at, ${cfg.contentTable}(${cfg.titleCol})`;
+
+    const { data: rows, count, error } = await db
+      .from(cfg.commentsTable)
+      .select(joinSelect, { count: "exact" })
+      .eq("status", data.status)
+      .order("created_at", { ascending: false })
+      .range(offset, offset + data.limit - 1);
+
+    if (error) throw new Error(error.message);
+
+    return {
+      rows: (rows ?? []).map((r: Record<string, unknown>) => ({
+        id:             r.id          as string,
+        workspace_id:   r.workspace_id as string,
+        blog_post_id:   r[cfg.idCol]  as string, // satisfies ContentAdminComment shape; semantically = content_id
+        content_id:     r[cfg.idCol]  as string,
+        content_type:   data.contentType as "news" | "articles" | "products",
+        parent_id:      (r.parent_id   as string | null) ?? null,
+        author_name:    r.author_name  as string,
+        author_email:   r.author_email as string,
+        author_website: (r.author_website as string | null) ?? null,
+        content:        r.content      as string,
+        status:         r.status       as string,
+        created_at:     r.created_at   as string,
+        moderated_at:   (r.moderated_at as string | null) ?? null,
+        post_slug:      null,
+        post_title:     (r[cfg.contentTable] as Record<string, string> | null)?.[cfg.titleCol] ?? null,
+      })),
+      total: count ?? 0,
+    };
+  });
