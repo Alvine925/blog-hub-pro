@@ -231,7 +231,7 @@ Return ONLY a valid JSON object (no markdown fences, no explanation) with this e
   "contentOpportunities": [
     {
       "title": "string",
-      "type": "blog | guide | faq | comparison | case-study",
+      "type": "blog | guide | faq | news | comparison | case-study",
       "topic": "string",
       "reason": "Why this is a good opportunity",
       "priority": "high | medium | low"

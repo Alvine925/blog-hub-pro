@@ -193,6 +193,79 @@ export function toMedia(
   };
 }
 
+// ── FAQ ──────────────────────────────────────────────────────────────────────
+
+export interface PublicFaq {
+  id: string;
+  question: string;
+  answer: string;
+  category: string;
+  featured: boolean;
+  sort_order: number;
+  updated_at: string;
+}
+
+export function toFaq(row: Record<string, unknown>): PublicFaq {
+  return {
+    id:          row.id as string,
+    question:    (row.question as string) || "",
+    answer:      (row.answer as string) || "",
+    category:    (row.category as string) || "General",
+    featured:    Boolean(row.featured),
+    sort_order:  Number(row.sort_order) || 0,
+    updated_at:  row.updated_at as string,
+  };
+}
+
+// ── News ─────────────────────────────────────────────────────────────────────
+
+export interface PublicNewsSummary {
+  slug: string;
+  title: string;
+  excerpt: string;
+  image: string | null;
+  category: string;
+  source_name: string | null;
+  source_url: string | null;
+  breaking: boolean;
+  featured: boolean;
+  views: number;
+  published_at: string | null;
+  updated_at: string;
+}
+
+export interface PublicNewsDetail extends PublicNewsSummary {
+  content: string;
+  seo_title: string | null;
+  meta_description: string | null;
+}
+
+export function toNewsSummary(row: Record<string, unknown>): PublicNewsSummary {
+  return {
+    slug:         row.slug as string,
+    title:        (row.title as string) || "",
+    excerpt:      (row.excerpt as string) || "",
+    image:        (row.cover_image as string | null) ?? null,
+    category:     (row.category as string) || "General",
+    source_name:  (row.source_name as string | null) ?? null,
+    source_url:   (row.source_url as string | null) ?? null,
+    breaking:     Boolean(row.breaking),
+    featured:     Boolean(row.featured),
+    views:        Number(row.views) || 0,
+    published_at: (row.published_at as string | null) ?? null,
+    updated_at:   row.updated_at as string,
+  };
+}
+
+export function toNewsDetail(row: Record<string, unknown>): PublicNewsDetail {
+  return {
+    ...toNewsSummary(row),
+    content:          (row.content as string) || "",
+    seo_title:        (row.seo_title as string | null) ?? null,
+    meta_description: (row.meta_description as string | null) ?? null,
+  };
+}
+
 // ── Search result ─────────────────────────────────────────────────────────────
 
 export interface PublicSearchResult {

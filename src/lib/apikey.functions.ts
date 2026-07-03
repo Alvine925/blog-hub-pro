@@ -58,7 +58,7 @@ export const listApiKeys = createServerFn({ method: "GET" })
       key_type: ((row.key_type as string) === "secret" ? "secret" : "publishable") as "publishable" | "secret",
       permissions: Array.isArray(row.permissions)
         ? (row.permissions as string[])
-        : ["read:blogs", "read:pages", "read:media", "read:collections"],
+        : ["read:blogs", "read:pages", "read:media", "read:collections", "read:faqs", "read:news"],
       // Treat old revoked_at as revoked for backward compat
       status: (row.revoked_at && row.status !== "revoked"
         ? "revoked"

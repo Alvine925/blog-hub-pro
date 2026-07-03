@@ -48,7 +48,7 @@ export interface EndpointDefinition {
   /** Detailed description for endpoint page */
   longDescription?: string;
   /** Category / group in the sidebar */
-  category: "posts" | "collections" | "media" | "search" | "engagement" | "meta";
+  category: "posts" | "faqs" | "news" | "collections" | "media" | "search" | "engagement" | "meta";
   /** Whether a Bearer token is required */
   authentication: boolean;
   /** Supports pagination (limit, offset) */
@@ -212,6 +212,267 @@ export const ENDPOINT_REGISTRY: EndpointDefinition[] = [
     versions: [{ version: "v1", status: "stable" }],
     addedInVersion: "v1",
     tags: ["posts", "blogs", "single", "slug", "content"],
+  },
+
+  // ── FAQs ───────────────────────────────────────────────────────────────────
+  {
+    id: "list-faqs",
+    method: "GET",
+    path: "/faqs",
+    title: "List FAQs",
+    description: "Retrieve published FAQs, ordered by sort order.",
+    longDescription:
+      "Returns all published FAQ entries for the workspace associated with your API key. " +
+      "Results are ordered by their configured sort_order. Supports filtering by category and featured status, " +
+      "plus full-text search across question and answer text.",
+    category: "faqs",
+    authentication: true,
+    pagination: true,
+    search: true,
+    filters: ["category", "featured"],
+    queryParams: [
+      {
+        name: "category",
+        type: "string",
+        required: false,
+        description: "Filter FAQs by category name. Case-insensitive.",
+        example: "Billing",
+      },
+      {
+        name: "featured",
+        type: "boolean",
+        required: false,
+        description: "Return only featured FAQs when set to true.",
+        example: "true",
+      },
+    ],
+    exampleResponse: {
+      data: [
+        {
+          id: "550e8400-e29b-41d4-a716-446655440111",
+          question: "How do I reset my password?",
+          answer: "Go to Settings > Security and click 'Reset Password'.",
+          category: "Account",
+          featured: false,
+          sort_order: 1,
+          updated_at: "2025-01-20T08:30:00Z",
+        },
+      ],
+      meta: { total: 12, limit: 50, offset: 0 },
+    },
+    responseFields: [
+      { name: "id", type: "string (UUID)", description: "FAQ unique identifier." },
+      { name: "question", type: "string", description: "The FAQ question." },
+      { name: "answer", type: "string", description: "The FAQ answer." },
+      { name: "category", type: "string", description: "Category name.", nullable: true },
+      { name: "featured", type: "boolean", description: "Whether the FAQ is featured." },
+      { name: "sort_order", type: "integer", description: "Manual sort position (ascending)." },
+      { name: "updated_at", type: "string (ISO 8601)", description: "Last update timestamp." },
+    ],
+    possibleErrors: [401, 403, 429, 500],
+    versions: [{ version: "v1", status: "stable" }],
+    addedInVersion: "v1",
+    tags: ["faqs", "list", "pagination", "search", "filter"],
+  },
+
+  // ── News ───────────────────────────────────────────────────────────────────
+  {
+    id: "list-news",
+    method: "GET",
+    path: "/news",
+    title: "List News",
+    description: "Retrieve a paginated list of published news items.",
+    longDescription:
+      "Returns all published news items for the workspace, ordered by published date (newest first). " +
+      "Supports pagination, full-text search, and filtering by category, breaking, and featured status.",
+    category: "news",
+    authentication: true,
+    pagination: true,
+    search: true,
+    filters: ["category", "breaking", "featured"],
+    queryParams: [
+      {
+        name: "category",
+        type: "string",
+        required: false,
+        description: "Filter news by category name. Case-insensitive.",
+        example: "Industry",
+      },
+      {
+        name: "breaking",
+        type: "boolean",
+        required: false,
+        description: "Return only breaking news when set to true.",
+        example: "true",
+      },
+      {
+        name: "featured",
+        type: "boolean",
+        required: false,
+        description: "Return only featured news when set to true.",
+        example: "true",
+      },
+    ],
+    exampleResponse: {
+      data: [
+        {
+          slug: "industry-update-q1",
+          title: "Industry Update: Q1 Trends",
+          excerpt: "A roundup of the latest developments in the industry.",
+          image: "https://example.com/news.jpg",
+          category: "Industry",
+          source_name: "TechCrunch",
+          source_url: "https://techcrunch.com/article",
+          breaking: false,
+          featured: true,
+          views: 87,
+          published_at: "2025-02-01T09:00:00Z",
+          updated_at: "2025-02-01T09:00:00Z",
+        },
+      ],
+      meta: { total: 15, limit: 20, offset: 0 },
+    },
+    responseFields: [
+      { name: "slug", type: "string", description: "URL-safe unique identifier." },
+      { name: "title", type: "string", description: "News item title." },
+      { name: "excerpt", type: "string", description: "Short summary.", nullable: true },
+      { name: "image", type: "string", description: "Cover image URL.", nullable: true },
+      { name: "category", type: "string", description: "Category name.", nullable: true },
+      { name: "source_name", type: "string", description: "Original source name, if aggregated.", nullable: true },
+      { name: "source_url", type: "string", description: "Original source URL, if aggregated.", nullable: true },
+      { name: "breaking", type: "boolean", description: "Whether flagged as breaking news." },
+      { name: "featured", type: "boolean", description: "Whether the news item is featured." },
+      { name: "views", type: "integer", description: "Total view count." },
+      { name: "published_at", type: "string (ISO 8601)", description: "Publication timestamp.", nullable: true },
+      { name: "updated_at", type: "string (ISO 8601)", description: "Last update timestamp." },
+    ],
+    possibleErrors: [401, 403, 429, 500],
+    versions: [{ version: "v1", status: "stable" }],
+    addedInVersion: "v1",
+    tags: ["news", "list", "pagination", "search", "filter"],
+  },
+
+  {
+    id: "get-news",
+    method: "GET",
+    path: "/news/:slug",
+    title: "Get News Item",
+    description: "Retrieve a single published news item by its slug.",
+    longDescription:
+      "Returns a single news item including its full HTML content. " +
+      "Each successful request increments the item's view counter.",
+    category: "news",
+    authentication: true,
+    pagination: false,
+    search: false,
+    filters: [],
+    queryParams: [],
+    pathParams: [
+      {
+        name: "slug",
+        type: "string",
+        required: true,
+        description: "The URL-safe identifier of the news item.",
+        example: "industry-update-q1",
+      },
+    ],
+    exampleResponse: {
+      data: {
+        slug: "industry-update-q1",
+        title: "Industry Update: Q1 Trends",
+        content: "<h1>Industry Update</h1><p>Full HTML content...</p>",
+        excerpt: "A roundup of the latest developments in the industry.",
+        category: "Industry",
+        breaking: false,
+        featured: true,
+        views: 88,
+        published_at: "2025-02-01T09:00:00Z",
+        updated_at: "2025-02-01T09:00:00Z",
+      },
+    },
+    responseFields: [
+      { name: "content", type: "string (HTML)", description: "Full news content as HTML." },
+    ],
+    possibleErrors: [401, 403, 404, 429, 500],
+    versions: [{ version: "v1", status: "stable" }],
+    addedInVersion: "v1",
+    tags: ["news", "single", "slug", "content"],
+  },
+
+  {
+    id: "get-breaking-news",
+    method: "GET",
+    path: "/news/breaking",
+    title: "Get Breaking News",
+    description: "Retrieve currently flagged breaking news items.",
+    category: "news",
+    authentication: true,
+    pagination: false,
+    search: false,
+    filters: [],
+    queryParams: [
+      {
+        name: "limit",
+        type: "integer",
+        required: false,
+        default: "10",
+        description: "Maximum number of items to return (1-50).",
+        example: "5",
+      },
+    ],
+    exampleResponse: {
+      data: [
+        {
+          slug: "market-shakeup",
+          title: "Major Market Shakeup Announced",
+          excerpt: "A significant development just broke in the industry.",
+          breaking: true,
+          published_at: "2025-02-05T14:00:00Z",
+        },
+      ],
+      meta: { total: 1 },
+    },
+    possibleErrors: [401, 403, 429, 500],
+    versions: [{ version: "v1", status: "stable" }],
+    addedInVersion: "v1",
+    tags: ["news", "breaking"],
+  },
+
+  {
+    id: "get-latest-news",
+    method: "GET",
+    path: "/news/latest",
+    title: "Get Latest News",
+    description: "Retrieve the most recently published news items.",
+    category: "news",
+    authentication: true,
+    pagination: false,
+    search: false,
+    filters: [],
+    queryParams: [
+      {
+        name: "limit",
+        type: "integer",
+        required: false,
+        default: "10",
+        description: "Maximum number of items to return (1-50).",
+        example: "5",
+      },
+    ],
+    exampleResponse: {
+      data: [
+        {
+          slug: "industry-update-q1",
+          title: "Industry Update: Q1 Trends",
+          published_at: "2025-02-01T09:00:00Z",
+        },
+      ],
+      meta: { total: 1 },
+    },
+    possibleErrors: [401, 403, 429, 500],
+    versions: [{ version: "v1", status: "stable" }],
+    addedInVersion: "v1",
+    tags: ["news", "latest"],
   },
 
   // ── Collections ────────────────────────────────────────────────────────────
@@ -717,6 +978,8 @@ export function getEndpointCategories(): EndpointDefinition["category"][] {
 
 export const CATEGORY_LABELS: Record<EndpointDefinition["category"], string> = {
   posts: "Blog Posts",
+  faqs: "FAQs",
+  news: "News",
   collections: "Collections",
   media: "Media",
   search: "Search",

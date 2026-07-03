@@ -79,10 +79,14 @@ const SCOPE_LABELS: Record<string, string> = {
   "read:pages": "Pages",
   "read:media": "Media",
   "read:collections": "Collections",
+  "read:faqs": "FAQs",
+  "read:news": "News",
   "write:blogs": "Write Blogs",
   "write:pages": "Write Pages",
   "write:media": "Write Media",
   "write:collections": "Write Collections",
+  "write:faqs": "Write FAQs",
+  "write:news": "Write News",
   "manage:api_keys": "Manage Keys",
 };
 

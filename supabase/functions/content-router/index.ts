@@ -12,6 +12,11 @@
  *   GET /blogs/:slug/related        — related blogs (by category + tags)
  *   GET /pages                      — published pages
  *   GET /pages/:slug                — single page by slug
+ *   GET /faqs                       — published FAQs (sorted by sort_order)
+ *   GET /news                       — paginated list of published news
+ *   GET /news/breaking              — breaking news items
+ *   GET /news/latest                — latest N published news items
+ *   GET /news/:slug                 — single news item by slug
  *   GET /collections                — all visible collections
  *   GET /collections/:slug          — entries for a specific collection
  *   GET /categories                 — distinct categories with post counts
@@ -32,6 +37,8 @@ import { ERRORS }                from "../_shared/errors.ts";
 
 import { listBlogs, getBlogBySlug, getRelatedBlogs, getFeaturedBlogs, getLatestBlogs } from "./services/BlogService.ts";
 import { listPages, getPageBySlug } from "./services/PageService.ts";
+import { listFaqs } from "./services/FaqService.ts";
+import { listNews, getNewsBySlug, getBreakingNews, getLatestNews } from "./services/NewsService.ts";
 import { listMedia } from "./services/MediaService.ts";
 import { listCollections, getCollectionEntries } from "./services/CollectionService.ts";
 import { listCategories } from "./services/CategoryService.ts";
@@ -183,6 +190,70 @@ Deno.serve(async (req: Request) => {
         response = cached(ok(rows, { page, limit, total, totalPages }, 200, links));
       }
 
+    // ── GET /faqs ──────────────────────────────────────────────────────────────
+    } else if (resource === "faqs") {
+      if (!hasPermission(context.permissions, "read:faqs")) {
+        response = fail(ERRORS.FORBIDDEN.code, ERRORS.FORBIDDEN.message, 403);
+      } else {
+        const page  = intParam(url, "page", 1, 1, 10_000);
+        const limit = intParam(url, "limit", 50, 1, 100);
+        const { rows, total } = await listFaqs(ws, {
+          page, limit,
+          category: strParam(url, "category"),
+          search:   strParam(url, "search"),
+          featured: boolParam(url, "featured"),
+        });
+        const totalPages = Math.ceil(total / limit);
+        const links = buildPaginationLinks(req.url, page, totalPages);
+        response = cached(ok(rows, { page, limit, total, totalPages }, 200, links));
+      }
+
+    // ── GET /news/* ────────────────────────────────────────────────────────────
+    } else if (resource === "news") {
+      if (!hasPermission(context.permissions, "read:news")) {
+        response = fail(ERRORS.FORBIDDEN.code, ERRORS.FORBIDDEN.message, 403);
+
+      } else if (segs[1] === "breaking") {
+        // GET /news/breaking
+        const limit = intParam(url, "limit", 10, 1, 50);
+        const data  = await getBreakingNews(ws, limit);
+        response = cached(ok(data, { total: data.length }));
+
+      } else if (segs[1] === "latest") {
+        // GET /news/latest
+        const limit = intParam(url, "limit", 10, 1, 50);
+        const data  = await getLatestNews(ws, limit);
+        response = cached(ok(data, { total: data.length }));
+
+      } else if (segs[1]) {
+        // GET /news/:slug
+        const item = await getNewsBySlug(ws, segs[1]);
+        if (!item) {
+          response = fail(ERRORS.NOT_FOUND.code, ERRORS.NOT_FOUND.message, 404);
+        } else {
+          response = cached(ok(item));
+        }
+
+      } else {
+        // GET /news
+        const page  = intParam(url, "page", 1, 1, 10_000);
+        const limit = intParam(url, "limit", 20, 1, 100);
+        const sort  = sortParam(url, ["created_at", "updated_at", "published_at", "title", "views"], "published_at");
+        const { rows, total } = await listNews(ws, {
+          page, limit, sort,
+          order:    orderParam(url),
+          search:   strParam(url, "search"),
+          category: strParam(url, "category"),
+          breaking: boolParam(url, "breaking"),
+          featured: boolParam(url, "featured"),
+          from:     dateParam(url, "from"),
+          to:       dateParam(url, "to"),
+        });
+        const totalPages = Math.ceil(total / limit);
+        const links = buildPaginationLinks(req.url, page, totalPages);
+        response = cached(ok(rows, { page, limit, total, totalPages }, 200, links));
+      }
+
     // ── GET /collections/* ─────────────────────────────────────────────────────
     } else if (resource === "collections") {
       if (!hasPermission(context.permissions, "read:collections")) {
@@ -296,7 +367,7 @@ Deno.serve(async (req: Request) => {
     } else {
       response = fail(
         ERRORS.NOT_FOUND.code,
-        "Endpoint not found. Available: /blogs, /blogs/:slug, /blogs/featured, /blogs/latest, /blogs/:slug/related, /pages, /pages/:slug, /collections, /collections/:slug, /categories, /tags, /media, /search",
+        "Endpoint not found. Available: /blogs, /blogs/:slug, /blogs/featured, /blogs/latest, /blogs/:slug/related, /pages, /pages/:slug, /faqs, /news, /news/:slug, /news/breaking, /news/latest, /collections, /collections/:slug, /categories, /tags, /media, /search",
         404,
       );
     }

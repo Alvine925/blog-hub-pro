@@ -7,3 +7,4 @@
 - [API platform schema](api-platform-schema.md) — api_keys upgraded with status/key_type/permissions/workspace_id; generate-api-key edge fn now issues pk_live_/sk_live_ keys; workspace api-keys page had raw-key storage bug — fixed to use edge fn.
 - [Supabase edge fn verification](supabase-edge-fn-verification.md) — no Deno/DB access in this env; verify edge fns/migrations by manual review + confirming tsc has zero new errors.
 - [Prompt generator engagement pattern](prompt-generator-engagement.md) — PromptGeneratorService uses buildEngagementSection(frameworkId,siteName) for proxy/PostEngagement/ShareModal/PoweredByBanner specs; GeneratorSelections.siteName; ENGAGEMENT_SECTION var in templates.
+- [Dual REST API gateways](dual-api-gateways.md) — content-router (full, prod) vs api-handler.node.ts (blog-only, dev engagement) are separate by design; don't assume they mirror each other.
