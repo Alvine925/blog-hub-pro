@@ -1,0 +1,536 @@
+# IMPLEMENTATION PROMPT
+
+# REBUILD THE DEVELOPER DOCUMENTATION USING THE ACTUAL CODEBASE (NO PLACEHOLDERS)
+
+## Objective
+
+The current Developer Documentation contains placeholder examples, hardcoded URLs, generic API Keys, and assumed endpoints.
+
+This is **not acceptable**.
+
+The documentation must be generated from the **actual implementation** of Lunar CMS.
+
+Your task is to completely audit the project, discover the real implementation, and update the Documentation Portal accordingly.
+
+Do not invent endpoints.
+
+Do not invent request bodies.
+
+Do not invent API Keys.
+
+Do not use placeholder domains such as:
+
+```text
+https://your-domain.com
+```
+
+Do not use placeholder API Keys such as
+
+```text
+pk_live_xxxxx
+
+Bearer YOUR_API_KEY
+```
+
+Everything must reflect the actual Lunar CMS implementation.
+
+---
+
+# FIRST TASK
+
+Before updating a single documentation page, perform a complete inspection of the project.
+
+Inspect
+
+* API Routes
+* Edge Functions
+* Route Registry
+* API Gateway
+* Content Router
+* Middleware
+* Authentication
+* API Key Validation
+* Environment Configuration
+* Constants
+* API Base URL
+* REST Endpoints
+* Services
+* Database
+* Response Builders
+* OpenAPI definitions (if available)
+
+The documentation should be generated from these files.
+
+Never assume anything.
+
+---
+
+# DETERMINE THE REAL BASE URL
+
+Find the actual API Base URL used by the application.
+
+Examples
+
+Production
+
+Development
+
+Local
+
+Determine
+
+* Production URL
+* Local Development URL
+* API Version
+
+If the application currently uses
+
+```text
+https://api.lunarcms.com/v1
+```
+
+then document that.
+
+If it currently uses
+
+```text
+https://cms.domain.com/api
+```
+
+document that.
+
+Do not create fictional URLs.
+
+---
+
+# DETERMINE THE ACTUAL AUTHENTICATION FLOW
+
+Inspect the authentication middleware.
+
+Determine
+
+* Header Name
+* Token Format
+* API Key Prefix
+* Validation Process
+* Authentication Errors
+* Permission Resolution
+
+Example
+
+If the application actually expects
+
+```http
+Authorization: Bearer lunar_pk_xxxxxxxxx
+```
+
+then document exactly that.
+
+Do not replace it with generic examples.
+
+---
+
+# DETERMINE THE REAL API KEY FORMAT
+
+Inspect
+
+* API Key generation
+* Database schema
+* Validation middleware
+
+Determine
+
+* Key Prefix
+* Publishable Key format
+* Secret Key format (if supported)
+* Key scopes
+* Key permissions
+
+Document the real implementation.
+
+---
+
+# DISCOVER ALL ENDPOINTS
+
+Inspect every route.
+
+Automatically build documentation for every endpoint.
+
+For each endpoint determine
+
+* HTTP Method
+* Route
+* Authentication
+* Required Permissions
+* Request Body
+* Query Parameters
+* Path Parameters
+* Pagination
+* Filtering
+* Sorting
+* Response Structure
+* Error Responses
+
+Do not manually recreate endpoints.
+
+Read them directly from the implementation.
+
+---
+
+# DISCOVER REQUEST PAYLOADS
+
+Inspect validation schemas.
+
+Determine
+
+Actual
+
+POST bodies
+
+PUT bodies
+
+PATCH bodies
+
+DELETE payloads
+
+Document the exact payload accepted by the API.
+
+---
+
+# DISCOVER ACTUAL RESPONSES
+
+Inspect
+
+* Response Builder
+* Content Transformer
+* Serializers
+
+Determine the exact JSON returned.
+
+Use actual field names.
+
+Never invent JSON.
+
+---
+
+# DISCOVER ERROR RESPONSES
+
+Inspect
+
+Shared Error Library
+
+Middleware
+
+Validation
+
+Authentication
+
+Document
+
+400
+
+401
+
+403
+
+404
+
+409
+
+422
+
+429
+
+500
+
+Use the real responses.
+
+---
+
+# VERIFY EVERY DOCUMENT
+
+Every documentation page must correspond to real functionality.
+
+If documentation exists for a feature that has not yet been implemented
+
+Mark it clearly as
+
+```text
+Coming Soon
+```
+
+Do not pretend it exists.
+
+---
+
+# VERIFY AI PROMPTS
+
+Inspect
+
+AI Prompt Library
+
+Determine which prompts actually exist.
+
+If a prompt generator is missing
+
+Do not document it as implemented.
+
+Instead
+
+Mark it
+
+Coming Soon.
+
+---
+
+# VERIFY FRAMEWORK GUIDES
+
+Inspect the project.
+
+Determine which framework examples actually exist.
+
+Only document supported frameworks.
+
+Do not invent support.
+
+---
+
+# API EXAMPLES
+
+Every example shown in the documentation should be executable.
+
+Example
+
+Instead of
+
+```bash
+curl https://your-domain.com/api/v1/blogs
+```
+
+Generate
+
+```bash
+curl https://<actual-base-url>/<actual-endpoint> \
+-H "Authorization: Bearer <actual-key-format>"
+```
+
+The route, headers and request structure must match the implementation exactly.
+
+---
+
+# CODE EXAMPLES
+
+Generate examples using the actual implementation.
+
+Use
+
+JavaScript
+
+TypeScript
+
+React
+
+Next.js
+
+PHP
+
+Python
+
+Node
+
+Flutter
+
+only where the endpoint actually exists.
+
+---
+
+# KEEP DOCUMENTATION IN SYNC
+
+The Documentation Portal should become implementation-driven.
+
+Whenever a new endpoint is added
+
+It should automatically become available for documentation generation.
+
+Avoid maintaining duplicate API definitions.
+
+Reuse the existing route metadata whenever possible.
+
+---
+
+# DOCUMENTATION DESIGN
+
+Redesign the Documentation Portal.
+
+The current design should be replaced.
+
+## Theme
+
+Primary Color
+
+```text
+Red
+```
+
+Use the existing Lunar design language but make red the dominant accent colour.
+
+---
+
+# LAYOUT
+
+Do not use dashboard cards.
+
+Do not place documentation inside cards.
+
+The content should sit directly on the page background.
+
+Similar to
+
+* Stripe Docs
+* Supabase Docs
+* Tailwind CSS Docs
+* Vercel Docs
+
+Example layout
+
+```text
+----------------------------------------------------
+
+Top Navigation
+
+----------------------------------------------------
+
+Sidebar
+
+Main Content
+
+Table of Contents
+
+----------------------------------------------------
+```
+
+The reading experience should feel like reading technical documentation rather than using an admin dashboard.
+
+---
+
+# TYPOGRAPHY
+
+Prioritize readability.
+
+Large section headings.
+
+Comfortable spacing.
+
+Readable code blocks.
+
+Sticky sidebar.
+
+Sticky table of contents.
+
+Minimal visual noise.
+
+---
+
+# SIDEBAR
+
+Support
+
+Nested Sections
+
+Collapse
+
+Expand
+
+Active Section Highlight
+
+Keyboard Navigation
+
+Search
+
+---
+
+# CODE BLOCKS
+
+Every code block should include
+
+* Syntax highlighting
+* Copy button
+* Language label
+
+---
+
+# API PLAYGROUND
+
+Reuse the existing API Explorer.
+
+Display it inline within endpoint documentation.
+
+Allow developers to execute requests directly from the documentation.
+
+---
+
+# SEARCH
+
+Search should index
+
+* Documentation
+* Endpoints
+* Parameters
+* Errors
+* Code Examples
+* AI Prompts
+
+---
+
+# FINAL AUDIT
+
+Before marking this task complete verify
+
+✓ Every documented endpoint exists.
+
+✓ Every documented request matches the implementation.
+
+✓ Every documented response matches the implementation.
+
+✓ Every documented error matches the implementation.
+
+✓ Base URLs are real.
+
+✓ Authentication examples are real.
+
+✓ API Key format matches the implementation.
+
+✓ No placeholder URLs remain.
+
+✓ No placeholder API Keys remain.
+
+✓ No fictional endpoints remain.
+
+✓ Documentation accurately reflects the current codebase.
+
+✓ Unsupported features are marked "Coming Soon."
+
+✓ Documentation uses a red theme.
+
+✓ Documentation does not use cards.
+
+✓ Documentation content is rendered directly on the page background.
+
+✓ The experience feels like a professional developer portal similar to Stripe, Supabase and Vercel.
+
+---
+
+# DELIVERABLES
+
+Provide a report containing:
+
+1. Documentation pages updated.
+2. Endpoints discovered from the codebase.
+3. Base URLs detected.
+4. Authentication mechanism documented.
+5. API Key format documented.
+6. Placeholder content removed.
+7. Unsupported features marked as "Coming Soon."
+8. Documentation design changes implemented.
+9. Any inconsistencies discovered between the implementation and the previous documentation.
+10. Confirmation that the Developer Documentation is now generated from the actual Lunar CMS implementation rather than placeholder content.

@@ -12,6 +12,7 @@ export const Route = createFileRoute("/admin/api-explorer")({
 });
 
 const SUPABASE_URL = (import.meta.env.VITE_SUPABASE_URL as string | undefined) ?? "https://your-project.supabase.co";
+const BASE_URL = typeof window !== "undefined" ? window.location.origin : "";
 
 type Lang = "curl" | "javascript" | "python";
 

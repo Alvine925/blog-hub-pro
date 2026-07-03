@@ -163,83 +163,123 @@ export interface FrameworkGuide {
   notes: string;
 }
 
+// ── Real API URLs ─────────────────────────────────────────────────────────────
+const SUPABASE_PROJECT_ID = "pzhsjhprnqfhixjkekxr";
+const CONTENT_ROUTER_URL = `https://${SUPABASE_PROJECT_ID}.supabase.co/functions/v1/content-router`;
+
 export const FRAMEWORK_GUIDES: FrameworkGuide[] = [
   {
     id: "nextjs",
     name: "Next.js",
     icon: "▲",
     envSetup: `# .env.local
-LUNAR_CMS_URL=https://your-domain.com/api
+# Production — Supabase edge function (content retrieval)
+LUNAR_CMS_URL=${CONTENT_ROUTER_URL}
+# Your pk_live_ or sk_live_ key from the API Keys dashboard
 LUNAR_CMS_API_KEY=pk_live_your_key_here`,
-    fetchExample: `// app/page.tsx (App Router)
-export default async function Page() {
-  const res = await fetch(\`\${process.env.LUNAR_CMS_URL}/v1/blogs\`, {
-    headers: { Authorization: \`Bearer \${process.env.LUNAR_CMS_API_KEY}\` },
-    next: { revalidate: 300 },
+    fetchExample: `// app/blog/page.tsx (App Router — Server Component)
+const LUNAR_URL = process.env.LUNAR_CMS_URL!;
+const LUNAR_KEY = process.env.LUNAR_CMS_API_KEY!;
+
+export default async function BlogPage() {
+  const res = await fetch(\`\${LUNAR_URL}/blogs?limit=20\`, {
+    headers: { Authorization: \`Bearer \${LUNAR_KEY}\` },
+    next: { revalidate: 300 }, // ISR: revalidate every 5 minutes
   });
-  const { data } = await res.json();
-  return <ul>{data.map(p => <li key={p.slug}>{p.title}</li>)}</ul>;
+
+  if (!res.ok) throw new Error(\`Lunar CMS error: \${res.status}\`);
+  const { data: posts } = await res.json();
+
+  return (
+    <ul>
+      {posts.map((p: { slug: string; title: string }) => (
+        <li key={p.slug}>{p.title}</li>
+      ))}
+    </ul>
+  );
 }`,
-    notes: "Use Server Components for automatic ISR. The API key never reaches the browser.",
+    notes: "Use Server Components for automatic ISR. The API key is read server-side only — it never reaches the browser.",
   },
   {
     id: "react",
     name: "React (Vite)",
     icon: "⚛",
     envSetup: `# .env
-# Proxy API calls through your own backend to protect the API key
-VITE_API_PROXY_URL=http://localhost:3001/api`,
+# Proxy API calls through your own backend to protect the API key.
+# Your backend forwards to: ${CONTENT_ROUTER_URL}
+VITE_API_PROXY_URL=/api/lunar`,
     fetchExample: `// src/hooks/useBlogs.ts
+// Your Express/Hono backend proxies /api/lunar/* → Lunar CMS
+// and injects the Authorization header server-side.
 import { useEffect, useState } from "react";
 
+interface BlogPost { slug: string; title: string; excerpt: string }
+
 export function useBlogs() {
-  const [blogs, setBlogs] = useState([]);
+  const [blogs, setBlogs] = useState<BlogPost[]>([]);
+  const [loading, setLoading] = useState(true);
+
   useEffect(() => {
-    fetch("/api/v1/blogs")  // proxied through your backend
-      .then(r => r.json())
-      .then(({ data }) => setBlogs(data));
+    fetch(\`\${import.meta.env.VITE_API_PROXY_URL}/blogs\`)
+      .then((r) => r.json())
+      .then(({ data }) => { setBlogs(data); setLoading(false); });
   }, []);
-  return blogs;
+
+  return { blogs, loading };
 }`,
-    notes: "Never expose your API key in client-side code. Proxy requests through a backend or serverless function.",
+    notes: "Never expose your API key in client-side Vite code. Route requests through your own backend which injects the Authorization header.",
   },
   {
     id: "astro",
     name: "Astro",
     icon: "🚀",
     envSetup: `# .env
-LUNAR_CMS_URL=https://your-domain.com/api
+# Production — Supabase edge function
+LUNAR_CMS_URL=${CONTENT_ROUTER_URL}
 LUNAR_CMS_API_KEY=pk_live_your_key_here`,
     fetchExample: `---
 // src/pages/blog/index.astro
-const res = await fetch(\`\${import.meta.env.LUNAR_CMS_URL}/v1/blogs\`, {
-  headers: { Authorization: \`Bearer \${import.meta.env.LUNAR_CMS_API_KEY}\` },
+// Runs at build time (static) or at request time (SSR mode)
+const LUNAR_URL = import.meta.env.LUNAR_CMS_URL;
+const LUNAR_KEY = import.meta.env.LUNAR_CMS_API_KEY;
+
+const res = await fetch(\`\${LUNAR_URL}/blogs?limit=20\`, {
+  headers: { Authorization: \`Bearer \${LUNAR_KEY}\` },
 });
 const { data: posts } = await res.json();
 ---
 <ul>
-  {posts.map(p => <li><a href={\`/blog/\${p.slug}\`}>{p.title}</a></li>)}
+  {posts.map((p: any) => (
+    <li><a href={\`/blog/\${p.slug}\`}>{p.title}</a></li>
+  ))}
 </ul>`,
-    notes: "Fetches at build time by default. Add export const prerender = false for SSR.",
+    notes: "Fetches at build time by default. Add `export const prerender = false` to your page for SSR mode.",
   },
   {
     id: "sveltekit",
     name: "SvelteKit",
     icon: "🔥",
     envSetup: `# .env
-LUNAR_CMS_URL=https://your-domain.com/api
+# Production — Supabase edge function
+LUNAR_CMS_URL=${CONTENT_ROUTER_URL}
 LUNAR_CMS_API_KEY=pk_live_your_key_here`,
     fetchExample: `// src/routes/blog/+page.server.ts
 import type { PageServerLoad } from "./$types";
 
-export const load: PageServerLoad = async ({ fetch }) => {
-  const res = await fetch(\`\${process.env.LUNAR_CMS_URL}/v1/blogs\`, {
-    headers: { Authorization: \`Bearer \${process.env.LUNAR_CMS_API_KEY}\` },
+const LUNAR_URL = process.env.LUNAR_CMS_URL!;
+const LUNAR_KEY = process.env.LUNAR_CMS_API_KEY!;
+
+export const load: PageServerLoad = async () => {
+  const res = await fetch(\`\${LUNAR_URL}/blogs?limit=20\`, {
+    headers: { Authorization: \`Bearer \${LUNAR_KEY}\` },
   });
-  const { data } = await res.json();
-  return { posts: data };
+
+  if (!res.ok) throw new Error(\`Lunar CMS error: \${res.status}\`);
+  const { data: posts } = await res.json();
+
+  return { posts };
 };`,
-    notes: "Use +page.server.ts to keep the API key server-side.",
+    notes: "Use +page.server.ts to keep the API key server-side. Environment variables prefixed with PUBLIC_ are exposed to the browser — never use those for your API key.",
   },
 ];
 
