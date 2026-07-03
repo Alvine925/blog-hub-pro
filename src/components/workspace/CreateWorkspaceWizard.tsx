@@ -25,7 +25,7 @@ const STEPS: { key: Step; label: string }[] = [
   { key: "creating",    label: "Setup" },
 ];
 
-const COLLECTION_OPTIONS = [
+const COLLECTION_OPTIONS: { id: string; label: string; description: string; required?: boolean }[] = [
   { id: "blogs",         label: "Blog posts",      description: "Articles, news, and updates",   required: true },
   { id: "pages",         label: "Pages",            description: "Static website pages",          required: true },
   { id: "media",         label: "Media library",    description: "Images and file uploads",       required: true },
@@ -39,7 +39,7 @@ const COLLECTION_OPTIONS = [
   { id: "events",        label: "Events",           description: "Upcoming events" },
   { id: "portfolio",     label: "Portfolio",        description: "Work showcase" },
   { id: "services",      label: "Services",         description: "Service offerings" },
-] as const;
+];
 
 const ANALYSIS_STAGES = [
   "Crawling your website",
