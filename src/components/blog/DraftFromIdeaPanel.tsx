@@ -4,9 +4,12 @@
  * A floating "Draft from idea" dialog on the New Post page.
  * The user describes their idea; AI returns a title, excerpt,
  * outline, and first paragraph which are auto-filled into the form.
+ * When workspaceId is provided the prompt and examples are tailored
+ * to the workspace's industry, audience, and brand voice.
  */
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { createServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Sparkles, Loader2, Lightbulb, X } from "lucide-react";
@@ -27,27 +30,107 @@ interface DraftResult {
   first_paragraph: string;
 }
 
-interface DraftFromIdeaPanelProps {
-  onDraftReady: (draft: { title: string; excerpt: string; content: string }) => void;
+interface WorkspaceContext {
+  name: string;
+  industry: string | null;
+  targetAudience: string | null;
+  brandVoice: string | null;
+  primaryTopics: string[];
+  suggestedCategories: string[];
+  description: string | null;
 }
 
-const IDEA_EXAMPLES = [
+interface DraftFromIdeaPanelProps {
+  onDraftReady: (draft: { title: string; excerpt: string; content: string }) => void;
+  workspaceId?: string;
+}
+
+const GENERIC_EXAMPLES = [
   "A beginner's guide to building with AI APIs in 2025",
   "Why serverless is the right choice for early-stage startups",
   "10 Tailwind CSS tricks most developers don't know",
   "How we cut our infrastructure costs by 60% using edge computing",
 ];
 
+const getWorkspaceContext = createServerFn({ method: "GET" })
+  .validator((input: { workspaceId: string }) => input)
+  .handler(async ({ data }): Promise<WorkspaceContext | null> => {
+    try {
+      const { getAdminClient } = await import("@/lib/supabase.server");
+      const db = getAdminClient();
+      const { data: ws } = await db
+        .from("workspaces")
+        .select("name, industry, target_audience, brand_voice, content_pillars, ai_context, description")
+        .eq("id", data.workspaceId)
+        .maybeSingle();
+      if (!ws) return null;
+      const aiCtx = ws.ai_context as Record<string, unknown> | null;
+      return {
+        name: ws.name ?? "",
+        industry: ws.industry ?? null,
+        targetAudience: ws.target_audience ?? null,
+        brandVoice: ws.brand_voice ?? null,
+        primaryTopics: (ws.content_pillars as string[] | null) ?? (aiCtx?.primaryTopics as string[] | null) ?? [],
+        suggestedCategories: (aiCtx?.suggestedCategories as string[] | null) ?? [],
+        description: ws.description ?? null,
+      };
+    } catch {
+      return null;
+    }
+  });
+
+function buildIdeaExamples(ctx: WorkspaceContext | null): string[] {
+  if (!ctx || !ctx.industry) return GENERIC_EXAMPLES;
+  const industry = ctx.industry;
+  const audience = ctx.targetAudience ?? "customers";
+  const topics = ctx.primaryTopics?.slice(0, 2) ?? [];
+  const examples: string[] = [];
+  if (topics[0]) examples.push(`The ultimate guide to ${topics[0].toLowerCase()} for ${audience}`);
+  if (topics[1]) examples.push(`Top trends in ${topics[1].toLowerCase()} your business needs to know`);
+  examples.push(`How ${industry} businesses are using AI to grow faster in 2025`);
+  examples.push(`5 common mistakes ${audience} make in ${industry} (and how to avoid them)`);
+  return examples.slice(0, 4);
+}
+
+function buildSystemPrompt(ctx: WorkspaceContext | null): string {
+  const contextLines: string[] = [];
+  if (ctx) {
+    if (ctx.name) contextLines.push(`Company/Workspace: ${ctx.name}`);
+    if (ctx.industry) contextLines.push(`Industry: ${ctx.industry}`);
+    if (ctx.targetAudience) contextLines.push(`Target audience: ${ctx.targetAudience}`);
+    if (ctx.brandVoice) contextLines.push(`Brand voice: ${ctx.brandVoice}`);
+    if (ctx.description) contextLines.push(`About: ${ctx.description}`);
+    if (ctx.primaryTopics?.length) contextLines.push(`Key topics: ${ctx.primaryTopics.slice(0, 5).join(", ")}`);
+  }
+
+  const contextBlock = contextLines.length
+    ? `\n\nWORKSPACE CONTEXT (use this to tailor the draft):\n${contextLines.join("\n")}\n`
+    : "";
+
+  return `You are a professional blog post drafter. Given a rough idea, return ONLY valid JSON — no markdown fences, no prose, no extra text. Raw JSON only.${contextBlock}
+Return an object with this exact shape:
+{
+  "title": "A compelling, specific blog post title tailored to the workspace context",
+  "excerpt": "A 1–2 sentence teaser that speaks directly to the target audience",
+  "outline": [
+    "Introduction — brief description of what this section covers",
+    "Section 1: [name] — brief description",
+    "Section 2: [name] — brief description",
+    "Section 3: [name] — brief description",
+    "Conclusion — key takeaway and call to action"
+  ],
+  "first_paragraph": "A full, engaging opening paragraph (3–5 sentences) written in the brand voice that hooks the reader"
+}`;
+}
+
 function outlineToHtml(outline: string[], firstParagraph: string): string {
   const lines: string[] = [];
 
-  // First paragraph as an intro
   if (firstParagraph) {
     lines.push(`<p>${firstParagraph}</p>`);
     lines.push("");
   }
 
-  // Outline sections → headings + placeholder paragraphs
   outline.forEach((section) => {
     const clean = section.replace(/^#+\s*/, "").replace(/^\d+\.\s*/, "").trim();
     const isHeading = section.match(/^#{1,3}\s/) || section.match(/^(Introduction|Conclusion|Section\s)/i);
@@ -63,11 +146,22 @@ function outlineToHtml(outline: string[], firstParagraph: string): string {
   return lines.join("\n");
 }
 
-export function DraftFromIdeaPanel({ onDraftReady }: DraftFromIdeaPanelProps) {
+export function DraftFromIdeaPanel({ onDraftReady, workspaceId }: DraftFromIdeaPanelProps) {
   const [open, setOpen] = useState(false);
   const [idea, setIdea] = useState("");
   const [loading, setLoading] = useState(false);
   const [preview, setPreview] = useState<DraftResult | null>(null);
+  const [wsContext, setWsContext] = useState<WorkspaceContext | null>(null);
+
+  useEffect(() => {
+    if (!workspaceId) return;
+    getWorkspaceContext({ data: { workspaceId } })
+      .then((ctx) => setWsContext(ctx))
+      .catch(() => {});
+  }, [workspaceId]);
+
+  const examples = buildIdeaExamples(wsContext);
+  const systemPrompt = buildSystemPrompt(wsContext);
 
   async function handleGenerate() {
     const trimmed = idea.trim();
@@ -75,22 +169,6 @@ export function DraftFromIdeaPanel({ onDraftReady }: DraftFromIdeaPanelProps) {
 
     setLoading(true);
     setPreview(null);
-
-    const systemPrompt = `You are a professional blog post drafter. Given a rough idea, return ONLY valid JSON — no markdown fences, no prose, no extra text. Raw JSON only.
-
-Return an object with this exact shape:
-{
-  "title": "A compelling, specific blog post title",
-  "excerpt": "A 1–2 sentence teaser that makes readers want to read more",
-  "outline": [
-    "Introduction — brief description of what this section covers",
-    "Section 1: [name] — brief description",
-    "Section 2: [name] — brief description",
-    "Section 3: [name] — brief description",
-    "Conclusion — key takeaway and call to action"
-  ],
-  "first_paragraph": "A full, engaging opening paragraph (3–5 sentences) that hooks the reader"
-}`;
 
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -111,14 +189,11 @@ Return an object with this exact shape:
 
       const raw: string = data.result ?? "";
 
-      // Try to parse JSON from the result
       let parsed: DraftResult | null = null;
       try {
-        // Strip markdown fences if present
         const cleaned = raw.replace(/^```(?:json)?\n?/m, "").replace(/\n?```$/m, "").trim();
         parsed = JSON.parse(cleaned) as DraftResult;
       } catch {
-        // Fallback: use the raw text as first paragraph, extract title from first line
         const lines = raw.split("\n").filter(Boolean);
         parsed = {
           title: lines[0]?.replace(/^#\s*/, "") ?? trimmed,
@@ -130,7 +205,7 @@ Return an object with this exact shape:
 
       setPreview(parsed);
       if (data.simulated) {
-        toast.info("Showing simulated draft — connect OpenAI for real AI drafts", { duration: 4000 });
+        toast.info("Showing simulated draft — connect AI for real drafts", { duration: 4000 });
       }
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Draft generation failed");
@@ -155,9 +230,12 @@ Return an object with this exact shape:
     setIdea("");
   }
 
+  const placeholderHint = wsContext?.industry
+    ? `e.g. A practical guide to ${wsContext.industry.toLowerCase()} trends for ${wsContext.targetAudience ?? "your audience"}…`
+    : "e.g. A practical guide to reducing API costs using caching strategies in Next.js apps…";
+
   return (
     <>
-      {/* Trigger button — shown prominently at the top of a new post */}
       <Button
         type="button"
         variant="outline"
@@ -175,23 +253,35 @@ Return an object with this exact shape:
             <DialogTitle className="flex items-center gap-2">
               <Sparkles className="h-5 w-5 text-primary" />
               Draft from idea
+              {wsContext?.name && (
+                <span className="text-xs font-normal text-muted-foreground ml-1">
+                  — tailored to {wsContext.name}
+                </span>
+              )}
             </DialogTitle>
           </DialogHeader>
 
           <div className="space-y-5 pt-1">
-            {/* Idea input */}
+            {wsContext && (wsContext.industry || wsContext.targetAudience) && (
+              <div className="rounded-lg border border-border/60 bg-muted/30 px-4 py-3 text-xs text-muted-foreground space-y-1">
+                {wsContext.industry && <p><span className="font-medium text-foreground">Industry:</span> {wsContext.industry}</p>}
+                {wsContext.targetAudience && <p><span className="font-medium text-foreground">Audience:</span> {wsContext.targetAudience}</p>}
+                {wsContext.brandVoice && <p><span className="font-medium text-foreground">Tone:</span> {wsContext.brandVoice}</p>}
+              </div>
+            )}
+
             <div className="space-y-2">
               <label className="text-sm font-medium">Describe your idea</label>
               <Textarea
                 value={idea}
                 onChange={(e) => setIdea(e.target.value)}
-                placeholder="e.g. A practical guide to reducing API costs using caching strategies in Next.js apps…"
+                placeholder={placeholderHint}
                 rows={4}
                 className="resize-none"
                 disabled={loading}
               />
               <div className="flex flex-wrap gap-1.5">
-                {IDEA_EXAMPLES.map((ex) => (
+                {examples.map((ex) => (
                   <button
                     key={ex}
                     type="button"
@@ -214,7 +304,6 @@ Return an object with this exact shape:
                 : <><Sparkles className="h-4 w-4" /> Generate draft</>}
             </Button>
 
-            {/* Draft preview */}
             {preview && (
               <div className="space-y-4 rounded-xl border border-border bg-muted/20 p-5">
                 <div>

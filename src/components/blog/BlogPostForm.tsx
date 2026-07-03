@@ -352,6 +352,7 @@ export function BlogPostForm({ initial, workspaceId }: BlogPostFormProps) {
               <p className="text-xs text-muted-foreground">Describe it and AI will draft a title, outline, and opening paragraph instantly.</p>
             </div>
             <DraftFromIdeaPanel
+              workspaceId={workspaceId}
               onDraftReady={({ title: t, excerpt: e, content: c }) => {
                 setTitle(t);
                 setExcerpt(e);

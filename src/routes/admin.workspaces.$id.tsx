@@ -326,7 +326,7 @@ function WorkspaceShell() {
       {/* Right: header + page content */}
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
         <WorkspaceHeader workspace={workspace} />
-        <main className="flex-1 overflow-hidden flex flex-col">
+        <main className="flex-1 overflow-y-auto flex flex-col">
           <Outlet />
         </main>
       </div>

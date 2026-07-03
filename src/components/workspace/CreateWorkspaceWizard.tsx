@@ -31,6 +31,7 @@ const COLLECTION_OPTIONS: { id: string; label: string; description: string; requ
   { id: "media",         label: "Media library",    description: "Images and file uploads",       required: true },
   { id: "documentation", label: "Documentation",    description: "Technical docs and guides" },
   { id: "products",      label: "Products",         description: "Product catalogue" },
+  { id: "articles",      label: "Articles",         description: "Long-form guides, tutorials, and educational content" },
   { id: "faqs",          label: "FAQs",             description: "Frequently asked questions, auto-generated from your site" },
   { id: "news",          label: "News",             description: "Industry news, auto-researched and written for you" },
   { id: "case-studies",  label: "Case studies",     description: "Client success stories" },
@@ -503,6 +504,14 @@ function CreatingStep({
               workspace_id: result.workspaceId,
               count: 10,
               suggestion_count: 10,
+            }),
+          );
+        }
+        if (selectedCollections.includes("articles")) {
+          generationJobs.push(
+            invokeEdgeFunction("generate-articles", accessToken, {
+              workspace_id: result.workspaceId,
+              count: 10,
             }),
           );
         }
