@@ -3,8 +3,11 @@ import { queryOptions, useSuspenseQuery, useQueryClient } from "@tanstack/react-
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 import { toast } from "sonner";
-import { ArrowLeft, Pencil, Trash2, Send, Package, DollarSign, Tag, Eye } from "lucide-react";
+import { ArrowLeft, Pencil, Trash2, Send, Package, DollarSign, Tag, Eye, Heart, MessageSquare, Share2 } from "lucide-react";
 import { adminGetProduct, deleteProduct, setProductStatus, type Product } from "@/lib/product.functions";
+import { getContentEngagementStats } from "@/lib/engagement.functions";
+import { useQuery } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import { cn } from "@/lib/utils";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -37,9 +40,27 @@ function fmtPrice(price: number | null, currency = "USD") {
   return new Intl.NumberFormat("en-US", { style: "currency", currency }).format(price);
 }
 
+function StatPill({ icon: Icon, label, value }: { icon: React.ElementType; label: string; value: number }) {
+  return (
+    <div className="flex items-center gap-1.5 rounded-lg border border-border bg-muted/40 px-3 py-2">
+      <Icon className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+      <div>
+        <p className="text-xs font-semibold tabular-nums">{value.toLocaleString()}</p>
+        <p className="text-[10px] text-muted-foreground">{label}</p>
+      </div>
+    </div>
+  );
+}
+
 function ProductDetail() {
   const { id: workspaceId, productId } = Route.useParams();
   const { data: product } = useSuspenseQuery(detailQuery(productId, workspaceId));
+  const doGetStats        = useServerFn(getContentEngagementStats);
+  const { data: stats }   = useQuery({
+    queryKey: ["content-engagement-stats", "products", productId],
+    queryFn:  () => doGetStats({ data: { workspaceId, contentType: "products", contentId: productId } }),
+    staleTime: 60_000,
+  });
   const queryClient = useQueryClient();
   const navigate    = useNavigate();
   const doDelete    = useServerFn(deleteProduct);
@@ -119,6 +140,16 @@ function ProductDetail() {
           </button>
         </div>
       </div>
+
+      {/* Engagement stats */}
+      {stats && (
+        <div className="mt-6 grid grid-cols-4 gap-2">
+          <StatPill icon={Eye}           label="Views"    value={product.views ?? 0} />
+          <StatPill icon={Heart}         label="Likes"    value={stats.likes}    />
+          <StatPill icon={MessageSquare} label="Comments" value={stats.comments} />
+          <StatPill icon={Share2}        label="Shares"   value={stats.shares}   />
+        </div>
+      )}
 
       {/* Cover image */}
       {product.cover_image && (

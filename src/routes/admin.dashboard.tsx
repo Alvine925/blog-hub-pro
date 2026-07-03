@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { AiAssistant } from "@/components/dashboard/AiAssistant";
 import { queryOptions, useSuspenseQuery, useQuery } from "@tanstack/react-query";
 import {
   FileText, Eye, Send, FilePen, ArrowRight, Clock, Plus,
@@ -345,30 +346,9 @@ function Dashboard() {
           </section>
         </div>
 
-        {/* Quick Actions — flat list */}
-        <div>
-          <div className="flex items-center border-b border-border pb-3 mb-0">
-            <h2 className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">Quick Actions</h2>
-          </div>
-          {[
-            { label: "New Post", desc: "Write and publish content", to: "/admin/blogs/new", icon: FileText, primary: true },
-            { label: "Scheduled", desc: "View queued posts", to: "/admin/blogs", icon: Clock },
-            { label: "Workspaces", desc: "Manage all workspaces", to: "/admin/workspaces", icon: Globe },
-            { label: "Analytics", desc: "View performance", to: "/admin/blogs", icon: TrendingUp },
-          ].map((action) => (
-            <Link
-              key={action.to + action.label}
-              to={action.to}
-              className="flex items-center gap-3 border-b border-border py-3 last:border-0 hover:bg-muted/20 -mx-2 px-2 rounded transition-colors"
-            >
-              <action.icon className={cn("h-4 w-4 shrink-0", action.primary ? "text-primary" : "text-muted-foreground")} />
-              <div className="min-w-0 flex-1">
-                <p className={cn("text-sm font-medium", action.primary && "text-primary")}>{action.label}</p>
-                <p className="text-xs text-muted-foreground">{action.desc}</p>
-              </div>
-              <ArrowRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground/30" />
-            </Link>
-          ))}
+        {/* AI Assistant */}
+        <div className="flex flex-col rounded-xl border border-border bg-card p-4" style={{ minHeight: "520px" }}>
+          <AiAssistant />
         </div>
       </div>
     </div>

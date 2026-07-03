@@ -3,8 +3,11 @@ import { queryOptions, useSuspenseQuery, useQueryClient } from "@tanstack/react-
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 import { toast } from "sonner";
-import { ArrowLeft, Pencil, Trash2, Send, Clock, Eye, Tag } from "lucide-react";
+import { ArrowLeft, Pencil, Trash2, Send, Clock, Eye, Tag, Heart, MessageSquare, Share2 } from "lucide-react";
 import { adminGetArticle, deleteArticle, setArticleStatus, type Article } from "@/lib/article.functions";
+import { getContentEngagementStats } from "@/lib/engagement.functions";
+import { useQuery } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import { cn } from "@/lib/utils";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -45,9 +48,27 @@ function fmtDate(d: string | null) {
   return new Date(d).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
 }
 
+function StatPill({ icon: Icon, label, value }: { icon: React.ElementType; label: string; value: number }) {
+  return (
+    <div className="flex items-center gap-1.5 rounded-lg border border-border bg-muted/40 px-3 py-2">
+      <Icon className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+      <div>
+        <p className="text-xs font-semibold tabular-nums">{value.toLocaleString()}</p>
+        <p className="text-[10px] text-muted-foreground">{label}</p>
+      </div>
+    </div>
+  );
+}
+
 function ArticleDetail() {
   const { id: workspaceId, articleId } = Route.useParams();
   const { data: article } = useSuspenseQuery(detailQuery(articleId, workspaceId));
+  const doGetStats        = useServerFn(getContentEngagementStats);
+  const { data: stats }   = useQuery({
+    queryKey: ["content-engagement-stats", "articles", articleId],
+    queryFn:  () => doGetStats({ data: { workspaceId, contentType: "articles", contentId: articleId } }),
+    staleTime: 60_000,
+  });
   const queryClient = useQueryClient();
   const navigate    = useNavigate();
   const doDelete    = useServerFn(deleteArticle);
@@ -130,6 +151,16 @@ function ArticleDetail() {
           </button>
         </div>
       </div>
+
+      {/* Engagement stats */}
+      {stats && (
+        <div className="mt-6 grid grid-cols-4 gap-2">
+          <StatPill icon={Eye}           label="Views"    value={article.views ?? 0} />
+          <StatPill icon={Heart}         label="Likes"    value={stats.likes}    />
+          <StatPill icon={MessageSquare} label="Comments" value={stats.comments} />
+          <StatPill icon={Share2}        label="Shares"   value={stats.shares}   />
+        </div>
+      )}
 
       {/* Cover image */}
       {article.cover_image && (

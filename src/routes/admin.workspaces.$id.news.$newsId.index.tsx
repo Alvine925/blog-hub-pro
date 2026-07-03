@@ -3,8 +3,11 @@ import { queryOptions, useSuspenseQuery, useQueryClient } from "@tanstack/react-
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 import { toast } from "sonner";
-import { ArrowLeft, Pencil, Trash2, Send, ExternalLink, AlertTriangle, Star } from "lucide-react";
+import { ArrowLeft, Pencil, Trash2, Send, ExternalLink, AlertTriangle, Star, Eye, Heart, MessageSquare, Share2 } from "lucide-react";
 import { adminGetNews, deleteNews, setNewsStatus, type NewsItem } from "@/lib/news.functions";
+import { getContentEngagementStats } from "@/lib/engagement.functions";
+import { useQuery } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import { cn } from "@/lib/utils";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -35,9 +38,27 @@ function fmtDate(d: string | null) {
   return new Date(d).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
 }
 
+function StatPill({ icon: Icon, label, value }: { icon: React.ElementType; label: string; value: number }) {
+  return (
+    <div className="flex items-center gap-1.5 rounded-lg border border-border bg-muted/40 px-3 py-2">
+      <Icon className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+      <div>
+        <p className="text-xs font-semibold tabular-nums">{value.toLocaleString()}</p>
+        <p className="text-[10px] text-muted-foreground">{label}</p>
+      </div>
+    </div>
+  );
+}
+
 function NewsDetail() {
   const { id: workspaceId, newsId } = Route.useParams();
   const { data: item }  = useSuspenseQuery(detailQuery(newsId, workspaceId));
+  const doGetStats      = useServerFn(getContentEngagementStats);
+  const { data: stats } = useQuery({
+    queryKey: ["content-engagement-stats", "news", newsId],
+    queryFn:  () => doGetStats({ data: { workspaceId, contentType: "news", contentId: newsId } }),
+    staleTime: 60_000,
+  });
   const queryClient     = useQueryClient();
   const navigate        = useNavigate();
   const doDelete        = useServerFn(deleteNews);
@@ -152,6 +173,16 @@ function NewsDetail() {
           </div>
         )}
       </div>
+
+      {/* Engagement stats */}
+      {stats && (
+        <div className="mt-6 grid grid-cols-4 gap-2">
+          <StatPill icon={Eye}          label="Views"    value={stats.views}    />
+          <StatPill icon={Heart}        label="Likes"    value={stats.likes}    />
+          <StatPill icon={MessageSquare} label="Comments" value={stats.comments} />
+          <StatPill icon={Share2}       label="Shares"   value={stats.shares}   />
+        </div>
+      )}
 
       {item.excerpt && (
         <div className="mt-6 border-b border-border pb-6">

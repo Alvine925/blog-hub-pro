@@ -203,3 +203,189 @@ export const deleteCommentFn = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true };
   });
+
+// ── Content engagement (news / articles / products) ────────────────────────────
+
+type ContentEngagementType = "news" | "articles" | "products";
+
+/** Maps content type → engagement table names and FK column */
+const CONTENT_ENGAGEMENT_CONFIG: Record<ContentEngagementType, {
+  likesTable:    string;
+  commentsTable: string;
+  viewsTable:    string;
+  sharesTable:   string;
+  idCol:         string;
+  contentTable:  string;
+  titleCol:      string;
+}> = {
+  news: {
+    likesTable:    "news_likes",
+    commentsTable: "news_comments",
+    viewsTable:    "news_views",
+    sharesTable:   "news_shares",
+    idCol:         "news_id",
+    contentTable:  "news",
+    titleCol:      "title",
+  },
+  articles: {
+    likesTable:    "articles_likes",
+    commentsTable: "articles_comments",
+    viewsTable:    "articles_views",
+    sharesTable:   "articles_shares",
+    idCol:         "article_id",
+    contentTable:  "articles",
+    titleCol:      "title",
+  },
+  products: {
+    likesTable:    "products_likes",
+    commentsTable: "products_comments",
+    viewsTable:    "products_views",
+    sharesTable:   "products_shares",
+    idCol:         "product_id",
+    contentTable:  "products",
+    titleCol:      "name",
+  },
+};
+
+export interface ContentEngagementStats {
+  likes:    number;
+  comments: number;
+  views:    number;
+  shares:   number;
+}
+
+/** Aggregated engagement stats for a single news / article / product item. */
+export const getContentEngagementStats = createServerFn({ method: "GET" })
+  .validator((d: { workspaceId: string; contentType: ContentEngagementType; contentId: string }) => d)
+  .handler(async ({ data }): Promise<ContentEngagementStats> => {
+    const { getAdminClient } = await import("./supabase.server");
+    const db  = getAdminClient() as any;
+    const cfg = CONTENT_ENGAGEMENT_CONFIG[data.contentType];
+
+    const [likes, comments, views, shares] = await Promise.all([
+      db.from(cfg.likesTable)
+        .select("id", { count: "exact", head: true })
+        .eq(cfg.idCol, data.contentId),
+      db.from(cfg.commentsTable)
+        .select("id", { count: "exact", head: true })
+        .eq(cfg.idCol, data.contentId)
+        .eq("status", "approved"),
+      db.from(cfg.viewsTable)
+        .select("id", { count: "exact", head: true })
+        .eq(cfg.idCol, data.contentId),
+      db.from(cfg.sharesTable)
+        .select("id", { count: "exact", head: true })
+        .eq(cfg.idCol, data.contentId),
+    ]);
+
+    return {
+      likes:    likes.count    ?? 0,
+      comments: comments.count ?? 0,
+      views:    views.count    ?? 0,
+      shares:   shares.count   ?? 0,
+    };
+  });
+
+export interface ContentAdminComment {
+  id:            string;
+  content_id:    string;
+  content_type:  ContentEngagementType;
+  parent_id:     string | null;
+  author_name:   string;
+  author_email:  string;
+  author_website: string | null;
+  content:       string;
+  status:        string;
+  created_at:    string;
+  moderated_at:  string | null;
+  post_title:    string | null;
+}
+
+/** List comments across news / articles / products for the moderation UI. */
+export const getAdminContentComments = createServerFn({ method: "GET" })
+  .validator((d: {
+    workspaceId:  string;
+    contentType:  ContentEngagementType;
+    status:       string;
+    page:         number;
+    limit:        number;
+  }) => d)
+  .handler(async ({ data }): Promise<{ rows: ContentAdminComment[]; total: number }> => {
+    const { getAdminClient } = await import("./supabase.server");
+    const db  = getAdminClient() as any;
+    const cfg = CONTENT_ENGAGEMENT_CONFIG[data.contentType];
+    const offset = (data.page - 1) * data.limit;
+
+    const joinSelect = `id, ${cfg.idCol}, parent_id, author_name, author_email, author_website, content, status, created_at, moderated_at, ${cfg.contentTable}(${cfg.titleCol})`;
+
+    const { data: rows, count, error } = await db
+      .from(cfg.commentsTable)
+      .select(joinSelect, { count: "exact" })
+      .eq("workspace_id", data.workspaceId)
+      .eq("status", data.status)
+      .order("created_at", { ascending: false })
+      .range(offset, offset + data.limit - 1);
+
+    if (error) throw new Error(error.message);
+
+    return {
+      rows: (rows ?? []).map((r: Record<string, unknown>) => ({
+        id:            r.id as string,
+        content_id:    r[cfg.idCol] as string,
+        content_type:  data.contentType,
+        parent_id:     (r.parent_id as string | null) ?? null,
+        author_name:   r.author_name as string,
+        author_email:  r.author_email as string,
+        author_website: (r.author_website as string | null) ?? null,
+        content:       r.content as string,
+        status:        r.status as string,
+        created_at:    r.created_at as string,
+        moderated_at:  (r.moderated_at as string | null) ?? null,
+        post_title:    (r[cfg.contentTable] as Record<string, string> | null)?.[cfg.titleCol] ?? null,
+      })),
+      total: count ?? 0,
+    };
+  });
+
+const contentModerateSchema = z.object({
+  commentId:   z.string().uuid(),
+  workspaceId: z.string().uuid(),
+  contentType: z.enum(["news", "articles", "products"]),
+  status:      z.enum(["approved", "rejected", "spam", "trash", "pending"]),
+});
+
+export const moderateContentCommentFn = createServerFn({ method: "POST" })
+  .validator((d: unknown) => contentModerateSchema.parse(d))
+  .handler(async ({ data }): Promise<{ ok: true }> => {
+    const { getAdminClient } = await import("./supabase.server");
+    const db  = getAdminClient() as any;
+    const cfg = CONTENT_ENGAGEMENT_CONFIG[data.contentType];
+    const { error } = await db
+      .from(cfg.commentsTable)
+      .update({ status: data.status, moderated_at: new Date().toISOString() })
+      .eq("id", data.commentId)
+      .eq("workspace_id", data.workspaceId);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+const contentDeleteSchema = z.object({
+  commentId:   z.string().uuid(),
+  workspaceId: z.string().uuid(),
+  contentType: z.enum(["news", "articles", "products"]),
+});
+
+export const deleteContentCommentFn = createServerFn({ method: "POST" })
+  .validator((d: unknown) => contentDeleteSchema.parse(d))
+  .handler(async ({ data }): Promise<{ ok: true }> => {
+    const { getAdminClient } = await import("./supabase.server");
+    const db  = getAdminClient() as any;
+    const cfg = CONTENT_ENGAGEMENT_CONFIG[data.contentType];
+    const { error } = await db
+      .from(cfg.commentsTable)
+      .delete()
+      .eq("id", data.commentId)
+      .eq("workspace_id", data.workspaceId);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });

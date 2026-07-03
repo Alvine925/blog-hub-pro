@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import {
   CheckCircle, XCircle, AlertTriangle, Trash2, RotateCcw,
   MessageSquare, Clock, Loader2, ExternalLink, ChevronLeft, ChevronRight,
+  FileText, Newspaper, BookOpen, ShoppingBag,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -13,7 +14,11 @@ import {
   getAdminComments,
   moderateCommentFn,
   deleteCommentFn,
+  getAdminContentComments,
+  moderateContentCommentFn,
+  deleteContentCommentFn,
   type AdminComment,
+  type ContentAdminComment,
 } from "@/lib/engagement.functions";
 import { format } from "date-fns";
 
@@ -27,6 +32,15 @@ export const Route = createFileRoute("/admin/workspaces/$id/comments")({
 });
 
 // ── Constants ─────────────────────────────────────────────────────────────────
+
+type ContentTypeTab = "blogs" | "news" | "articles" | "products";
+
+const CONTENT_TYPE_TABS: { value: ContentTypeTab; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
+  { value: "blogs",    label: "Blog Posts", icon: FileText    },
+  { value: "news",     label: "News",       icon: Newspaper   },
+  { value: "articles", label: "Articles",   icon: BookOpen    },
+  { value: "products", label: "Products",   icon: ShoppingBag },
+];
 
 type CommentStatus = "pending" | "approved" | "rejected" | "spam" | "trash";
 
@@ -77,30 +91,54 @@ const ACTIONS: Record<CommentStatus, { label: string; targetStatus?: CommentStat
 
 function CommentsPage() {
   const { id: workspaceId } = Route.useParams();
+  const [contentType, setContentType] = useState<ContentTypeTab>("blogs");
   const [activeTab, setActiveTab] = useState<CommentStatus>("pending");
   const [page, setPage] = useState(1);
   const LIMIT = 20;
 
-  const doGetComments  = useServerFn(getAdminComments);
-  const doModerate     = useServerFn(moderateCommentFn);
-  const doDelete       = useServerFn(deleteCommentFn);
+  const doGetComments        = useServerFn(getAdminComments);
+  const doModerate           = useServerFn(moderateCommentFn);
+  const doDelete             = useServerFn(deleteCommentFn);
+  const doGetContentComments = useServerFn(getAdminContentComments);
+  const doModerateContent    = useServerFn(moderateContentCommentFn);
+  const doDeleteContent      = useServerFn(deleteContentCommentFn);
   const queryClient    = useQueryClient();
 
-  const { data, isLoading } = useQuery({
-    queryKey: ["admin", "comments", workspaceId, activeTab, page],
-    queryFn: () => doGetComments({ data: { workspaceId, status: activeTab, page, limit: LIMIT } }),
+  // Blog query
+  const { data: blogData, isLoading: blogLoading } = useQuery({
+    queryKey: ["admin", "comments", "blogs", workspaceId, activeTab, page],
+    queryFn:  () => doGetComments({ data: { workspaceId, status: activeTab, page, limit: LIMIT } }),
+    enabled:  contentType === "blogs",
   });
 
-  const comments  = data?.rows ?? [];
-  const total     = data?.total ?? 0;
+  // Non-blog query
+  const nonBlogType = contentType !== "blogs" ? (contentType as "news" | "articles" | "products") : null;
+  const { data: contentData, isLoading: contentLoading } = useQuery({
+    queryKey: ["admin", "comments", contentType, workspaceId, activeTab, page],
+    queryFn:  () => doGetContentComments({ data: {
+      workspaceId,
+      contentType: nonBlogType!,
+      status: activeTab,
+      page,
+      limit: LIMIT,
+    }}),
+    enabled: contentType !== "blogs",
+  });
+
+  const isLoading  = contentType === "blogs" ? blogLoading : contentLoading;
+  const activeData = contentType === "blogs" ? blogData   : contentData;
+  const comments   = activeData?.rows ?? [];
+  const total      = activeData?.total ?? 0;
   const totalPages = Math.ceil(total / LIMIT);
 
   const invalidate = () =>
-    queryClient.invalidateQueries({ queryKey: ["admin", "comments", workspaceId] });
+    queryClient.invalidateQueries({ queryKey: ["admin", "comments", contentType, workspaceId] });
 
   const moderateMutation = useMutation({
     mutationFn: ({ commentId, status }: { commentId: string; status: CommentStatus }) =>
-      doModerate({ data: { commentId, workspaceId, status } }),
+      contentType === "blogs"
+        ? doModerate({ data: { commentId, workspaceId, status } })
+        : doModerateContent({ data: { commentId, workspaceId, contentType: contentType as "news" | "articles" | "products", status } }),
     onSuccess: (_, { status }) => {
       toast.success(`Comment marked as ${status}`);
       invalidate();
@@ -110,7 +148,9 @@ function CommentsPage() {
 
   const deleteMutation = useMutation({
     mutationFn: (commentId: string) =>
-      doDelete({ data: { commentId, workspaceId } }),
+      contentType === "blogs"
+        ? doDelete({ data: { commentId, workspaceId } })
+        : doDeleteContent({ data: { commentId, workspaceId, contentType: contentType as "news" | "articles" | "products" } }),
     onSuccess: () => {
       toast.success("Comment permanently deleted");
       invalidate();
@@ -123,6 +163,11 @@ function CommentsPage() {
     setPage(1);
   }
 
+  function handleContentTypeChange(ct: ContentTypeTab) {
+    setContentType(ct);
+    setPage(1);
+  }
+
   const busy = moderateMutation.isPending || deleteMutation.isPending;
 
   return (
@@ -131,11 +176,31 @@ function CommentsPage() {
       <div className="mb-6">
         <h1 className="text-xl font-semibold">Comments</h1>
         <p className="mt-0.5 text-sm text-muted-foreground">
-          Moderate reader comments across all blog posts.
+          Moderate reader comments across all content types.
         </p>
       </div>
 
-      {/* Tabs */}
+      {/* Content type selector */}
+      <div className="mb-4 flex items-center gap-1.5 flex-wrap">
+        {CONTENT_TYPE_TABS.map((ct) => (
+          <button
+            key={ct.value}
+            type="button"
+            onClick={() => handleContentTypeChange(ct.value)}
+            className={[
+              "inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium border transition-colors",
+              contentType === ct.value
+                ? "border-primary bg-primary/10 text-primary"
+                : "border-border bg-background text-muted-foreground hover:border-primary/40 hover:text-foreground",
+            ].join(" ")}
+          >
+            <ct.icon className="h-3 w-3" />
+            {ct.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Status Tabs */}
       <div className="mb-6 flex items-center gap-1 border-b border-border">
         {TABS.map((tab) => (
           <button
@@ -226,6 +291,19 @@ function CommentsPage() {
 
 // ── Comment card ──────────────────────────────────────────────────────────────
 
+// Unified comment shape for the card — covers both blog and content comment types
+type AnyComment = {
+  id:             string;
+  parent_id:      string | null;
+  author_name:    string;
+  author_email:   string;
+  author_website: string | null;
+  content:        string;
+  status:         string;
+  created_at:     string;
+  post_title:     string | null;
+};
+
 function CommentCard({
   comment,
   status,
@@ -233,7 +311,7 @@ function CommentCard({
   onModerate,
   onDelete,
 }: {
-  comment: AdminComment;
+  comment: AnyComment;
   status: CommentStatus;
   busy: boolean;
   onModerate: (status: CommentStatus) => void;
