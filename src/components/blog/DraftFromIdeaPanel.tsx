@@ -93,12 +93,17 @@ Return an object with this exact shape:
 }`;
 
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const authHeaders = session?.access_token
+        ? { Authorization: `Bearer ${session.access_token}` }
+        : {};
       const { data, error } = await supabase.functions.invoke("ai-generate", {
         body: {
           task: "custom",
           system_prompt: systemPrompt,
           prompt: trimmed,
         },
+        headers: authHeaders,
       });
 
       if (error) throw new Error(error.message);

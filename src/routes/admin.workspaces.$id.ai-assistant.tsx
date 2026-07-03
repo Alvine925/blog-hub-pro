@@ -1,12 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { createServerFn } from "@tanstack/react-start";
+import { getRequest } from "@tanstack/react-start/server";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Sparkles, Loader2, Copy, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/admin/workspaces/$id/ai-assistant")({
   head: () => ({ meta: [{ title: "AI Assistant" }] }),
@@ -24,15 +24,18 @@ const TASKS = [
 ];
 
 const generateContent = createServerFn({ method: "POST" })
-  .validator((input: { prompt: string; accessToken: string }) => input)
+  .validator((input: { prompt: string }) => input)
   .handler(async ({ data }) => {
     const SUPABASE_URL = process.env.SUPABASE_URL ?? "";
+    // Read the Bearer token attached by the attachSupabaseAuth middleware
+    const request = getRequest();
+    const authHeader = request?.headers?.get("authorization") ?? "";
     try {
       const resp = await fetch(`${SUPABASE_URL}/functions/v1/ai-generate`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${data.accessToken}`,
+          ...(authHeader ? { Authorization: authHeader } : {}),
         },
         body: JSON.stringify({ prompt: data.prompt }),
       });
@@ -41,7 +44,7 @@ const generateContent = createServerFn({ method: "POST" })
         throw new Error(`AI service error: ${text}`);
       }
       const json = await resp.json();
-      return { content: json.content ?? json.text ?? JSON.stringify(json) };
+      return { content: json.result ?? json.content ?? json.text ?? JSON.stringify(json) };
     } catch (err) {
       throw new Error(err instanceof Error ? err.message : "AI request failed");
     }
@@ -59,9 +62,7 @@ function WorkspaceAI() {
     setLoading(true);
     setOutput("");
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const token = session?.access_token ?? "";
-      const result = await doGenerate({ data: { prompt: task.prompt + input.trim(), accessToken: token } });
+      const result = await doGenerate({ data: { prompt: task.prompt + input.trim() } });
       setOutput(result.content);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed");
