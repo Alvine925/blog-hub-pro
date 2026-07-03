@@ -85,7 +85,7 @@ const STATUS_STYLE: Record<string, string> = {
 
 function WorkspaceBlogs() {
   const { id: workspaceId } = Route.useParams();
-  const { data: posts } = useSuspenseQuery(listQuery);
+  const { data: posts } = useSuspenseQuery(listQuery(workspaceId));
   const { data: engagement } = useSuspenseQuery(engagementQuery(workspaceId));
   const queryClient = useQueryClient();
   const navigate = useNavigate();

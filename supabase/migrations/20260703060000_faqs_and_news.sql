@@ -55,7 +55,7 @@ CREATE POLICY "Anon can update faqs" ON public.faqs
 CREATE POLICY "Anon can delete faqs" ON public.faqs
   FOR DELETE TO anon, authenticated USING (true);
 
-GRANT SELECT, INSERT, UPDATE, DELETE ON public.faqs TO anon, authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.faqs TO anon, authenticated, service_role;
 
 -- ------------------------------------------------------------
 -- 2. news TABLE
@@ -114,7 +114,7 @@ CREATE POLICY "Anon can update news" ON public.news
 CREATE POLICY "Anon can delete news" ON public.news
   FOR DELETE TO anon, authenticated USING (true);
 
-GRANT SELECT, INSERT, UPDATE, DELETE ON public.news TO anon, authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.news TO anon, authenticated, service_role;
 
 -- ------------------------------------------------------------
 -- 3. workspace_content_opportunities — track generation lifecycle

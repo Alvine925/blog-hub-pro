@@ -7,10 +7,10 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import {
-  Loader2, Sparkles, CheckCircle2, FileText, Newspaper, HelpCircle, Package, BookOpen,
+  Loader2, Sparkles, CheckCircle2, FileText, Newspaper, HelpCircle, Package, BookOpen, PenLine,
 } from "lucide-react";
 
-export type ContentType = "news" | "faqs" | "products" | "articles";
+export type ContentType = "news" | "faqs" | "products" | "articles" | "blogs";
 
 const CONFIG: Record<ContentType, {
   edgeFn: string;
