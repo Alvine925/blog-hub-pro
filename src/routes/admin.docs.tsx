@@ -1,32 +1,37 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useState, useMemo, useEffect, useRef, useCallback } from "react";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { z } from "zod";
+import SyntaxHighlighter from "react-syntax-highlighter";
+import { atomOneDark } from "react-syntax-highlighter/dist/esm/styles/hljs";
 import {
-  BookOpen, Key, Shield, Zap, Hash, Layers, Search, AlertTriangle,
-  Activity, Globe, Code2, FileText, Sparkles, Clock, ChevronRight,
-  Copy, Check, Menu, X, Database, ArrowLeft, ExternalLink, ChevronDown,
-  Terminal, Package, HelpCircle, Rocket, Star, Webhook,
+  Copy, Check, Search, BookOpen, Key, Zap, Code2, AlertTriangle,
+  Clock, Layers, Star, StarOff, Eye, ChevronRight, ExternalLink,
+  Activity, Globe, Shield, Sparkles, FileText, Database, Hash,
+  ChevronDown, ChevronUp,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { ENDPOINT_REGISTRY, CATEGORY_LABELS } from "@/lib/EndpointRegistry";
-import { generateSnippet, ALL_LANGUAGES, LANGUAGE_LABELS, type CodeLanguage } from "@/lib/ExampleGenerator";
-import { buildParamList } from "@/lib/ParameterParser";
+
+import { createDocService, DOC_SECTIONS, CATEGORY_LABELS, ALL_LANGUAGES, LANGUAGE_LABELS } from "@/lib/DocumentationRenderer";
+import { ENDPOINT_REGISTRY, type EndpointDefinition } from "@/lib/EndpointRegistry";
+import { generateSnippet, type CodeLanguage } from "@/lib/ExampleGenerator";
+import { buildParamList, formatParamType } from "@/lib/ParameterParser";
+import { searchDocs, type SearchResult } from "@/lib/DocumentationSearch";
 import {
-  DOC_SECTIONS,
+  DOC_SECTIONS as ALL_SECTIONS,
   ERROR_DOCS,
   RATE_LIMIT_TIERS,
   CHANGELOG,
   FRAMEWORK_GUIDES,
 } from "@/lib/DocumentationService";
-import { searchDocs } from "@/lib/DocumentationSearch";
+import { generatePrompt } from "@/lib/PromptGeneratorService";
+import { AI_PLATFORMS } from "@/lib/prompt-templates";
 
-// ─── Route ────────────────────────────────────────────────────────────────────
+// ── Route ─────────────────────────────────────────────────────────────────────
 
 const searchSchema = z.object({
-  section:    z.string().optional().default("introduction"),
+  section:    z.string().optional().default("overview"),
   endpointId: z.string().optional(),
-  q:          z.string().optional(),
 });
 
 export const Route = createFileRoute("/admin/docs")({
@@ -35,70 +40,75 @@ export const Route = createFileRoute("/admin/docs")({
   component: DevDocsPortal,
 });
 
-// ─── Nav structure ────────────────────────────────────────────────────────────
+// ── Real API base URLs ────────────────────────────────────────────────────────
 
-interface NavLeaf  { type: "leaf";  id: string; label: string; icon?: React.ComponentType<{ className?: string }> }
-interface NavGroup { type: "group"; label: string; items: NavLeaf[]; defaultOpen?: boolean }
-type NavEntry = NavGroup;
+const SUPABASE_PROJECT_ID = "pzhsjhprnqfhixjkekxr";
+const PROD_API_URL = `https://${SUPABASE_PROJECT_ID}.supabase.co/functions/v1/content-router`;
 
-const NAV_STRUCTURE: NavEntry[] = [
-  {
-    type: "group", label: "Getting Started", defaultOpen: true,
-    items: [
-      { type: "leaf", id: "introduction",   label: "Introduction",      icon: BookOpen },
-      { type: "leaf", id: "quick-start",    label: "Quick Start",       icon: Rocket   },
-      { type: "leaf", id: "authentication", label: "Authentication",    icon: Shield   },
-      { type: "leaf", id: "api-keys",       label: "API Keys",          icon: Key      },
-      { type: "leaf", id: "first-request",  label: "First Request",     icon: Zap      },
-    ],
-  },
-  {
-    type: "group", label: "REST API", defaultOpen: true,
-    items: [
-      { type: "leaf", id: "endpoints",      label: "All Endpoints",     icon: Database },
-      { type: "leaf", id: "pagination",     label: "Pagination",        icon: Hash     },
-      { type: "leaf", id: "filtering",      label: "Filtering",         icon: Layers   },
-      { type: "leaf", id: "search-api",     label: "Search",            icon: Search   },
-      { type: "leaf", id: "rate-limits",    label: "Rate Limits",       icon: Activity },
-      { type: "leaf", id: "versioning",     label: "Versioning",        icon: Globe    },
-    ],
-  },
-  {
-    type: "group", label: "Error Reference", defaultOpen: false,
-    items: [
-      { type: "leaf", id: "errors",         label: "HTTP Error Codes",  icon: AlertTriangle },
-    ],
-  },
-  {
-    type: "group", label: "Guides", defaultOpen: true,
-    items: [
-      { type: "leaf", id: "code-examples",  label: "Code Examples",     icon: Code2    },
-      { type: "leaf", id: "frameworks",     label: "Framework Guides",  icon: FileText },
-      { type: "leaf", id: "ai-prompts",     label: "AI Prompts",        icon: Sparkles },
-    ],
-  },
-  {
-    type: "group", label: "Resources", defaultOpen: false,
-    items: [
-      { type: "leaf", id: "faq",            label: "Developer FAQ",     icon: HelpCircle },
-      { type: "leaf", id: "changelog",      label: "Changelog",         icon: Clock    },
-      { type: "leaf", id: "sdk",            label: "SDKs",              icon: Package  },
-      { type: "leaf", id: "webhooks",       label: "Webhooks",          icon: Webhook  },
-    ],
-  },
-];
+// ── Method badge colors ───────────────────────────────────────────────────────
 
 const METHOD_COLOR: Record<string, string> = {
   GET:    "text-emerald-700 bg-emerald-50 border border-emerald-200",
-  POST:   "text-blue-700   bg-blue-50   border border-blue-200",
-  PUT:    "text-amber-700  bg-amber-50  border border-amber-200",
+  POST:   "text-blue-700 bg-blue-50 border border-blue-200",
+  PUT:    "text-amber-700 bg-amber-50 border border-amber-200",
   PATCH:  "text-orange-700 bg-orange-50 border border-orange-200",
-  DELETE: "text-red-700    bg-red-50    border border-red-200",
+  DELETE: "text-red-700 bg-red-50 border border-red-200",
 };
 
-// ─── Tiny reusable components ─────────────────────────────────────────────────
+const SECTION_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
+  overview:        BookOpen,
+  authentication:  Shield,
+  "api-keys":      Key,
+  "first-request": Zap,
+  pagination:      Hash,
+  filtering:       Layers,
+  search:          Search,
+  errors:          AlertTriangle,
+  "rate-limits":   Activity,
+  versioning:      Globe,
+  "code-examples": Code2,
+  frameworks:      FileText,
+  "ai-prompts":    Sparkles,
+  endpoints:       Database,
+  changelog:       Clock,
+};
 
-function CopyButton({ text }: { text: string }) {
+// ── Section headings for right-side TOC ──────────────────────────────────────
+
+const SECTION_TOC: Record<string, string[]> = {
+  overview:        ["Overview", "Base URL", "Production URL", "Example Request", "All Endpoints"],
+  authentication:  ["Authentication", "Key Types", "Auth Header", "cURL Example"],
+  "api-keys":      ["API Keys", "Key Lifecycle"],
+  "first-request": ["First Request", "1. Get a Key", "2. Make a Request", "3. Handle Response"],
+  pagination:      ["Pagination", "Parameters", "Example URLs", "Response Meta"],
+  filtering:       ["Filtering"],
+  search:          ["Search", "Example", "Supported Endpoints"],
+  errors:          ["Error Codes", "Error Format"],
+  "rate-limits":   ["Rate Limits", "Limits by Key Type", "Response Headers", "Retry Strategy"],
+  versioning:      ["Versioning", "Version Status", "Deprecation Policy"],
+  "code-examples": ["Code Examples"],
+  frameworks:      ["Framework Guides"],
+  "ai-prompts":    ["AI Prompts"],
+  endpoints:       ["REST Endpoints"],
+  changelog:       ["Changelog"],
+};
+
+// ── Language mapping for syntax highlighter ───────────────────────────────────
+
+const SH_LANG: Record<string, string> = {
+  bash: "bash", shell: "bash", curl: "bash",
+  json: "json",
+  javascript: "javascript", js: "javascript",
+  typescript: "typescript", ts: "typescript",
+  python: "python",
+  php: "php",
+  go: "go",
+  csharp: "csharp", cs: "csharp",
+};
+
+// ── CopyBtn ───────────────────────────────────────────────────────────────────
+
+function CopyBtn({ text, label = "Copy" }: { text: string; label?: string }) {
   const [copied, setCopied] = useState(false);
   return (
     <button
@@ -106,139 +116,137 @@ function CopyButton({ text }: { text: string }) {
       onClick={() => {
         navigator.clipboard.writeText(text);
         setCopied(true);
-        toast.success("Copied!");
+        toast.success("Copied");
         setTimeout(() => setCopied(false), 2000);
       }}
-      className="flex items-center gap-1 text-xs text-zinc-400 hover:text-zinc-200 transition-colors"
+      className="flex items-center gap-1 text-xs text-zinc-400 hover:text-white transition-colors"
     >
       {copied ? <Check className="h-3 w-3 text-emerald-400" /> : <Copy className="h-3 w-3" />}
-      {copied ? "Copied" : "Copy"}
+      {copied ? "Copied" : label}
     </button>
   );
 }
 
-function CodeBlock({ code, language = "", className }: { code: string; language?: string; className?: string }) {
+// ── CodeBlock with syntax highlighting ───────────────────────────────────────
+
+function CodeBlock({ code, language = "" }: { code: string; language?: string }) {
+  const shLang = SH_LANG[language.toLowerCase()] ?? "plaintext";
+  const displayLang = language || "code";
+
   return (
-    <div className={cn("group relative rounded-xl bg-zinc-950 border border-zinc-800 overflow-hidden", className)}>
-      {language && (
-        <div className="flex items-center justify-between px-4 py-2 border-b border-zinc-800 bg-zinc-900">
-          <span className="text-[10px] font-medium text-zinc-400 uppercase tracking-wider font-mono">{language}</span>
-          <CopyButton text={code} />
-        </div>
-      )}
-      {!language && (
-        <div className="absolute right-3 top-3 opacity-0 group-hover:opacity-100 transition-opacity z-10">
-          <CopyButton text={code} />
-        </div>
-      )}
-      <pre className="overflow-x-auto p-4 text-sm text-zinc-100 font-mono leading-relaxed">
-        <code>{code}</code>
-      </pre>
+    <div className="rounded-lg overflow-hidden border border-zinc-800 text-sm">
+      {/* Header bar */}
+      <div className="flex items-center justify-between px-4 py-2 bg-zinc-900 border-b border-zinc-800">
+        <span className="text-xs font-mono text-zinc-400">{displayLang}</span>
+        <CopyBtn text={code} />
+      </div>
+      {/* Code */}
+      <SyntaxHighlighter
+        language={shLang}
+        style={atomOneDark}
+        customStyle={{
+          margin: 0,
+          borderRadius: 0,
+          background: "#18181b",
+          padding: "1rem",
+          fontSize: "0.75rem",
+          lineHeight: "1.6",
+        }}
+        wrapLongLines={false}
+      >
+        {code}
+      </SyntaxHighlighter>
     </div>
   );
 }
 
-function SectionCard({ children, className }: { children: React.ReactNode; className?: string }) {
-  return (
-    <div className={cn("bg-white border border-zinc-200 rounded-xl p-6 shadow-sm", className)}>
-      {children}
-    </div>
-  );
-}
+// ── Badge ─────────────────────────────────────────────────────────────────────
 
-function MethodBadge({ method }: { method: string }) {
+function Badge({ text, color = "gray" }: { text: string; color?: "gray" | "green" | "blue" | "amber" | "red" }) {
+  const colors = {
+    gray:  "bg-zinc-100 text-zinc-600",
+    green: "bg-emerald-50 text-emerald-700 border border-emerald-200",
+    blue:  "bg-blue-50 text-blue-700 border border-blue-200",
+    amber: "bg-amber-50 text-amber-700 border border-amber-200",
+    red:   "bg-red-50 text-red-700 border border-red-200",
+  };
   return (
-    <span className={cn("inline-flex items-center rounded px-1.5 py-0.5 text-[11px] font-bold font-mono", METHOD_COLOR[method] ?? "bg-muted text-muted-foreground")}>
-      {method}
+    <span className={cn("inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-semibold font-mono", colors[color])}>
+      {text}
     </span>
   );
 }
 
-function StatusBadge({ label, color = "zinc" }: { label: string; color?: "zinc" | "green" | "blue" | "amber" | "red" | "purple" }) {
-  const colors = {
-    zinc:   "bg-zinc-100 text-zinc-600",
-    green:  "bg-emerald-50 text-emerald-700 border border-emerald-200",
-    blue:   "bg-blue-50 text-blue-700 border border-blue-200",
-    amber:  "bg-amber-50 text-amber-700 border border-amber-200",
-    red:    "bg-red-50 text-red-700 border border-red-200",
-    purple: "bg-purple-50 text-purple-700 border border-purple-200",
-  };
-  return <span className={cn("inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-semibold", colors[color])}>{label}</span>;
-}
+// ── Callout box ───────────────────────────────────────────────────────────────
 
-function InfoBox({ type = "info", children, className }: { type?: "info" | "warning" | "tip"; children: React.ReactNode; className?: string }) {
+function Callout({ type, title, children }: { type: "info" | "warning" | "danger"; title: string; children: React.ReactNode }) {
   const styles = {
-    info:    "bg-blue-50 border-blue-200 text-blue-800",
-    warning: "bg-amber-50 border-amber-200 text-amber-800",
-    tip:     "bg-emerald-50 border-emerald-200 text-emerald-800",
+    info:    "border-blue-200 bg-blue-50 text-blue-900",
+    warning: "border-amber-200 bg-amber-50 text-amber-900",
+    danger:  "border-red-200 bg-red-50 text-red-900",
   };
   return (
     <div className={cn("rounded-lg border px-4 py-3 text-sm", styles[type])}>
-      {children}
+      <p className="font-semibold mb-1">{title}</p>
+      <div className="text-[13px] opacity-90">{children}</div>
     </div>
   );
 }
 
-function SectionHeading({ id, children }: { id: string; children: React.ReactNode }) {
-  return (
-    <h2 id={id} className="text-lg font-semibold text-zinc-900 flex items-center gap-2 scroll-mt-20">
-      {children}
-    </h2>
-  );
+// ── Persistent state ──────────────────────────────────────────────────────────
+
+function useFavorites(workspaceId: string) {
+  const KEY = `lunar-doc-favorites-${workspaceId}`;
+  const [favs, setFavs] = useState<string[]>(() => {
+    try { return JSON.parse(localStorage.getItem(KEY) ?? "[]"); } catch { return []; }
+  });
+  const toggle = useCallback((epId: string) => {
+    setFavs((prev) => {
+      const next = prev.includes(epId) ? prev.filter((f) => f !== epId) : [...prev, epId];
+      localStorage.setItem(KEY, JSON.stringify(next));
+      return next;
+    });
+  }, [KEY]);
+  return { favs, toggle };
 }
 
-function ParamTable({ params }: { params: ReturnType<typeof buildParamList> }) {
-  if (!params.length) return <p className="text-sm text-zinc-500">No parameters.</p>;
-  return (
-    <div className="overflow-x-auto rounded-lg border border-zinc-200">
-      <table className="w-full text-sm">
-        <thead>
-          <tr className="bg-zinc-50 border-b border-zinc-200">
-            <th className="px-3 py-2 text-left text-xs font-semibold text-zinc-500 uppercase tracking-wider">Name</th>
-            <th className="px-3 py-2 text-left text-xs font-semibold text-zinc-500 uppercase tracking-wider">Type</th>
-            <th className="px-3 py-2 text-left text-xs font-semibold text-zinc-500 uppercase tracking-wider">Required</th>
-            <th className="px-3 py-2 text-left text-xs font-semibold text-zinc-500 uppercase tracking-wider">Description</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-zinc-100">
-          {params.map((p) => (
-            <tr key={p.name} className="hover:bg-zinc-50/50">
-              <td className="px-3 py-2 font-mono text-xs text-zinc-900 font-medium">{p.name}</td>
-              <td className="px-3 py-2 font-mono text-xs text-purple-600">{p.type}</td>
-              <td className="px-3 py-2">
-                {p.required
-                  ? <StatusBadge label="required" color="red" />
-                  : <StatusBadge label="optional" color="zinc" />}
-              </td>
-              <td className="px-3 py-2 text-xs text-zinc-600">{p.description}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
+function useRecentlyViewed(workspaceId: string) {
+  const KEY = `lunar-doc-recent-${workspaceId}`;
+  const [recent, setRecent] = useState<string[]>(() => {
+    try { return JSON.parse(localStorage.getItem(KEY) ?? "[]"); } catch { return []; }
+  });
+  const push = useCallback((epId: string) => {
+    setRecent((prev) => {
+      const next = [epId, ...prev.filter((r) => r !== epId)].slice(0, 5);
+      localStorage.setItem(KEY, JSON.stringify(next));
+      return next;
+    });
+  }, [KEY]);
+  return { recent, push };
 }
 
-// ─── Sidebar ──────────────────────────────────────────────────────────────────
+// ── DocSidebar ────────────────────────────────────────────────────────────────
 
 function DocSidebar({
   section,
   endpointId,
   onNavigate,
-  collapsed,
-  onToggle,
 }: {
   section: string;
   endpointId?: string;
   onNavigate: (s: string, epId?: string) => void;
-  collapsed: boolean;
-  onToggle: () => void;
 }) {
-  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() =>
-    Object.fromEntries(NAV_STRUCTURE.map((g) => [g.label, g.defaultOpen ?? false]))
-  );
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
+  const grouped = useMemo(() => {
+    const g: Record<string, typeof ALL_SECTIONS> = {};
+    for (const s of ALL_SECTIONS) {
+      g[s.group] = [...(g[s.group] ?? []), s];
+    }
+    return g;
+  }, []);
+
   const epsByCategory = useMemo(() => {
-    const g: Record<string, typeof ENDPOINT_REGISTRY> = {};
+    const g: Record<string, EndpointDefinition[]> = {};
     for (const ep of ENDPOINT_REGISTRY) {
       const label = CATEGORY_LABELS[ep.category];
       g[label] = [...(g[label] ?? []), ep];
@@ -246,1014 +254,876 @@ function DocSidebar({
     return g;
   }, []);
 
-  const toggleGroup = (label: string) =>
-    setOpenGroups((prev) => ({ ...prev, [label]: !prev[label] }));
+  const isEpSection = section === "endpoints" || !!endpointId;
+
+  const toggleGroup = (group: string) =>
+    setCollapsed((prev) => ({ ...prev, [group]: !prev[group] }));
 
   return (
-    <aside
-      className={cn(
-        "fixed left-0 top-14 bottom-0 z-30 flex flex-col bg-white border-r border-zinc-200 transition-all duration-200 overflow-y-auto",
-        collapsed ? "w-0 overflow-hidden" : "w-60",
-      )}
-    >
-      <div className="py-4 px-3 min-w-60">
-        {NAV_STRUCTURE.map((group) => {
-          const isOpen = openGroups[group.label] ?? group.defaultOpen ?? false;
-          return (
-            <div key={group.label} className="mb-3">
-              <button
-                type="button"
-                onClick={() => toggleGroup(group.label)}
-                className="flex w-full items-center justify-between px-2 py-1 mb-0.5"
-              >
-                <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">
-                  {group.label}
-                </span>
-                <ChevronDown className={cn("h-3 w-3 text-zinc-400 transition-transform", isOpen && "rotate-180")} />
-              </button>
-              {isOpen && (
-                <div className="space-y-0.5">
-                  {group.items.map((item) => {
-                    const Icon = item.icon;
-                    const isEndpointsPage = item.id === "endpoints";
-                    const active = section === item.id && !endpointId;
-                    return (
-                      <div key={item.id}>
-                        <button
-                          type="button"
-                          onClick={() => onNavigate(item.id)}
-                          className={cn(
-                            "flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-sm font-medium transition-colors text-left",
-                            active
-                              ? "bg-violet-50 text-violet-700"
-                              : "text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900",
-                          )}
-                        >
-                          {Icon && <Icon className="h-3.5 w-3.5 shrink-0" />}
-                          {item.label}
-                        </button>
-                        {isEndpointsPage && (section === "endpoints" || !!endpointId) && (
-                          <div className="ml-4 mt-0.5 space-y-0.5 border-l border-zinc-100 pl-3">
-                            {Object.entries(epsByCategory).map(([cat, eps]) => (
-                              <div key={cat}>
-                                <p className="py-1 text-[9px] font-bold uppercase tracking-widest text-zinc-400">{cat}</p>
-                                {eps.map((ep) => (
-                                  <button
-                                    key={ep.id}
-                                    type="button"
-                                    onClick={() => onNavigate("endpoints", ep.id)}
-                                    className={cn(
-                                      "flex w-full items-center gap-1.5 rounded px-1.5 py-1 text-xs transition-colors text-left",
-                                      endpointId === ep.id
-                                        ? "text-violet-700 font-semibold"
-                                        : "text-zinc-500 hover:text-zinc-800",
-                                    )}
-                                  >
-                                    <span className={cn("rounded px-1 py-0.5 text-[9px] font-bold font-mono shrink-0", METHOD_COLOR[ep.method])}>
-                                      {ep.method}
-                                    </span>
-                                    <span className="truncate font-mono text-[10px]">{ep.path}</span>
-                                  </button>
-                                ))}
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
-    </aside>
-  );
-}
-
-// ─── Table of Contents ────────────────────────────────────────────────────────
-
-interface TocEntry { id: string; label: string }
-
-function DocTOC({ entries, activeId }: { entries: TocEntry[]; activeId: string }) {
-  if (!entries.length) return null;
-  return (
-    <aside className="w-52 shrink-0 sticky top-20 self-start hidden xl:block">
-      <p className="mb-3 text-[10px] font-bold uppercase tracking-widest text-zinc-400">On this page</p>
-      <nav className="space-y-1">
-        {entries.map((e) => (
-          <a
-            key={e.id}
-            href={`#${e.id}`}
-            className={cn(
-              "block rounded px-2 py-1 text-xs transition-colors",
-              activeId === e.id
-                ? "text-violet-700 font-semibold bg-violet-50"
-                : "text-zinc-500 hover:text-zinc-800",
-            )}
-          >
-            {e.label}
-          </a>
-        ))}
-      </nav>
-    </aside>
-  );
-}
-
-// ─── Section: Introduction ────────────────────────────────────────────────────
-
-function IntroductionSection({ onNavigate }: { onNavigate: (s: string) => void }) {
-  const categories = [...new Set(ENDPOINT_REGISTRY.map((e) => CATEGORY_LABELS[e.category]))];
-  return (
-    <div className="space-y-5">
-      <div>
-        <div className="flex items-center gap-2 mb-3">
-          <StatusBadge label="v1" color="green" />
-          <StatusBadge label="Stable" color="blue" />
-        </div>
-        <h1 className="text-3xl font-bold text-zinc-900 tracking-tight">Lunar CMS Developer Docs</h1>
-        <p className="mt-3 text-zinc-500 text-base leading-relaxed max-w-2xl">
-          The Lunar CMS REST API gives you programmatic access to all your workspace content — blogs, articles, products, FAQs, and more.
-          Authenticate with an API key and start fetching in minutes.
-        </p>
-      </div>
-
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        {[
-          { icon: Zap,      label: "REST + JSON",                desc: "Standard HTTP responses",          section: "endpoints"     },
-          { icon: Shield,   label: "API Key Auth",               desc: "Bearer token authentication",      section: "authentication" },
-          { icon: Database, label: `${ENDPOINT_REGISTRY.length} Endpoints`, desc: `Across ${categories.length} content types`, section: "endpoints" },
-        ].map((f) => (
-          <button
-            key={f.label}
-            type="button"
-            onClick={() => onNavigate(f.section)}
-            className="text-left rounded-xl border border-zinc-200 bg-white p-4 shadow-sm hover:border-violet-300 hover:shadow-md transition-all group"
-          >
-            <f.icon className="h-5 w-5 text-violet-600 mb-2 group-hover:scale-110 transition-transform" />
-            <p className="font-semibold text-sm text-zinc-900">{f.label}</p>
-            <p className="text-xs text-zinc-500 mt-0.5">{f.desc}</p>
-          </button>
-        ))}
-      </div>
-
-      <SectionCard>
-        <SectionHeading id="what-is-lunar">What is Lunar CMS?</SectionHeading>
-        <p className="mt-2 text-sm text-zinc-600 leading-relaxed">
-          Lunar CMS is a headless content management system. You manage content through the admin dashboard, and your website or app
-          fetches that content through the REST API. This separation lets you use any frontend framework — Next.js, React, Vue, Astro,
-          SvelteKit, Laravel, Flutter, or plain HTML.
-        </p>
-        <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {[
-            { title: "Headless Architecture",  desc: "Content and presentation are decoupled. Change your frontend any time without touching content." },
-            { title: "Multi-workspace",         desc: "Each workspace has isolated content and its own set of API keys." },
-            { title: "Publishable & Secret Keys", desc: "pk_live_ keys for frontend, sk_live_ keys for trusted backend servers." },
-            { title: "Real-time Content",      desc: "Changes in the dashboard reflect immediately via the API." },
-          ].map((i) => (
-            <div key={i.title} className="rounded-lg border border-zinc-100 bg-zinc-50 p-3">
-              <p className="text-xs font-semibold text-zinc-800">{i.title}</p>
-              <p className="text-xs text-zinc-500 mt-0.5 leading-relaxed">{i.desc}</p>
-            </div>
-          ))}
-        </div>
-      </SectionCard>
-
-      <SectionCard>
-        <SectionHeading id="base-url">Base URL</SectionHeading>
-        <p className="mt-2 text-sm text-zinc-600">All API requests should be made to:</p>
-        <div className="mt-3 flex items-center gap-2 rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2.5 font-mono text-sm">
-          <Globe className="h-4 w-4 text-zinc-400 shrink-0" />
-          <span className="text-zinc-900">https://your-domain.com/api/v1</span>
-          <div className="ml-auto">
-            <CopyButton text="https://your-domain.com/api/v1" />
-          </div>
-        </div>
-        <InfoBox type="tip" className="mt-3">
-          Replace <code className="font-mono text-xs bg-emerald-100 px-1 rounded">your-domain.com</code> with your actual Lunar CMS deployment URL. Each workspace is identified by its API key, not by a separate URL.
-        </InfoBox>
-      </SectionCard>
-
-      <SectionCard>
-        <SectionHeading id="next-steps">Next Steps</SectionHeading>
-        <div className="mt-3 space-y-2">
-          {[
-            { label: "Get your API key",           section: "api-keys",       desc: "Create a publishable or secret key in the API Keys section" },
-            { label: "Authenticate your requests", section: "authentication", desc: "Learn how to include your API key in every request" },
-            { label: "Make your first request",    section: "first-request",  desc: "Fetch your first content in under a minute" },
-            { label: "Browse the API Reference",   section: "endpoints",      desc: `Explore all ${ENDPOINT_REGISTRY.length} available endpoints` },
-          ].map((step) => (
+    <aside className="w-60 shrink-0 border-r border-zinc-200 bg-white overflow-y-auto flex flex-col">
+      <div className="py-5 px-3 flex-1">
+        {Object.entries(grouped).map(([group, items]) => (
+          <div key={group} className="mb-5">
             <button
-              key={step.label}
               type="button"
-              onClick={() => onNavigate(step.section)}
-              className="flex w-full items-center gap-3 rounded-lg border border-zinc-100 p-3 text-left hover:border-violet-200 hover:bg-violet-50/30 transition-colors group"
+              onClick={() => toggleGroup(group)}
+              className="flex w-full items-center justify-between mb-1 px-2"
             >
-              <ChevronRight className="h-4 w-4 text-violet-500 shrink-0 group-hover:translate-x-0.5 transition-transform" />
-              <div>
-                <p className="text-sm font-medium text-zinc-900">{step.label}</p>
-                <p className="text-xs text-zinc-500">{step.desc}</p>
-              </div>
+              <p className="text-[9px] font-bold uppercase tracking-widest text-zinc-400">
+                {group}
+              </p>
+              {collapsed[group]
+                ? <ChevronDown className="h-3 w-3 text-zinc-400" />
+                : <ChevronUp className="h-3 w-3 text-zinc-400" />}
             </button>
-          ))}
-        </div>
-      </SectionCard>
-    </div>
-  );
-}
 
-// ─── Section: Quick Start ─────────────────────────────────────────────────────
+            {!collapsed[group] && items.map((item) => {
+              const Icon = SECTION_ICONS[item.id] ?? BookOpen;
+              const active = section === item.id && !endpointId;
+              return (
+                <div key={item.id}>
+                  <button
+                    type="button"
+                    onClick={() => onNavigate(item.id)}
+                    className={cn(
+                      "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm font-medium transition-colors text-left border-l-2",
+                      active
+                        ? "border-red-600 bg-red-50 text-red-600"
+                        : "border-transparent text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900",
+                    )}
+                  >
+                    <Icon className="h-3.5 w-3.5 shrink-0" />
+                    {item.title}
+                  </button>
 
-function QuickStartSection() {
-  const [step, setStep] = useState(0);
-  const steps = [
-    {
-      title: "1. Get an API Key",
-      content: (
-        <div className="space-y-3">
-          <p className="text-sm text-zinc-600">Go to <strong>API Keys</strong> in the sidebar and create a publishable key (<code className="font-mono text-xs bg-zinc-100 px-1 rounded">pk_live_</code>).</p>
-          <InfoBox type="tip">Use publishable keys for public frontends. Secret keys should only be used server-side.</InfoBox>
-        </div>
-      ),
-    },
-    {
-      title: "2. Make a Request",
-      content: (
-        <CodeBlock
-          language="bash"
-          code={`curl "https://your-domain.com/api/v1/blogs?limit=5" \\
-  -H "Authorization: Bearer pk_live_YOUR_KEY"`}
-        />
-      ),
-    },
-    {
-      title: "3. Parse the Response",
-      content: (
-        <CodeBlock
-          language="json"
-          code={`{
-  "success": true,
-  "data": [
-    {
-      "slug": "hello-world",
-      "title": "Hello World",
-      "excerpt": "My first blog post",
-      "published_at": "2025-01-15T12:00:00Z"
-    }
-  ],
-  "meta": { "page": 1, "limit": 5, "total": 42, "totalPages": 9 }
-}`}
-        />
-      ),
-    },
-    {
-      title: "4. Display in Your App",
-      content: (
-        <CodeBlock
-          language="javascript"
-          code={`const res = await fetch("https://your-domain.com/api/v1/blogs", {
-  headers: { Authorization: "Bearer pk_live_YOUR_KEY" },
-});
-const { data: posts } = await res.json();
-
-posts.forEach(post => {
-  console.log(post.title, post.slug);
-});`}
-        />
-      ),
-    },
-  ];
-  return (
-    <div className="space-y-5">
-      <div>
-        <h1 className="text-2xl font-bold text-zinc-900">Quick Start</h1>
-        <p className="mt-2 text-zinc-500 text-sm">Get your first content in under 2 minutes.</p>
-      </div>
-      <div className="flex gap-2 flex-wrap">
-        {steps.map((s, i) => (
-          <button
-            key={i}
-            type="button"
-            onClick={() => setStep(i)}
-            className={cn(
-              "text-xs px-3 py-1.5 rounded-full border font-medium transition-colors",
-              step === i ? "bg-violet-600 text-white border-violet-600" : "border-zinc-200 text-zinc-600 hover:border-violet-300",
-            )}
-          >
-            {s.title}
-          </button>
+                  {/* Endpoint sub-nav */}
+                  {item.id === "endpoints" && isEpSection && (
+                    <div className="mt-1 ml-5 space-y-0.5">
+                      {Object.entries(epsByCategory).map(([cat, eps]) => (
+                        <div key={cat}>
+                          <p className="px-2 py-1 text-[9px] font-bold uppercase tracking-widest text-zinc-400">{cat}</p>
+                          {eps.map((ep) => (
+                            <button
+                              key={ep.id}
+                              type="button"
+                              onClick={() => onNavigate("endpoints", ep.id)}
+                              className={cn(
+                                "flex w-full items-center gap-1.5 rounded px-2 py-1 text-xs transition-colors text-left border-l-2",
+                                endpointId === ep.id
+                                  ? "border-red-600 bg-red-50 text-red-700 font-medium"
+                                  : "border-transparent text-zinc-500 hover:text-zinc-800",
+                              )}
+                            >
+                              <span className={cn("rounded px-1 py-0.5 text-[9px] font-bold font-mono shrink-0", METHOD_COLOR[ep.method])}>
+                                {ep.method}
+                              </span>
+                              <span className="truncate font-mono text-[10px]">{ep.path}</span>
+                            </button>
+                          ))}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
         ))}
       </div>
-      <SectionCard>{steps[step].content}</SectionCard>
-      <div className="flex gap-2">
-        {step > 0 && (
-          <button type="button" onClick={() => setStep(step - 1)} className="text-sm text-zinc-500 hover:text-zinc-800 transition-colors">
-            ← Previous
-          </button>
-        )}
-        {step < steps.length - 1 && (
-          <button type="button" onClick={() => setStep(step + 1)} className="ml-auto text-sm font-medium text-violet-600 hover:text-violet-800 transition-colors">
-            Next →
-          </button>
-        )}
-      </div>
-    </div>
+    </aside>
   );
 }
 
-// ─── Section: Authentication ──────────────────────────────────────────────────
+// ── DocToc (right-side table of contents) ─────────────────────────────────────
 
-function AuthenticationSection() {
+function DocToc({ section, endpointId }: { section: string; endpointId?: string }) {
+  const headings = endpointId
+    ? ["Endpoint", "Code Example", "Parameters", "Response", "Errors", "AI Prompt"]
+    : SECTION_TOC[section] ?? [];
+
+  if (headings.length === 0) return null;
+
   return (
-    <div className="space-y-5">
-      <div>
-        <h1 className="text-2xl font-bold text-zinc-900">Authentication</h1>
-        <p className="mt-2 text-zinc-500 text-sm">All API requests require an API key passed as a Bearer token.</p>
-      </div>
-
-      <SectionCard>
-        <SectionHeading id="bearer-token">Bearer Token</SectionHeading>
-        <p className="mt-2 text-sm text-zinc-600">Include your API key in the <code className="font-mono text-xs bg-zinc-100 px-1 rounded">Authorization</code> header of every request:</p>
-        <CodeBlock className="mt-3" language="http" code={`GET /api/v1/blogs HTTP/1.1
-Host: your-domain.com
-Authorization: Bearer pk_live_YOUR_KEY
-Content-Type: application/json`} />
-      </SectionCard>
-
-      <SectionCard>
-        <SectionHeading id="key-types">Key Types</SectionHeading>
-        <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div className="rounded-lg border border-emerald-200 bg-emerald-50/50 p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <StatusBadge label="pk_live_" color="green" />
-              <span className="text-xs font-semibold text-zinc-700">Publishable Key</span>
-            </div>
-            <ul className="space-y-1 text-xs text-zinc-600">
-              <li>✓ Safe to use in client-side code</li>
-              <li>✓ Read-only access to published content</li>
-              <li>✓ Rate limited at 60 req/min</li>
-              <li>✗ Cannot access unpublished content</li>
-            </ul>
-          </div>
-          <div className="rounded-lg border border-blue-200 bg-blue-50/50 p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <StatusBadge label="sk_live_" color="blue" />
-              <span className="text-xs font-semibold text-zinc-700">Secret Key</span>
-            </div>
-            <ul className="space-y-1 text-xs text-zinc-600">
-              <li>✓ Full read/write access</li>
-              <li>✓ Access to drafts and unpublished</li>
-              <li>✓ Higher rate limits (120 req/min)</li>
-              <li>✗ Never expose in client-side code</li>
-            </ul>
-          </div>
-        </div>
-      </SectionCard>
-
-      <SectionCard>
-        <SectionHeading id="auth-errors">Authentication Errors</SectionHeading>
-        <div className="mt-3 space-y-2">
-          {[
-            { code: "401", reason: "Missing or invalid API key", fix: 'Add `Authorization: Bearer YOUR_KEY` header' },
-            { code: "403", reason: "Key doesn't have permission for this resource", fix: "Use a secret key for protected endpoints" },
-          ].map((e) => (
-            <div key={e.code} className="flex items-start gap-3 rounded-lg border border-red-100 bg-red-50/50 p-3">
-              <StatusBadge label={e.code} color="red" />
-              <div>
-                <p className="text-xs font-medium text-zinc-800">{e.reason}</p>
-                <p className="text-xs text-zinc-500 mt-0.5">{e.fix}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-      </SectionCard>
-
-      <SectionCard>
-        <SectionHeading id="security">Security Best Practices</SectionHeading>
-        <ul className="mt-3 space-y-2 text-sm text-zinc-600">
-          {[
-            "Never commit API keys to version control — use environment variables",
-            "Use publishable keys for client-side code; secret keys stay server-side",
-            "Rotate keys immediately if you suspect they've been compromised",
-            "Use different keys for development and production",
-          ].map((tip) => (
-            <li key={tip} className="flex items-start gap-2">
-              <Shield className="h-4 w-4 text-violet-500 shrink-0 mt-0.5" />
-              {tip}
+    <aside className="w-48 shrink-0 hidden xl:block border-l border-zinc-200 bg-white overflow-y-auto">
+      <div className="py-5 px-4">
+        <p className="text-[9px] font-bold uppercase tracking-widest text-zinc-400 mb-3">On this page</p>
+        <ul className="space-y-1">
+          {headings.map((h) => (
+            <li key={h}>
+              <span className="block text-xs text-zinc-500 hover:text-zinc-900 cursor-default py-0.5 leading-snug">
+                {h}
+              </span>
             </li>
           ))}
         </ul>
-      </SectionCard>
-    </div>
+      </div>
+    </aside>
   );
 }
 
-// ─── Section: API Keys ────────────────────────────────────────────────────────
+// ── Section: Overview ─────────────────────────────────────────────────────────
 
-function ApiKeysSection() {
+function OverviewSection({ baseUrl }: { baseUrl: string }) {
+  const categories = [...new Set(ENDPOINT_REGISTRY.map((e) => CATEGORY_LABELS[e.category]))];
+  const firstListEp = ENDPOINT_REGISTRY.find((e) => e.pagination) ?? ENDPOINT_REGISTRY[0];
+
+  const devCurlExample = `curl "${baseUrl}/api/v1${firstListEp.path}?limit=10" \\
+  -H "Authorization: Bearer pk_live_your_key_here"`;
+
+  const prodCurlExample = `curl "${PROD_API_URL}${firstListEp.path}?limit=10" \\
+  -H "Authorization: Bearer pk_live_your_key_here"`;
+
+  const exampleRes = JSON.stringify(firstListEp.exampleResponse, null, 2);
+
   return (
-    <div className="space-y-5">
+    <div className="space-y-10">
       <div>
-        <h1 className="text-2xl font-bold text-zinc-900">API Keys</h1>
-        <p className="mt-2 text-zinc-500 text-sm">Create and manage API keys to authenticate requests.</p>
+        <p className="text-xs font-semibold uppercase tracking-widest text-red-600 mb-2">Getting Started</p>
+        <h1 className="text-3xl font-bold text-zinc-900 mb-3">Lunar CMS REST API</h1>
+        <p className="text-zinc-500 leading-relaxed max-w-2xl">
+          The Lunar CMS REST API lets you fetch your workspace content from any application —
+          static sites, SPAs, mobile apps, or server-side services. Authenticate with an API key
+          and start fetching in minutes.
+        </p>
       </div>
 
-      <SectionCard>
-        <SectionHeading id="creating-keys">Creating Keys</SectionHeading>
-        <ol className="mt-3 space-y-3">
-          {[
-            "Navigate to the workspace you want to create a key for",
-            "Click API Keys in the workspace sidebar",
-            "Click New API Key and give it a descriptive name",
-            "Choose the key type: publishable or secret",
-            "Copy the key immediately — it won't be shown again",
-          ].map((step, i) => (
-            <li key={i} className="flex items-start gap-3 text-sm text-zinc-600">
-              <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-violet-100 text-violet-700 text-xs font-bold">
-                {i + 1}
-              </span>
-              {step}
-            </li>
-          ))}
-        </ol>
-      </SectionCard>
+      <div className="flex flex-wrap gap-6 text-sm">
+        <div className="flex items-center gap-2">
+          <Zap className="h-4 w-4 text-red-600" />
+          <span className="font-medium text-zinc-800">REST API</span>
+          <span className="text-zinc-400">Standard HTTP + JSON</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <Shield className="h-4 w-4 text-red-600" />
+          <span className="font-medium text-zinc-800">API Key Auth</span>
+          <span className="text-zinc-400">Bearer token</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <Globe className="h-4 w-4 text-red-600" />
+          <span className="font-medium text-zinc-800">{ENDPOINT_REGISTRY.length} Endpoints</span>
+          <span className="text-zinc-400">across {categories.length} categories</span>
+        </div>
+      </div>
 
-      <SectionCard>
-        <SectionHeading id="key-lifecycle">Key Lifecycle</SectionHeading>
-        <div className="mt-3 grid grid-cols-2 sm:grid-cols-4 gap-3">
-          {[
-            { label: "Create", icon: "✦", desc: "Generate new keys from the dashboard" },
-            { label: "Store",  icon: "🔒", desc: "Store in env variables, never in code" },
-            { label: "Use",    icon: "→",  desc: "Include in Authorization header" },
-            { label: "Revoke", icon: "✗",  desc: "Instantly disable compromised keys" },
-          ].map((step) => (
-            <div key={step.label} className="rounded-lg border border-zinc-100 bg-zinc-50 p-3 text-center">
-              <div className="text-lg mb-1">{step.icon}</div>
-              <p className="text-xs font-semibold text-zinc-800">{step.label}</p>
-              <p className="text-[11px] text-zinc-500 mt-1 leading-tight">{step.desc}</p>
+      <div>
+        <h2 className="text-lg font-semibold text-zinc-900 mb-3">Base URL</h2>
+        <div className="space-y-2">
+          <div>
+            <p className="text-xs text-zinc-400 mb-1 font-medium uppercase tracking-wide">Development (Node middleware)</p>
+            <div className="flex items-center gap-2 rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 font-mono text-sm">
+              <span className="text-zinc-500">https://</span>
+              <span className="text-zinc-800">{baseUrl.replace(/^https?:\/\//, "")}/api/v1</span>
+              <div className="ml-auto"><CopyBtn text={`${baseUrl}/api/v1`} /></div>
+            </div>
+          </div>
+          <div>
+            <p className="text-xs text-zinc-400 mb-1 font-medium uppercase tracking-wide">Production (Supabase Edge Function)</p>
+            <div className="flex items-center gap-2 rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 font-mono text-sm">
+              <span className="text-zinc-800 truncate">{PROD_API_URL}</span>
+              <div className="ml-auto shrink-0"><CopyBtn text={PROD_API_URL} /></div>
+            </div>
+          </div>
+        </div>
+        <p className="mt-2 text-xs text-zinc-400">
+          The node middleware ({baseUrl}/api/v1) covers blog engagement endpoints.
+          The Supabase edge function handles all content retrieval (blogs, FAQs, news, collections, search, media).
+        </p>
+      </div>
+
+      <div>
+        <h2 className="text-lg font-semibold text-zinc-900 mb-3">Example Request</h2>
+        <p className="text-sm text-zinc-500 mb-2">Development:</p>
+        <CodeBlock code={devCurlExample} language="bash" />
+        <p className="text-sm text-zinc-500 mt-3 mb-2">Production:</p>
+        <CodeBlock code={prodCurlExample} language="bash" />
+      </div>
+
+      <div>
+        <h2 className="text-lg font-semibold text-zinc-900 mb-3">Example Response</h2>
+        <CodeBlock code={exampleRes} language="json" />
+      </div>
+
+      <div>
+        <h2 className="text-lg font-semibold text-zinc-900 mb-4">All Endpoints</h2>
+        <div className="rounded-lg border border-zinc-200 overflow-hidden">
+          {ENDPOINT_REGISTRY.map((ep, i) => (
+            <div key={ep.id} className={cn("flex items-center gap-3 px-4 py-3 text-sm", i > 0 && "border-t border-zinc-100")}>
+              <span className={cn("rounded px-1.5 py-0.5 text-[10px] font-bold font-mono shrink-0", METHOD_COLOR[ep.method])}>{ep.method}</span>
+              <code className="font-mono text-xs text-zinc-700">/v1{ep.path}</code>
+              <span className="text-zinc-400 ml-2 text-xs truncate">{ep.description}</span>
+              <Badge text={CATEGORY_LABELS[ep.category]} color="gray" />
             </div>
           ))}
         </div>
-      </SectionCard>
-
-      <SectionCard>
-        <SectionHeading id="env-vars">Environment Variables</SectionHeading>
-        <p className="mt-2 text-sm text-zinc-600">Always store API keys in environment variables:</p>
-        <CodeBlock className="mt-3" language="bash" code={`# .env.local (never commit this file)
-LUNAR_API_KEY=pk_live_xxxxxxxxxxxxxxxx
-LUNAR_API_URL=https://your-domain.com/api/v1`} />
-      </SectionCard>
+      </div>
     </div>
   );
 }
 
-// ─── Section: First Request ───────────────────────────────────────────────────
+// ── Section: Authentication ───────────────────────────────────────────────────
 
-function FirstRequestSection() {
-  const [lang, setLang] = useState<CodeLanguage>("curl");
-  const firstEp = ENDPOINT_REGISTRY[0];
-  const snippet = generateSnippet(firstEp, lang, "https://your-domain.com/api/v1", "pk_live_YOUR_KEY");
+function AuthSection({ baseUrl }: { baseUrl: string }) {
+  const ep = ENDPOINT_REGISTRY[0];
   return (
-    <div className="space-y-5">
+    <div className="space-y-10">
       <div>
-        <h1 className="text-2xl font-bold text-zinc-900">Your First Request</h1>
-        <p className="mt-2 text-zinc-500 text-sm">Make your first API call and get content back.</p>
+        <p className="text-xs font-semibold uppercase tracking-widest text-red-600 mb-2">Introduction</p>
+        <h1 className="text-3xl font-bold text-zinc-900 mb-3">Authentication</h1>
+        <p className="text-zinc-500 leading-relaxed">
+          All API requests require a Bearer token in the <code className="font-mono text-xs bg-zinc-100 px-1 rounded">Authorization</code> header.
+          Your API key is workspace-scoped — it automatically determines which content is returned.
+        </p>
       </div>
 
-      <SectionCard>
-        <SectionHeading id="endpoint">Endpoint</SectionHeading>
-        <div className="mt-3 flex items-center gap-2 rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 font-mono text-sm">
-          <MethodBadge method="GET" />
-          <span className="text-zinc-900">/api/v1/blogs</span>
-        </div>
-      </SectionCard>
+      <Callout type="info" title="Key Principle">
+        Workspace IDs and Collection IDs are never required in requests. Your API key resolves everything automatically.
+      </Callout>
 
-      <SectionCard>
-        <SectionHeading id="code-example">Code Example</SectionHeading>
-        <div className="mt-3 flex gap-1.5 flex-wrap">
+      <div>
+        <h2 className="text-lg font-semibold text-zinc-900 mb-4">Key Types</h2>
+        <div className="grid grid-cols-2 gap-4">
+          {[
+            {
+              prefix: "pk_live_",
+              name: "Publishable Key",
+              color: "green" as const,
+              desc: "Safe to expose in frontend applications for read-only public content. Ideal for static sites and client-side apps via a proxy.",
+              use: "Public read endpoints (blogs, collections, news, FAQs)",
+            },
+            {
+              prefix: "sk_live_",
+              name: "Secret Key",
+              color: "amber" as const,
+              desc: "Higher rate limits and additional capabilities including comment moderation. Never expose in client-side code.",
+              use: "Server-side integrations, webhooks, comment moderation",
+            },
+          ].map((k) => (
+            <div key={k.prefix} className="rounded-lg border border-zinc-200 p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <code className="font-mono text-xs bg-zinc-100 px-2 py-0.5 rounded">{k.prefix}...</code>
+                <Badge text={k.name} color={k.color} />
+              </div>
+              <p className="text-sm text-zinc-500 mb-2">{k.desc}</p>
+              <p className="text-xs text-zinc-400"><span className="font-semibold text-zinc-600">Use for:</span> {k.use}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div>
+        <h2 className="text-lg font-semibold text-zinc-900 mb-3">Authorization Header</h2>
+        <CodeBlock
+          code={`GET ${baseUrl}/api/v1${ep.path} HTTP/1.1\nAuthorization: Bearer pk_live_your_key_here\nContent-Type: application/json`}
+          language="http"
+        />
+      </div>
+
+      <div>
+        <h2 className="text-lg font-semibold text-zinc-900 mb-3">cURL Example</h2>
+        <CodeBlock
+          code={`curl "${baseUrl}/api/v1${ep.path}" \\\n  -H "Authorization: Bearer pk_live_your_key_here"`}
+          language="bash"
+        />
+      </div>
+
+      <div>
+        <h2 className="text-lg font-semibold text-zinc-900 mb-3">Authentication Errors</h2>
+        <CodeBlock
+          code={JSON.stringify({ success: false, error: { code: "INVALID_API_KEY", message: "Invalid or missing API key." } }, null, 2)}
+          language="json"
+        />
+      </div>
+
+      <Callout type="danger" title="Never expose Secret Keys">
+        Do not include <code className="font-mono bg-red-100 px-1 rounded">sk_live_</code> keys in client-side code,
+        version control, or public repositories. Use environment variables and server-side code only.
+      </Callout>
+    </div>
+  );
+}
+
+// ── Section: API Keys ─────────────────────────────────────────────────────────
+
+function ApiKeysSection({}) {
+  return (
+    <div className="space-y-10">
+      <div>
+        <p className="text-xs font-semibold uppercase tracking-widest text-red-600 mb-2">Introduction</p>
+        <h1 className="text-3xl font-bold text-zinc-900 mb-3">API Keys</h1>
+        <p className="text-zinc-500 leading-relaxed">
+          Manage your workspace API keys. Keys are workspace-scoped and automatically
+          resolve content without requiring workspace or collection IDs in requests.
+        </p>
+      </div>
+
+      <div className="flex items-center gap-3 rounded-lg border border-zinc-200 bg-zinc-50 p-4">
+        <Key className="h-5 w-5 text-red-600 shrink-0" />
+        <div className="flex-1">
+          <p className="font-semibold text-sm text-zinc-800">Manage API Keys</p>
+          <p className="text-xs text-zinc-500">Create, revoke, and manage keys from the API Keys dashboard.</p>
+        </div>
+        <a
+          href={`/admin/api-keys`}
+          className="flex items-center gap-1.5 rounded-lg bg-red-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-red-700 transition-colors"
+        >
+          <ExternalLink className="h-3 w-3" />
+          Go to API Keys
+        </a>
+      </div>
+
+      <div>
+        <h2 className="text-lg font-semibold text-zinc-900 mb-4">Key Format</h2>
+        <div className="space-y-2">
+          {[
+            { prefix: "pk_live_", label: "Publishable", desc: "Read access for public content. Safe for frontend use via proxy." },
+            { prefix: "sk_live_", label: "Secret", desc: "Full access including moderation. Server-side only." },
+          ].map((k) => (
+            <div key={k.prefix} className="flex items-start gap-3 rounded-lg border border-zinc-200 p-3">
+              <code className="font-mono text-sm bg-zinc-100 px-2 py-0.5 rounded shrink-0">{k.prefix}{"<payload>"}</code>
+              <div>
+                <span className="text-sm font-semibold text-zinc-700">{k.label}</span>
+                <p className="text-xs text-zinc-500 mt-0.5">{k.desc}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div>
+        <h2 className="text-lg font-semibold text-zinc-900 mb-4">Key Lifecycle</h2>
+        <div className="space-y-3">
+          {[
+            { step: "1", title: "Create", desc: "Generate a key from the API Keys dashboard. Choose Publishable for frontend use or Secret for server-side." },
+            { step: "2", title: "Store Securely", desc: "Copy the key immediately — it is shown only once. Store it in environment variables, never in source code." },
+            { step: "3", title: "Use", desc: 'Include the key in every request: Authorization: Bearer pk_live_your_key' },
+            { step: "4", title: "Revoke", desc: "Revoke compromised or unused keys immediately from the API Keys dashboard. Revoked keys reject all requests instantly." },
+          ].map((s) => (
+            <div key={s.step} className="flex gap-4 items-start py-3 border-b border-zinc-100 last:border-0">
+              <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-red-100 text-red-700 text-xs font-bold">
+                {s.step}
+              </div>
+              <div>
+                <p className="font-semibold text-sm text-zinc-800">{s.title}</p>
+                <p className="text-sm text-zinc-500 mt-0.5">{s.desc}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Section: First Request ────────────────────────────────────────────────────
+
+function FirstRequestSection({ baseUrl, apiKey }: { baseUrl: string; apiKey: string }) {
+  const [lang, setLang] = useState<CodeLanguage>("curl");
+  const ep = ENDPOINT_REGISTRY.find((e) => e.pagination) ?? ENDPOINT_REGISTRY[0];
+  const snippet = generateSnippet(ep, lang, baseUrl, apiKey || "pk_live_your_key_here");
+
+  return (
+    <div className="space-y-10">
+      <div>
+        <p className="text-xs font-semibold uppercase tracking-widest text-red-600 mb-2">Introduction</p>
+        <h1 className="text-3xl font-bold text-zinc-900 mb-3">Making Your First Request</h1>
+        <p className="text-zinc-500 leading-relaxed">
+          Get up and running in under 2 minutes. Fetch your first blog post with the language of your choice.
+        </p>
+      </div>
+
+      <div>
+        <h2 className="text-lg font-semibold text-zinc-900 mb-3">1. Get an API Key</h2>
+        <p className="text-sm text-zinc-500 mb-2">Navigate to the API Keys section and create a Publishable key.</p>
+        <div className="rounded-lg border border-zinc-200 bg-zinc-50 px-4 py-3 font-mono text-xs text-zinc-600">
+          pk_live_your_key_here
+        </div>
+      </div>
+
+      <div>
+        <h2 className="text-lg font-semibold text-zinc-900 mb-3">2. Make a Request</h2>
+        <div className="mb-3 flex flex-wrap gap-1.5">
           {ALL_LANGUAGES.map((l) => (
             <button
               key={l}
               type="button"
               onClick={() => setLang(l)}
               className={cn(
-                "text-xs px-2.5 py-1 rounded-full border transition-colors font-medium",
-                lang === l ? "bg-zinc-900 text-white border-zinc-900" : "border-zinc-200 text-zinc-600 hover:border-zinc-400",
+                "rounded px-2.5 py-1 text-xs font-medium transition-colors",
+                l === lang ? "bg-red-600 text-white" : "border border-zinc-200 text-zinc-500 hover:text-zinc-800",
               )}
             >
               {LANGUAGE_LABELS[l]}
             </button>
           ))}
         </div>
-        <CodeBlock className="mt-3" language={LANGUAGE_LABELS[lang]} code={snippet} />
-      </SectionCard>
+        <CodeBlock code={snippet} language={lang === "curl" ? "bash" : lang} />
+      </div>
 
-      <SectionCard>
-        <SectionHeading id="response">Response</SectionHeading>
-        <CodeBlock
-          className="mt-3"
-          language="json"
-          code={JSON.stringify(firstEp.exampleResponse, null, 2)}
-        />
-      </SectionCard>
+      <div>
+        <h2 className="text-lg font-semibold text-zinc-900 mb-3">3. Handle the Response</h2>
+        <CodeBlock code={JSON.stringify(ep.exampleResponse, null, 2)} language="json" />
+      </div>
     </div>
   );
 }
 
-// ─── Section: Endpoints ───────────────────────────────────────────────────────
+// ── Section: Pagination ───────────────────────────────────────────────────────
 
-function EndpointsSection({ endpointId, onSelectEndpoint }: { endpointId?: string; onSelectEndpoint: (id: string) => void }) {
-  const [lang, setLang] = useState<CodeLanguage>("curl");
-  const ep = endpointId ? ENDPOINT_REGISTRY.find((e) => e.id === endpointId) : null;
-
-  const epsByCategory = useMemo(() => {
-    const g: Record<string, typeof ENDPOINT_REGISTRY> = {};
-    for (const e of ENDPOINT_REGISTRY) {
-      const label = CATEGORY_LABELS[e.category];
-      g[label] = [...(g[label] ?? []), e];
-    }
-    return g;
-  }, []);
-
-  if (ep) {
-    const params = buildParamList(ep);
-    const snippet = generateSnippet(ep, lang, "https://your-domain.com/api/v1", "pk_live_YOUR_KEY");
-    return (
-      <div className="space-y-5">
-        <div className="flex items-center gap-2">
-          <button type="button" onClick={() => onSelectEndpoint("")} className="text-xs text-zinc-400 hover:text-zinc-700 flex items-center gap-1">
-            <ArrowLeft className="h-3.5 w-3.5" /> All Endpoints
-          </button>
-        </div>
-        <div>
-          <div className="flex items-center gap-2 flex-wrap">
-            <MethodBadge method={ep.method} />
-            <h1 className="text-xl font-bold text-zinc-900 font-mono">{ep.path}</h1>
-            {ep.deprecated && <StatusBadge label="Deprecated" color="amber" />}
-          </div>
-          <p className="mt-2 text-zinc-500 text-sm">{ep.description}</p>
-          {ep.longDescription && <p className="mt-1 text-zinc-500 text-sm">{ep.longDescription}</p>}
-        </div>
-
-        <div className="flex gap-3 flex-wrap">
-          <StatusBadge label={ep.authentication ? "Auth required" : "Public"} color={ep.authentication ? "amber" : "green"} />
-          {ep.pagination && <StatusBadge label="Paginated" color="blue" />}
-          {ep.search && <StatusBadge label="Searchable" color="purple" />}
-          <StatusBadge label={`Added ${ep.addedInVersion}`} color="zinc" />
-        </div>
-
-        <SectionCard>
-          <SectionHeading id="request-url">Request URL</SectionHeading>
-          <div className="mt-2 flex items-center gap-2 rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 font-mono text-sm overflow-x-auto">
-            <MethodBadge method={ep.method} />
-            <span className="text-zinc-600">https://your-domain.com/api/v1</span>
-            <span className="text-zinc-900 font-medium">{ep.path}</span>
-          </div>
-        </SectionCard>
-
-        <SectionCard>
-          <SectionHeading id="parameters">Parameters</SectionHeading>
-          <div className="mt-3">
-            <ParamTable params={params} />
-          </div>
-        </SectionCard>
-
-        <SectionCard>
-          <SectionHeading id="code-examples">Code Examples</SectionHeading>
-          <div className="mt-3 flex gap-1.5 flex-wrap">
-            {ALL_LANGUAGES.map((l) => (
-              <button
-                key={l}
-                type="button"
-                onClick={() => setLang(l)}
-                className={cn(
-                  "text-xs px-2.5 py-1 rounded-full border transition-colors font-medium",
-                  lang === l ? "bg-zinc-900 text-white border-zinc-900" : "border-zinc-200 text-zinc-600 hover:border-zinc-400",
-                )}
-              >
-                {LANGUAGE_LABELS[l]}
-              </button>
-            ))}
-          </div>
-          <CodeBlock className="mt-3" language={LANGUAGE_LABELS[lang]} code={snippet} />
-        </SectionCard>
-
-        <SectionCard>
-          <SectionHeading id="response">Example Response</SectionHeading>
-          <CodeBlock className="mt-3" language="json" code={JSON.stringify(ep.exampleResponse, null, 2)} />
-        </SectionCard>
-
-        {ep.possibleErrors.length > 0 && (
-          <SectionCard>
-            <SectionHeading id="errors">Possible Errors</SectionHeading>
-            <div className="mt-3 flex gap-2 flex-wrap">
-              {ep.possibleErrors.map((code) => (
-                <StatusBadge key={code} label={String(code)} color={code >= 500 ? "red" : code >= 400 ? "amber" : "green"} />
-              ))}
-            </div>
-          </SectionCard>
-        )}
-      </div>
-    );
-  }
-
+function PaginationSection({ baseUrl }: { baseUrl: string }) {
   return (
-    <div className="space-y-5">
+    <div className="space-y-10">
       <div>
-        <h1 className="text-2xl font-bold text-zinc-900">REST Endpoints</h1>
-        <p className="mt-2 text-zinc-500 text-sm">
-          {ENDPOINT_REGISTRY.length} endpoints across {Object.keys(epsByCategory).length} categories.
-          All endpoints return JSON.
+        <p className="text-xs font-semibold uppercase tracking-widest text-red-600 mb-2">Reference</p>
+        <h1 className="text-3xl font-bold text-zinc-900 mb-3">Pagination</h1>
+        <p className="text-zinc-500 leading-relaxed">
+          All list endpoints use offset-based pagination via the{" "}
+          <code className="font-mono text-xs bg-zinc-100 px-1 rounded">limit</code> and{" "}
+          <code className="font-mono text-xs bg-zinc-100 px-1 rounded">offset</code> parameters.
         </p>
       </div>
-      {Object.entries(epsByCategory).map(([cat, eps]) => (
-        <SectionCard key={cat}>
-          <SectionHeading id={cat.toLowerCase().replace(/\s+/g, "-")}>{cat}</SectionHeading>
-          <div className="mt-3 space-y-2">
-            {eps.map((ep) => (
-              <button
-                key={ep.id}
-                type="button"
-                onClick={() => onSelectEndpoint(ep.id)}
-                className="flex w-full items-start gap-3 rounded-lg border border-zinc-100 p-3 text-left hover:border-violet-200 hover:bg-violet-50/30 transition-colors group"
-              >
-                <MethodBadge method={ep.method} />
-                <div className="flex-1 min-w-0">
-                  <span className="text-sm font-mono text-zinc-900 font-medium">{ep.path}</span>
-                  <p className="text-xs text-zinc-500 mt-0.5">{ep.description}</p>
-                </div>
-                <ChevronRight className="h-4 w-4 text-zinc-300 group-hover:text-violet-400 shrink-0 mt-0.5 transition-colors" />
-              </button>
-            ))}
-          </div>
-        </SectionCard>
-      ))}
-    </div>
-  );
-}
 
-// ─── Section: Pagination ──────────────────────────────────────────────────────
-
-function PaginationSection() {
-  return (
-    <div className="space-y-5">
       <div>
-        <h1 className="text-2xl font-bold text-zinc-900">Pagination</h1>
-        <p className="mt-2 text-zinc-500 text-sm">List endpoints use offset-based pagination via <code className="font-mono text-xs bg-zinc-100 px-1 rounded">limit</code> and <code className="font-mono text-xs bg-zinc-100 px-1 rounded">page</code> query parameters.</p>
-      </div>
-
-      <SectionCard>
-        <SectionHeading id="parameters">Parameters</SectionHeading>
-        <div className="mt-3 overflow-x-auto rounded-lg border border-zinc-200">
+        <h2 className="text-lg font-semibold text-zinc-900 mb-3">Parameters</h2>
+        <div className="overflow-hidden rounded-lg border border-zinc-200">
           <table className="w-full text-sm">
-            <thead><tr className="bg-zinc-50 border-b"><th className="px-3 py-2 text-left text-xs font-semibold text-zinc-500">Param</th><th className="px-3 py-2 text-left text-xs font-semibold text-zinc-500">Type</th><th className="px-3 py-2 text-left text-xs font-semibold text-zinc-500">Default</th><th className="px-3 py-2 text-left text-xs font-semibold text-zinc-500">Max</th><th className="px-3 py-2 text-left text-xs font-semibold text-zinc-500">Description</th></tr></thead>
-            <tbody className="divide-y divide-zinc-100">
+            <thead className="bg-zinc-50">
+              <tr>
+                {["Parameter", "Type", "Default", "Max", "Description"].map((h) => (
+                  <th key={h} className="px-4 py-2.5 text-left text-xs font-semibold text-zinc-500">{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
               {[
-                { name: "limit",  type: "integer", default: "20",  max: "100",  desc: "Number of items to return" },
-                { name: "page",   type: "integer", default: "1",   max: "—",    desc: "Page number (1-based)" },
-                { name: "offset", type: "integer", default: "0",   max: "—",    desc: "Number of items to skip (alternative to page)" },
-              ].map((r) => (
-                <tr key={r.name} className="hover:bg-zinc-50/50">
-                  <td className="px-3 py-2 font-mono text-xs font-medium text-zinc-900">{r.name}</td>
-                  <td className="px-3 py-2 font-mono text-xs text-purple-600">{r.type}</td>
-                  <td className="px-3 py-2 font-mono text-xs text-zinc-500">{r.default}</td>
-                  <td className="px-3 py-2 font-mono text-xs text-zinc-500">{r.max}</td>
-                  <td className="px-3 py-2 text-xs text-zinc-600">{r.desc}</td>
+                { p: "limit", t: "integer", d: "20", m: "100", desc: "Number of results to return." },
+                { p: "offset", t: "integer", d: "0", m: "—", desc: "Number of results to skip. Use offset = page × limit to simulate page-based pagination." },
+              ].map((r, i) => (
+                <tr key={r.p} className={cn("border-t border-zinc-100", i === 0 && "border-t-0")}>
+                  <td className="px-4 py-3"><code className="font-mono text-xs bg-zinc-100 px-1 rounded">{r.p}</code></td>
+                  <td className="px-4 py-3 text-zinc-500">{r.t}</td>
+                  <td className="px-4 py-3 font-mono text-xs">{r.d}</td>
+                  <td className="px-4 py-3 font-mono text-xs">{r.m}</td>
+                  <td className="px-4 py-3 text-zinc-500 text-xs">{r.desc}</td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
-      </SectionCard>
-
-      <SectionCard>
-        <SectionHeading id="example">Example</SectionHeading>
-        <CodeBlock className="mt-3" language="bash" code={`# Page 2, 10 items per page
-curl "https://your-domain.com/api/v1/blogs?limit=10&page=2" \\
-  -H "Authorization: Bearer pk_live_YOUR_KEY"`} />
-      </SectionCard>
-
-      <SectionCard>
-        <SectionHeading id="response-meta">Response Meta</SectionHeading>
-        <CodeBlock className="mt-3" language="json" code={`{
-  "success": true,
-  "data": [ /* ... items ... */ ],
-  "meta": {
-    "page": 2,
-    "limit": 10,
-    "total": 87,
-    "totalPages": 9
-  }
-}`} />
-      </SectionCard>
-    </div>
-  );
-}
-
-// ─── Section: Filtering ───────────────────────────────────────────────────────
-
-function FilteringSection() {
-  return (
-    <div className="space-y-5">
-      <div>
-        <h1 className="text-2xl font-bold text-zinc-900">Filtering</h1>
-        <p className="mt-2 text-zinc-500 text-sm">Use query parameters to filter results by category, status, date, and more.</p>
       </div>
 
-      <SectionCard>
-        <SectionHeading id="common-filters">Common Filters</SectionHeading>
-        <div className="mt-3 space-y-2">
+      <div>
+        <h2 className="text-lg font-semibold text-zinc-900 mb-3">Example URLs</h2>
+        <div className="space-y-2">
           {[
-            { param: "category", example: "?category=technology", desc: "Filter by content category" },
-            { param: "status",   example: "?status=published",    desc: "Filter by publish status (published, draft)" },
-            { param: "tag",      example: "?tag=javascript",      desc: "Filter by tag" },
-            { param: "author",   example: "?author=john-doe",     desc: "Filter by author slug" },
-          ].map((f) => (
-            <div key={f.param} className="rounded-lg border border-zinc-100 bg-zinc-50 p-3">
-              <div className="flex items-center gap-2 flex-wrap">
-                <code className="text-xs font-mono font-semibold text-violet-700 bg-violet-50 px-1.5 py-0.5 rounded">{f.param}</code>
-                <code className="text-xs font-mono text-zinc-500">{f.example}</code>
-              </div>
-              <p className="text-xs text-zinc-600 mt-1">{f.desc}</p>
+            { url: `${baseUrl}/api/v1/blogs`, desc: "First 20 results (default)" },
+            { url: `${baseUrl}/api/v1/blogs?limit=10`, desc: "First 10 results" },
+            { url: `${baseUrl}/api/v1/blogs?limit=10&offset=10`, desc: "Second page of 10 results" },
+            { url: `${baseUrl}/api/v1/blogs?limit=100`, desc: "Up to 100 results (max)" },
+          ].map(({ url, desc }) => (
+            <div key={url} className="flex items-center gap-3 rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2">
+              <code className="font-mono text-xs text-zinc-700 flex-1">{url}</code>
+              <span className="text-xs text-zinc-400 shrink-0">{desc}</span>
+              <CopyBtn text={url} />
             </div>
           ))}
         </div>
-      </SectionCard>
-
-      <SectionCard>
-        <SectionHeading id="combining-filters">Combining Filters</SectionHeading>
-        <CodeBlock className="mt-3" language="bash" code={`curl "https://your-domain.com/api/v1/blogs?category=tech&limit=5&page=1" \\
-  -H "Authorization: Bearer pk_live_YOUR_KEY"`} />
-        <InfoBox type="info" className="mt-3">Filters are AND'd together. An item must match all filters to appear in results.</InfoBox>
-      </SectionCard>
-    </div>
-  );
-}
-
-// ─── Section: Search API ──────────────────────────────────────────────────────
-
-function SearchApiSection() {
-  return (
-    <div className="space-y-5">
-      <div>
-        <h1 className="text-2xl font-bold text-zinc-900">Search</h1>
-        <p className="mt-2 text-zinc-500 text-sm">Full-text search across all published content in a workspace.</p>
       </div>
 
-      <SectionCard>
-        <SectionHeading id="endpoint">Endpoint</SectionHeading>
-        <div className="mt-3 flex items-center gap-2 rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 font-mono text-sm">
-          <MethodBadge method="GET" />
-          <span>/api/v1/search?q=your+query</span>
+      <div>
+        <h2 className="text-lg font-semibold text-zinc-900 mb-3">Response Meta Object</h2>
+        <CodeBlock code={JSON.stringify({ data: ["..."], meta: { total: 45, limit: 10, offset: 10 } }, null, 2)} language="json" />
+        <div className="mt-3 overflow-hidden rounded-lg border border-zinc-200">
+          <table className="w-full text-sm">
+            <thead className="bg-zinc-50">
+              <tr>
+                {["Field", "Type", "Description"].map((h) => (
+                  <th key={h} className="px-4 py-2.5 text-left text-xs font-semibold text-zinc-500">{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {[
+                { f: "total", t: "integer", d: "Total number of matching results across all pages." },
+                { f: "limit", t: "integer", d: "Number of results returned in this response." },
+                { f: "offset", t: "integer", d: "Number of results skipped before this page." },
+              ].map((r, i) => (
+                <tr key={r.f} className="border-t border-zinc-100">
+                  <td className="px-4 py-3"><code className="font-mono text-xs bg-zinc-100 px-1 rounded">{r.f}</code></td>
+                  <td className="px-4 py-3 text-zinc-500">{r.t}</td>
+                  <td className="px-4 py-3 text-zinc-500 text-xs">{r.d}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
-      </SectionCard>
-
-      <SectionCard>
-        <SectionHeading id="example">Example</SectionHeading>
-        <CodeBlock className="mt-3" language="bash" code={`curl "https://your-domain.com/api/v1/search?q=javascript&limit=10" \\
-  -H "Authorization: Bearer pk_live_YOUR_KEY"`} />
-      </SectionCard>
-
-      <SectionCard>
-        <SectionHeading id="response">Response</SectionHeading>
-        <CodeBlock className="mt-3" language="json" code={`{
-  "success": true,
-  "data": [
-    {
-      "type": "blog",
-      "slug": "intro-to-javascript",
-      "title": "Introduction to JavaScript",
-      "excerpt": "Learn the basics of JavaScript...",
-      "score": 0.95
-    }
-  ],
-  "meta": { "page": 1, "limit": 10, "total": 3, "totalPages": 1 }
-}`} />
-      </SectionCard>
+      </div>
     </div>
   );
 }
 
-// ─── Section: Error Codes ─────────────────────────────────────────────────────
+// ── Section: Filtering ────────────────────────────────────────────────────────
+
+function FilteringSection({ baseUrl }: { baseUrl: string }) {
+  const endpointsWithFilters = ENDPOINT_REGISTRY.filter((e) => e.filters.length > 0);
+
+  return (
+    <div className="space-y-10">
+      <div>
+        <p className="text-xs font-semibold uppercase tracking-widest text-red-600 mb-2">Reference</p>
+        <h1 className="text-3xl font-bold text-zinc-900 mb-3">Filtering</h1>
+        <p className="text-zinc-500 leading-relaxed">
+          Narrow results using filter query parameters. Only filters supported by each
+          endpoint are accepted — unsupported filters are silently ignored.
+        </p>
+      </div>
+
+      {endpointsWithFilters.map((ep) => (
+        <div key={ep.id}>
+          <h2 className="text-base font-semibold text-zinc-800 mb-3">
+            <span className={cn("mr-2 rounded px-1.5 py-0.5 text-[10px] font-bold font-mono", METHOD_COLOR[ep.method])}>{ep.method}</span>
+            <code className="font-mono text-sm">/v1{ep.path}</code>
+          </h2>
+          <div className="flex flex-wrap gap-1.5 mb-3">
+            {ep.filters.map((f) => (
+              <Badge key={f} text={`?${f}=`} color="gray" />
+            ))}
+          </div>
+          <div className="overflow-hidden rounded-lg border border-zinc-200">
+            <table className="w-full text-sm">
+              <thead className="bg-zinc-50">
+                <tr>
+                  {["Filter", "Example", "Description"].map((h) => (
+                    <th key={h} className="px-4 py-2.5 text-left text-xs font-semibold text-zinc-500">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {ep.queryParams.map((p, i) => (
+                  <tr key={p.name} className={cn(i > 0 && "border-t border-zinc-100")}>
+                    <td className="px-4 py-3"><code className="font-mono text-xs bg-zinc-100 px-1 rounded">{p.name}</code></td>
+                    <td className="px-4 py-3"><code className="font-mono text-xs text-zinc-500">?{p.name}={p.example}</code></td>
+                    <td className="px-4 py-3 text-zinc-500 text-xs">{p.description}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div className="mt-2">
+            <p className="text-xs text-zinc-400 mb-1">Example URL:</p>
+            <div className="flex items-center gap-2 rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2">
+              <code className="font-mono text-xs flex-1 text-zinc-700">
+                {baseUrl}/api/v1{ep.path}
+                {ep.queryParams[0] ? `?${ep.queryParams[0].name}=${ep.queryParams[0].example}` : ""}
+              </code>
+              <CopyBtn text={`${baseUrl}/api/v1${ep.path}${ep.queryParams[0] ? `?${ep.queryParams[0].name}=${ep.queryParams[0].example}` : ""}`} />
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ── Section: Search ───────────────────────────────────────────────────────────
+
+function SearchSection({ baseUrl }: { baseUrl: string }) {
+  const searchableEndpoints = ENDPOINT_REGISTRY.filter((e) => e.search);
+  const firstSearchEp = searchableEndpoints[0];
+  const exampleUrl = firstSearchEp
+    ? `${baseUrl}/api/v1${firstSearchEp.path}?search=marketing+strategy`
+    : `${baseUrl}/api/v1/blogs?search=marketing+strategy`;
+
+  return (
+    <div className="space-y-10">
+      <div>
+        <p className="text-xs font-semibold uppercase tracking-widest text-red-600 mb-2">Reference</p>
+        <h1 className="text-3xl font-bold text-zinc-900 mb-3">Search</h1>
+        <p className="text-zinc-500 leading-relaxed">
+          Use the <code className="font-mono text-xs bg-zinc-100 px-1 rounded">search</code> parameter
+          for full-text search on list endpoints. Use <code className="font-mono text-xs bg-zinc-100 px-1 rounded">q</code> on
+          the global <code className="font-mono text-xs bg-zinc-100 px-1 rounded">/search</code> endpoint.
+        </p>
+      </div>
+
+      <div>
+        <h2 className="text-lg font-semibold text-zinc-900 mb-3">Example</h2>
+        <CodeBlock code={`curl "${exampleUrl}" \\\n  -H "Authorization: Bearer pk_live_your_key_here"`} language="bash" />
+      </div>
+
+      <div>
+        <h2 className="text-lg font-semibold text-zinc-900 mb-3">Supported Endpoints</h2>
+        <div className="space-y-2">
+          {searchableEndpoints.map((ep) => (
+            <div key={ep.id} className="flex items-center gap-3 rounded-lg border border-zinc-200 px-4 py-3">
+              <span className={cn("rounded px-1.5 py-0.5 text-[10px] font-bold font-mono shrink-0", METHOD_COLOR[ep.method])}>{ep.method}</span>
+              <code className="font-mono text-xs">/api/v1{ep.path}</code>
+              <span className="text-xs text-zinc-400">{ep.description}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div>
+        <h2 className="text-lg font-semibold text-zinc-900 mb-3">Global Search Endpoint</h2>
+        <p className="text-sm text-zinc-500 mb-3">
+          Use <code className="font-mono text-xs bg-zinc-100 px-1 rounded">GET /api/v1/search?q=</code> to search
+          across all content types simultaneously. Requires the <code className="font-mono text-xs bg-zinc-100 px-1 rounded">q</code> parameter.
+        </p>
+        <CodeBlock
+          code={`curl "${baseUrl}/api/v1/search?q=wireless+headphones" \\\n  -H "Authorization: Bearer pk_live_your_key_here"`}
+          language="bash"
+        />
+      </div>
+    </div>
+  );
+}
+
+// ── Section: Errors ───────────────────────────────────────────────────────────
 
 function ErrorsSection() {
   return (
-    <div className="space-y-5">
+    <div className="space-y-10">
       <div>
-        <h1 className="text-2xl font-bold text-zinc-900">HTTP Error Codes</h1>
-        <p className="mt-2 text-zinc-500 text-sm">All errors follow a consistent JSON structure with a machine-readable error code.</p>
+        <p className="text-xs font-semibold uppercase tracking-widest text-red-600 mb-2">Reference</p>
+        <h1 className="text-3xl font-bold text-zinc-900 mb-3">Error Codes</h1>
+        <p className="text-zinc-500 leading-relaxed">
+          All errors return JSON with a <code className="font-mono text-xs bg-zinc-100 px-1 rounded">success: false</code> flag
+          and an <code className="font-mono text-xs bg-zinc-100 px-1 rounded">error</code> object containing a machine-readable code and message.
+        </p>
       </div>
 
-      <SectionCard>
-        <SectionHeading id="error-format">Error Format</SectionHeading>
-        <CodeBlock className="mt-3" language="json" code={`{
-  "success": false,
-  "error": {
-    "code": "INVALID_API_KEY",
-    "message": "Invalid or missing API key.",
-    "status": 401
-  }
-}`} />
-      </SectionCard>
+      <div>
+        <h2 className="text-lg font-semibold text-zinc-900 mb-3">Error Response Format</h2>
+        <CodeBlock
+          code={JSON.stringify({ success: false, error: { code: "INVALID_API_KEY", message: "Invalid or missing API key." } }, null, 2)}
+          language="json"
+        />
+      </div>
 
-      {ERROR_DOCS.map((err) => (
-        <SectionCard key={err.code}>
-          <div className="flex items-center gap-3">
-            <StatusBadge label={String(err.code)} color={err.code >= 500 ? "red" : err.code >= 400 ? "amber" : "green"} />
-            <SectionHeading id={`error-${err.code}`}>{err.name}</SectionHeading>
+      <div className="space-y-6">
+        {ERROR_DOCS.map((e) => (
+          <div key={e.code}>
+            <div className="flex items-center gap-3 mb-3">
+              <Badge text={String(e.code)} color={e.code >= 500 ? "red" : e.code >= 400 ? "amber" : "gray"} />
+              <h3 className="text-base font-semibold text-zinc-800">{e.name}</h3>
+            </div>
+            <p className="text-sm text-zinc-500 mb-3">{e.description}</p>
+            <CodeBlock code={JSON.stringify(e.example, null, 2)} language="json" />
+            <div className="mt-2 text-xs text-zinc-500">
+              <span className="font-semibold text-zinc-700">Resolution: </span>{e.resolution}
+            </div>
           </div>
-          <p className="mt-2 text-sm text-zinc-600">{err.description}</p>
-          <CodeBlock className="mt-3" language="json" code={JSON.stringify(err.example, null, 2)} />
-          <InfoBox type="tip" className="mt-3">
-            <strong>Resolution:</strong> {err.resolution}
-          </InfoBox>
-        </SectionCard>
-      ))}
+        ))}
+      </div>
     </div>
   );
 }
 
-// ─── Section: Rate Limits ─────────────────────────────────────────────────────
+// ── Section: Rate Limits ──────────────────────────────────────────────────────
 
 function RateLimitsSection() {
   return (
-    <div className="space-y-5">
+    <div className="space-y-10">
       <div>
-        <h1 className="text-2xl font-bold text-zinc-900">Rate Limits</h1>
-        <p className="mt-2 text-zinc-500 text-sm">Rate limits protect the API and ensure fair access for all users.</p>
+        <p className="text-xs font-semibold uppercase tracking-widest text-red-600 mb-2">Reference</p>
+        <h1 className="text-3xl font-bold text-zinc-900 mb-3">Rate Limits</h1>
+        <p className="text-zinc-500 leading-relaxed">
+          Rate limits are applied per API key. When exceeded, the API returns a{" "}
+          <code className="font-mono text-xs bg-zinc-100 px-1 mx-1 rounded">429 Too Many Requests</code>
+          response with a <code className="font-mono text-xs bg-zinc-100 px-1 rounded">Retry-After</code> header.
+        </p>
       </div>
 
-      <SectionCard>
-        <SectionHeading id="limits-table">Rate Limit Tiers</SectionHeading>
-        <div className="mt-3 overflow-x-auto rounded-lg border border-zinc-200">
+      <div>
+        <h2 className="text-lg font-semibold text-zinc-900 mb-3">Limits by Key Type</h2>
+        <div className="overflow-hidden rounded-lg border border-zinc-200">
           <table className="w-full text-sm">
-            <thead><tr className="bg-zinc-50 border-b"><th className="px-3 py-2 text-left text-xs font-semibold text-zinc-500">Key Type</th><th className="px-3 py-2 text-left text-xs font-semibold text-zinc-500">Req / Minute</th><th className="px-3 py-2 text-left text-xs font-semibold text-zinc-500">Req / Day</th></tr></thead>
-            <tbody className="divide-y divide-zinc-100">
-              {RATE_LIMIT_TIERS.map((t) => (
-                <tr key={t.keyType}>
-                  <td className="px-3 py-2 text-xs font-medium text-zinc-900 font-mono">{t.keyType}</td>
-                  <td className="px-3 py-2 text-xs text-zinc-600">{t.requestsPerMinute}</td>
-                  <td className="px-3 py-2 text-xs text-zinc-600">{t.requestsPerDay.toLocaleString()}</td>
+            <thead className="bg-zinc-50">
+              <tr>
+                {["Key Type", "Requests / Minute", "Requests / Day"].map((h) => (
+                  <th key={h} className="px-4 py-2.5 text-left text-xs font-semibold text-zinc-500">{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {RATE_LIMIT_TIERS.map((t, i) => (
+                <tr key={t.keyType} className={cn(i > 0 && "border-t border-zinc-100")}>
+                  <td className="px-4 py-3"><code className="font-mono text-xs bg-zinc-100 px-1 rounded">{t.keyType}</code></td>
+                  <td className="px-4 py-3">{t.requestsPerMinute.toLocaleString()}</td>
+                  <td className="px-4 py-3">{t.requestsPerDay.toLocaleString()}</td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
-      </SectionCard>
+      </div>
 
-      <SectionCard>
-        <SectionHeading id="rate-limit-headers">Response Headers</SectionHeading>
-        <div className="mt-3 space-y-2">
-          {[
-            { header: "X-RateLimit-Limit",     desc: "Maximum requests allowed in the current window" },
-            { header: "X-RateLimit-Remaining", desc: "Requests remaining in the current window" },
-            { header: "X-RateLimit-Reset",     desc: "Unix timestamp when the window resets" },
-            { header: "Retry-After",            desc: "Seconds to wait before retrying (on 429)" },
-          ].map((h) => (
-            <div key={h.header} className="rounded-lg border border-zinc-100 bg-zinc-50 p-3 flex items-start gap-3">
-              <code className="text-xs font-mono font-medium text-violet-700 shrink-0">{h.header}</code>
-              <p className="text-xs text-zinc-600">{h.desc}</p>
-            </div>
-          ))}
-        </div>
-      </SectionCard>
+      <div>
+        <h2 className="text-lg font-semibold text-zinc-900 mb-3">Response Headers</h2>
+        <CodeBlock
+          code={`HTTP/1.1 429 Too Many Requests\nRetry-After: 60\nX-RateLimit-Limit: 60\nX-RateLimit-Remaining: 0\nX-RateLimit-Reset: 1700000060`}
+          language="http"
+        />
+      </div>
 
-      <SectionCard>
-        <SectionHeading id="backoff">Exponential Backoff</SectionHeading>
-        <CodeBlock className="mt-3" language="javascript" code={`async function fetchWithRetry(url, options, maxRetries = 3) {
-  for (let attempt = 0; attempt < maxRetries; attempt++) {
+      <div>
+        <h2 className="text-lg font-semibold text-zinc-900 mb-3">Retry Strategy</h2>
+        <CodeBlock
+          code={`async function fetchWithRetry(url, options, retries = 3) {
+  for (let attempt = 0; attempt < retries; attempt++) {
     const res = await fetch(url, options);
     if (res.status !== 429) return res;
-    const retryAfter = res.headers.get("Retry-After") ?? 1;
-    await new Promise(r => setTimeout(r, retryAfter * 1000 * Math.pow(2, attempt)));
+
+    const retryAfter = parseInt(res.headers.get("Retry-After") ?? "2");
+    const wait = Math.min(retryAfter * 1000, (2 ** attempt) * 1000);
+    await new Promise(resolve => setTimeout(resolve, wait));
   }
-  throw new Error("Max retries exceeded");
-}`} />
-      </SectionCard>
+  throw new Error("Rate limit retries exhausted");
+}`}
+          language="javascript"
+        />
+      </div>
+
+      <Callout type="info" title="Tip">
+        Use ISR (Incremental Static Regeneration) or a caching layer (TanStack Query, SWR) to significantly
+        reduce API call volume and stay well within rate limits.
+      </Callout>
     </div>
   );
 }
 
-// ─── Section: Versioning ──────────────────────────────────────────────────────
+// ── Section: Versioning ───────────────────────────────────────────────────────
 
-function VersioningSection() {
+function VersioningSection({ baseUrl }: { baseUrl: string }) {
   return (
-    <div className="space-y-5">
+    <div className="space-y-10">
       <div>
-        <h1 className="text-2xl font-bold text-zinc-900">Versioning</h1>
-        <p className="mt-2 text-zinc-500 text-sm">The API is versioned to ensure backwards compatibility as new features are added.</p>
+        <p className="text-xs font-semibold uppercase tracking-widest text-red-600 mb-2">Reference</p>
+        <h1 className="text-3xl font-bold text-zinc-900 mb-3">Versioning</h1>
+        <p className="text-zinc-500 leading-relaxed">
+          The API version is embedded in the URL path. Currently <code className="font-mono text-xs bg-zinc-100 px-1 rounded">v1</code> is
+          the only stable version.
+        </p>
       </div>
 
-      <SectionCard>
-        <SectionHeading id="version-strategy">Version Strategy</SectionHeading>
-        <p className="mt-2 text-sm text-zinc-600">The API version is included in the URL path:</p>
-        <div className="mt-3 space-y-2">
-          {[
-            { url: "/api/v1/blogs", status: "stable",     note: "Current stable version" },
-            { url: "/api/v2/blogs", status: "coming-soon", note: "Future version" },
-          ].map((v) => (
-            <div key={v.url} className="flex items-center gap-3 rounded-lg border border-zinc-100 bg-zinc-50 px-3 py-2">
-              <code className="font-mono text-sm text-zinc-900">{v.url}</code>
-              <StatusBadge label={v.status} color={v.status === "stable" ? "green" : "zinc"} />
-              <span className="text-xs text-zinc-500">{v.note}</span>
-            </div>
-          ))}
+      <div>
+        <h2 className="text-lg font-semibold text-zinc-900 mb-3">Version Status</h2>
+        <div className="overflow-hidden rounded-lg border border-zinc-200">
+          <table className="w-full text-sm">
+            <thead className="bg-zinc-50">
+              <tr>
+                {["Version", "Status", "Dev Base URL", "Production Base URL"].map((h) => (
+                  <th key={h} className="px-4 py-2.5 text-left text-xs font-semibold text-zinc-500">{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td className="px-4 py-3"><code className="font-mono text-xs bg-zinc-100 px-1 rounded">v1</code></td>
+                <td className="px-4 py-3"><Badge text="Stable" color="green" /></td>
+                <td className="px-4 py-3"><code className="font-mono text-xs text-zinc-500">{baseUrl}/api/v1</code></td>
+                <td className="px-4 py-3"><code className="font-mono text-xs text-zinc-500 break-all">{PROD_API_URL}</code></td>
+              </tr>
+            </tbody>
+          </table>
         </div>
-      </SectionCard>
+      </div>
 
-      <SectionCard>
-        <SectionHeading id="deprecation">Deprecation Policy</SectionHeading>
-        <ul className="mt-3 space-y-2 text-sm text-zinc-600">
-          <li className="flex items-start gap-2"><ChevronRight className="h-4 w-4 text-violet-400 mt-0.5 shrink-0" />Breaking changes are always introduced in a new major version</li>
-          <li className="flex items-start gap-2"><ChevronRight className="h-4 w-4 text-violet-400 mt-0.5 shrink-0" />Deprecated versions are supported for at least 12 months after announcement</li>
-          <li className="flex items-start gap-2"><ChevronRight className="h-4 w-4 text-violet-400 mt-0.5 shrink-0" />Deprecation notices are sent via the Changelog and email notifications</li>
-        </ul>
-      </SectionCard>
+      <div>
+        <h2 className="text-lg font-semibold text-zinc-900 mb-2">Deprecation Policy</h2>
+        <p className="text-sm text-zinc-500">
+          Deprecated versions receive at least 12 months of notice before removal.
+          Breaking changes always increment the major version number.
+          Non-breaking additions (new fields, new endpoints) may be made without a version bump.
+        </p>
+      </div>
     </div>
   );
 }
 
-// ─── Section: Code Examples ───────────────────────────────────────────────────
+// ── Section: Code Examples ────────────────────────────────────────────────────
 
-function CodeExamplesSection() {
+function CodeExamplesSection({ baseUrl, apiKey }: { baseUrl: string; apiKey: string }) {
   const [lang, setLang] = useState<CodeLanguage>("curl");
-  const [epIdx, setEpIdx] = useState(0);
-  const ep = ENDPOINT_REGISTRY[epIdx];
-  const snippet = generateSnippet(ep, lang, "https://your-domain.com/api/v1", "pk_live_YOUR_KEY");
+  const [epId, setEpId] = useState(ENDPOINT_REGISTRY[0].id);
+  const ep = ENDPOINT_REGISTRY.find((e) => e.id === epId) ?? ENDPOINT_REGISTRY[0];
+  const snippet = generateSnippet(ep, lang, baseUrl, apiKey || "pk_live_your_key_here");
+
   return (
-    <div className="space-y-5">
+    <div className="space-y-10">
       <div>
-        <h1 className="text-2xl font-bold text-zinc-900">Code Examples</h1>
-        <p className="mt-2 text-zinc-500 text-sm">Ready-to-use code snippets in 8 languages for every endpoint.</p>
+        <p className="text-xs font-semibold uppercase tracking-widest text-red-600 mb-2">Guides</p>
+        <h1 className="text-3xl font-bold text-zinc-900 mb-3">Code Examples</h1>
+        <p className="text-zinc-500 leading-relaxed">
+          Ready-to-use code snippets for every endpoint in {ALL_LANGUAGES.length} languages.
+          {apiKey ? " Using your pasted API key." : " Paste your API key in the top bar to pre-fill examples."}
+        </p>
       </div>
 
-      <SectionCard>
-        <SectionHeading id="select-endpoint">Select Endpoint</SectionHeading>
-        <select
-          value={epIdx}
-          onChange={(e) => setEpIdx(Number(e.target.value))}
-          className="mt-2 w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-900 focus:outline-none focus:ring-2 focus:ring-violet-500"
-        >
-          {ENDPOINT_REGISTRY.map((e, i) => (
-            <option key={e.id} value={i}>{e.method} {e.path} — {e.title}</option>
-          ))}
-        </select>
-      </SectionCard>
+      <div className="flex flex-wrap gap-4">
+        <div>
+          <p className="text-xs font-semibold text-zinc-500 mb-1.5">Endpoint</p>
+          <select
+            value={epId}
+            onChange={(e) => setEpId(e.target.value)}
+            className="rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-sm text-zinc-700 focus:outline-none focus:ring-1 focus:ring-red-500"
+          >
+            {ENDPOINT_REGISTRY.map((e) => (
+              <option key={e.id} value={e.id}>{e.method} /v1{e.path}</option>
+            ))}
+          </select>
+        </div>
+      </div>
 
-      <SectionCard>
-        <SectionHeading id="language">Language</SectionHeading>
-        <div className="mt-3 flex gap-1.5 flex-wrap">
+      <div>
+        <p className="text-xs font-semibold text-zinc-500 mb-2">Language</p>
+        <div className="flex flex-wrap gap-1.5 mb-4">
           {ALL_LANGUAGES.map((l) => (
             <button
               key={l}
               type="button"
               onClick={() => setLang(l)}
               className={cn(
-                "text-xs px-2.5 py-1 rounded-full border font-medium transition-colors",
-                lang === l ? "bg-zinc-900 text-white border-zinc-900" : "border-zinc-200 text-zinc-600 hover:border-zinc-400",
+                "rounded px-2.5 py-1 text-xs font-medium transition-colors",
+                l === lang ? "bg-red-600 text-white" : "border border-zinc-200 text-zinc-500 hover:text-zinc-800",
               )}
             >
               {LANGUAGE_LABELS[l]}
             </button>
           ))}
         </div>
-        <CodeBlock className="mt-3" language={LANGUAGE_LABELS[lang]} code={snippet} />
-      </SectionCard>
+        <CodeBlock code={snippet} language={lang === "curl" ? "bash" : lang} />
+      </div>
     </div>
   );
 }
 
-// ─── Section: Framework Guides ────────────────────────────────────────────────
+// ── Section: Framework Guides ─────────────────────────────────────────────────
 
 function FrameworksSection() {
-  const [selected, setSelected] = useState(FRAMEWORK_GUIDES[0].id);
-  const guide = FRAMEWORK_GUIDES.find((g) => g.id === selected) ?? FRAMEWORK_GUIDES[0];
-
-  const extraGuides = [
-    { id: "vue",       name: "Vue",       icon: "💚", note: "Use Composition API with useFetch from @vueuse/core for automatic caching." },
-    { id: "nuxt",      name: "Nuxt",      icon: "🟢", note: "Use useAsyncData in pages. The Nuxt server handles secret key protection." },
-    { id: "laravel",   name: "Laravel",   icon: "🔴", note: "Use Http::withHeaders()->get() from the Laravel HTTP client in controllers." },
-    { id: "python",    name: "Python",    icon: "🐍", note: "Use the requests or httpx library. Store keys in .env loaded by python-dotenv." },
-    { id: "flutter",   name: "Flutter",   icon: "💙", note: "Use the http package or dio. Never hardcode API keys in Flutter apps." },
-  ];
+  const [activeId, setActiveId] = useState(FRAMEWORK_GUIDES[0].id);
+  const guide = FRAMEWORK_GUIDES.find((g) => g.id === activeId) ?? FRAMEWORK_GUIDES[0];
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-10">
       <div>
-        <h1 className="text-2xl font-bold text-zinc-900">Framework Guides</h1>
-        <p className="mt-2 text-zinc-500 text-sm">Integration examples for popular frameworks and languages.</p>
+        <p className="text-xs font-semibold uppercase tracking-widest text-red-600 mb-2">Guides</p>
+        <h1 className="text-3xl font-bold text-zinc-900 mb-3">Framework Guides</h1>
+        <p className="text-zinc-500 leading-relaxed">
+          Integration examples for popular frameworks. Each guide shows environment variable setup
+          and a complete fetch example using the real API base URL.
+        </p>
       </div>
 
-      <div className="flex gap-2 flex-wrap">
+      <div className="flex flex-wrap gap-2">
         {FRAMEWORK_GUIDES.map((g) => (
           <button
             key={g.id}
             type="button"
-            onClick={() => setSelected(g.id)}
+            onClick={() => setActiveId(g.id)}
             className={cn(
-              "flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg border font-medium transition-colors",
-              selected === g.id ? "bg-zinc-900 text-white border-zinc-900" : "border-zinc-200 text-zinc-600 hover:border-zinc-400",
+              "flex items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium transition-colors",
+              g.id === activeId ? "border-red-600 bg-red-50 text-red-600" : "border-zinc-200 text-zinc-600 hover:text-zinc-900",
             )}
           >
             <span>{g.icon}</span>
@@ -1262,604 +1132,628 @@ function FrameworksSection() {
         ))}
       </div>
 
-      <SectionCard>
-        <SectionHeading id="env-setup">Environment Setup</SectionHeading>
-        <CodeBlock className="mt-3" language="bash" code={guide.envSetup} />
-      </SectionCard>
+      <div className="space-y-5">
+        <div>
+          <h3 className="text-sm font-semibold text-zinc-700 mb-2">Environment Variables</h3>
+          <CodeBlock code={guide.envSetup} language="bash" />
+        </div>
+        <div>
+          <h3 className="text-sm font-semibold text-zinc-700 mb-2">Fetch Example</h3>
+          <CodeBlock code={guide.fetchExample} language="typescript" />
+        </div>
+        <div className="rounded-lg border border-blue-100 bg-blue-50 px-4 py-3 text-sm text-blue-800">
+          <span className="font-semibold">Note: </span>{guide.notes}
+        </div>
+      </div>
+    </div>
+  );
+}
 
-      <SectionCard>
-        <SectionHeading id="fetch-example">Fetching Content</SectionHeading>
-        <CodeBlock className="mt-3" language={guide.name} code={guide.fetchExample} />
-        <InfoBox type="tip" className="mt-3">{guide.notes}</InfoBox>
-      </SectionCard>
+// ── Section: AI Prompts ───────────────────────────────────────────────────────
 
-      <SectionCard>
-        <SectionHeading id="more-frameworks">More Frameworks</SectionHeading>
-        <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-          {extraGuides.map((g) => (
-            <div key={g.id} className="rounded-lg border border-zinc-100 bg-zinc-50 p-3">
-              <div className="flex items-center gap-2 mb-1">
-                <span>{g.icon}</span>
-                <span className="text-sm font-semibold text-zinc-800">{g.name}</span>
-              </div>
-              <p className="text-xs text-zinc-500 leading-relaxed">{g.note}</p>
-            </div>
+function AiPromptsSection({ baseUrl }: { baseUrl: string }) {
+  const [activeEpId, setActiveEpId] = useState(ENDPOINT_REGISTRY[0].id);
+  const [generatedPrompt, setGeneratedPrompt] = useState<string | null>(null);
+  const [selectedPlatform, setSelectedPlatform] = useState("cursor");
+
+  const ep = ENDPOINT_REGISTRY.find((e) => e.id === activeEpId) ?? ENDPOINT_REGISTRY[0];
+
+  const CATEGORY_TO_CONTENT_TYPE: Record<string, string> = {
+    posts: "blogs",
+    collections: "collections",
+    media: "media",
+  };
+
+  function handleGenerate(platformId: string) {
+    setSelectedPlatform(platformId);
+    const contentTypeId = CATEGORY_TO_CONTENT_TYPE[ep.category] ?? "everything";
+    const output = generatePrompt({
+      frameworkId: "nextjs",
+      aiPlatformId: platformId,
+      contentTypeIds: [contentTypeId],
+      renderStrategyId: "ssr",
+      stylingId: "tailwind",
+      apiBaseUrl: baseUrl,
+      apiKeyPlaceholder: "pk_live_your_key_here",
+    });
+    setGeneratedPrompt(output.prompt);
+    toast.success(`${AI_PLATFORMS.find((p) => p.id === platformId)?.label} prompt generated`);
+  }
+
+  return (
+    <div className="space-y-10">
+      <div>
+        <p className="text-xs font-semibold uppercase tracking-widest text-red-600 mb-2">Guides</p>
+        <h1 className="text-3xl font-bold text-zinc-900 mb-3">AI Prompts</h1>
+        <p className="text-zinc-500 leading-relaxed">
+          Generate implementation prompts for AI coding assistants. Prompts are pre-filled
+          with your API details, endpoint reference, and best practices.
+        </p>
+      </div>
+
+      <div>
+        <p className="text-xs font-semibold text-zinc-500 mb-2">Endpoint context</p>
+        <select
+          value={activeEpId}
+          onChange={(e) => { setActiveEpId(e.target.value); setGeneratedPrompt(null); }}
+          className="rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-red-500"
+        >
+          {ENDPOINT_REGISTRY.map((e) => (
+            <option key={e.id} value={e.id}>{e.method} /v1{e.path} — {e.title}</option>
+          ))}
+        </select>
+      </div>
+
+      <div>
+        <p className="text-xs font-semibold text-zinc-500 mb-3">Generate for</p>
+        <div className="flex flex-wrap gap-2">
+          {AI_PLATFORMS.slice(0, 4).map((p) => (
+            <button
+              key={p.id}
+              type="button"
+              onClick={() => handleGenerate(p.id)}
+              className={cn(
+                "flex items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium transition-colors",
+                selectedPlatform === p.id && generatedPrompt
+                  ? "border-red-600 bg-red-50 text-red-600"
+                  : "border-zinc-200 text-zinc-600 hover:text-zinc-900",
+              )}
+            >
+              <Sparkles className="h-3.5 w-3.5" />
+              {p.label} Prompt
+            </button>
           ))}
         </div>
-      </SectionCard>
-    </div>
-  );
-}
-
-// ─── Section: AI Prompts ──────────────────────────────────────────────────────
-
-function AiPromptsSection() {
-  const platforms = [
-    {
-      name: "Cursor",    icon: "⌨️",
-      prompt: `You are integrating Lunar CMS into a Next.js app.
-API Base URL: https://your-domain.com/api/v1
-API Key: pk_live_YOUR_KEY (add to .env.local as LUNAR_API_KEY)
-
-Task: Create a complete blog listing page that:
-1. Fetches /api/v1/blogs?limit=12 in a Server Component
-2. Renders a responsive grid of blog cards
-3. Shows title, excerpt, published_at, and cover image
-4. Links each card to /blog/[slug]
-5. Handles loading and error states
-6. Implements pagination using the meta.totalPages from the API response
-
-Each API response has shape: { success: boolean, data: [...], meta: { page, limit, total, totalPages } }`,
-    },
-    {
-      name: "Claude",    icon: "🟠",
-      prompt: `I'm building a website powered by Lunar CMS. Help me integrate the REST API.
-
-API Base: https://your-domain.com/api/v1
-Auth: Authorization: Bearer pk_live_YOUR_KEY
-
-Available endpoints:
-- GET /blogs — list blog posts (supports ?limit=, ?page=, ?category=, ?search=)
-- GET /blogs/:slug — single blog post
-- GET /faqs — list FAQs
-- GET /search?q= — global search
-
-Please create:
-1. A TypeScript service class (LunarCmsService) for fetching content
-2. React hooks for each content type with SWR or React Query
-3. TypeScript interfaces matching the API response shapes
-4. Error boundary components for API failures`,
-    },
-    {
-      name: "GPT / Codex", icon: "🟢",
-      prompt: `Integrate Lunar CMS REST API into my project.
-
-Base URL: https://your-domain.com/api/v1
-API Key env var: LUNAR_API_KEY
-
-Generate a complete data fetching layer:
-- Typed API client with all endpoints
-- Automatic retry with exponential backoff
-- Response caching (stale-while-revalidate)
-- Error handling with typed error responses
-- Environment-based base URL configuration
-
-API responses always follow: { success: boolean, data: T | T[], error?: { code: string, message: string }, meta?: { page, limit, total, totalPages } }`,
-    },
-    {
-      name: "Bolt / Lovable", icon: "⚡",
-      prompt: `Build a complete blog website frontend for a Lunar CMS backend.
-
-API: https://your-domain.com/api/v1
-API Key: pk_live_YOUR_KEY
-
-Requirements:
-- Home page: latest 6 blog posts in a card grid
-- Blog listing page: all posts with search, category filter, pagination
-- Blog detail page: full post content, related posts
-- Use Tailwind CSS for styling
-- Mobile responsive
-- SEO-friendly with proper meta tags
-- Fast loading with appropriate caching`,
-    },
-    {
-      name: "Replit Agent", icon: "🔄",
-      prompt: `Create a Lunar CMS powered blog website.
-
-The Lunar CMS REST API is at: https://your-domain.com/api/v1
-API Key (add to Secrets as LUNAR_API_KEY): pk_live_YOUR_KEY
-
-Build with:
-- React + Vite frontend
-- Express proxy server (to keep API key server-side)
-- Tailwind CSS styling
-- Pages: Home, Blog List, Blog Detail, Search
-
-API endpoints you'll use:
-GET /api/v1/blogs?limit=10&page=1 — list posts
-GET /api/v1/blogs/:slug — single post  
-GET /api/v1/search?q=term — search`,
-    },
-    {
-      name: "GitHub Copilot", icon: "🐙",
-      prompt: `// Lunar CMS Integration
-// API Base: https://your-domain.com/api/v1
-// Auth: Bearer token from env.LUNAR_API_KEY
-//
-// Create a complete TypeScript API client with:
-// - Typed request/response interfaces
-// - Async methods for each endpoint
-// - Error handling
-// - Pagination helpers
-//
-// Endpoints:
-// GET /blogs — BlogPost[]
-// GET /blogs/:slug — BlogPost
-// GET /faqs — FAQ[]
-// GET /search?q= — SearchResult[]
-//
-// BlogPost shape:
-// { slug, title, excerpt, content, cover_image, category, published_at, author }`,
-    },
-  ];
-
-  const [selected, setSelected] = useState(0);
-  return (
-    <div className="space-y-5">
-      <div>
-        <h1 className="text-2xl font-bold text-zinc-900">AI Implementation Prompts</h1>
-        <p className="mt-2 text-zinc-500 text-sm">Ready-to-use prompts for AI coding tools. Paste one into your preferred AI assistant to generate a complete integration.</p>
       </div>
 
-      <div className="flex gap-2 flex-wrap">
-        {platforms.map((p, i) => (
-          <button
-            key={p.name}
-            type="button"
-            onClick={() => setSelected(i)}
-            className={cn(
-              "flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg border font-medium transition-colors",
-              selected === i ? "bg-violet-600 text-white border-violet-600" : "border-zinc-200 text-zinc-600 hover:border-violet-300",
-            )}
-          >
-            <span>{p.icon}</span>
-            {p.name}
-          </button>
-        ))}
-      </div>
-
-      <SectionCard>
-        <div className="flex items-center justify-between mb-3">
-          <SectionHeading id="prompt">{platforms[selected].icon} {platforms[selected].name} Prompt</SectionHeading>
-          <button
-            type="button"
-            onClick={() => {
-              navigator.clipboard.writeText(platforms[selected].prompt);
-              toast.success("Prompt copied!");
-            }}
-            className="flex items-center gap-1.5 text-xs font-medium text-violet-600 hover:text-violet-800 transition-colors border border-violet-200 bg-violet-50 rounded-lg px-2.5 py-1"
-          >
-            <Copy className="h-3.5 w-3.5" /> Copy Prompt
-          </button>
-        </div>
-        <CodeBlock code={platforms[selected].prompt} />
-      </SectionCard>
-
-      <InfoBox type="tip">
-        Replace <code className="font-mono text-xs bg-emerald-100 px-1 rounded">your-domain.com</code> with your actual deployment URL and <code className="font-mono text-xs bg-emerald-100 px-1 rounded">pk_live_YOUR_KEY</code> with a real API key before using these prompts.
-      </InfoBox>
-    </div>
-  );
-}
-
-// ─── Section: FAQ ─────────────────────────────────────────────────────────────
-
-function FaqSection() {
-  const [open, setOpen] = useState<number | null>(null);
-  const [query, setQuery] = useState("");
-  const faqs = [
-    { q: "How do I authenticate with the API?",                   a: 'Include your API key in the Authorization header as a Bearer token: `Authorization: Bearer pk_live_YOUR_KEY`. Get your key from the API Keys section of your workspace.' },
-    { q: "What is the difference between publishable and secret keys?", a: "Publishable keys (pk_live_) are safe for client-side use and only access published content. Secret keys (sk_live_) are for server-side use, have higher rate limits, and can access draft content." },
-    { q: "How do I paginate through results?",                    a: "Add `?limit=20&page=2` to your request. The response meta object contains `total`, `totalPages`, `page`, and `limit` so you can build pagination UI." },
-    { q: "Can I filter blog posts by category?",                  a: "Yes. Use `?category=your-category` as a query parameter. Multiple filters can be combined: `?category=tech&limit=10`." },
-    { q: "How do I implement full-text search?",                   a: "Use the `/api/v1/search?q=your+query` endpoint. It searches across all published content types and returns scored results." },
-    { q: "Is the API key safe to use in client-side JavaScript?", a: "Only publishable keys (pk_live_) are safe in the browser. Secret keys should only be used in server-side code (Node.js, serverless functions, etc.)." },
-    { q: "How do I cache API responses?",                         a: "In Next.js use `next: { revalidate: 300 }` for ISR. In other frameworks, use stale-while-revalidate headers or a caching library like SWR or React Query." },
-    { q: "What happens when I hit the rate limit?",               a: "The API returns a 429 response with a Retry-After header. Implement exponential backoff and retry after the indicated delay. Upgrade to a higher-tier plan for higher limits." },
-    { q: "How do I get a single blog post by its slug?",          a: "Use `GET /api/v1/blogs/:slug` replacing `:slug` with the post's slug value, e.g., `/api/v1/blogs/hello-world`." },
-    { q: "Can I use the API to create or update content?",        a: "Write access (POST, PUT, DELETE) is only available via secret keys on specific endpoints. Most public-facing use cases require read-only publishable keys." },
-    { q: "How do I handle 404 errors for blog posts?",            a: "Check the `success` field in the response. When false, the `error.code` will be `NOT_FOUND`. Return a custom 404 page in your frontend." },
-    { q: "Does the API support CORS?",                            a: "Yes. The API includes CORS headers that allow browser-side requests from any origin when using publishable keys." },
-  ];
-  const filtered = faqs.filter((f) =>
-    !query || f.q.toLowerCase().includes(query.toLowerCase()) || f.a.toLowerCase().includes(query.toLowerCase())
-  );
-  return (
-    <div className="space-y-5">
-      <div>
-        <h1 className="text-2xl font-bold text-zinc-900">Developer FAQ</h1>
-        <p className="mt-2 text-zinc-500 text-sm">Answers to the most common questions.</p>
-      </div>
-
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400" />
-        <input
-          type="text"
-          placeholder="Search FAQ…"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          className="w-full rounded-xl border border-zinc-200 bg-white pl-9 pr-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
-        />
-      </div>
-
-      <div className="space-y-2">
-        {filtered.map((faq, i) => (
-          <SectionCard key={i} className="p-0 overflow-hidden">
-            <button
-              type="button"
-              onClick={() => setOpen(open === i ? null : i)}
-              className="flex w-full items-center justify-between px-5 py-4 text-left"
-            >
-              <span className="text-sm font-medium text-zinc-900">{faq.q}</span>
-              <ChevronDown className={cn("h-4 w-4 text-zinc-400 transition-transform shrink-0", open === i && "rotate-180")} />
-            </button>
-            {open === i && (
-              <div className="px-5 pb-4 text-sm text-zinc-600 leading-relaxed border-t border-zinc-100 pt-3">
-                {faq.a}
-              </div>
-            )}
-          </SectionCard>
-        ))}
-        {filtered.length === 0 && (
-          <p className="text-center text-sm text-zinc-400 py-8">No results for "{query}"</p>
-        )}
-      </div>
-    </div>
-  );
-}
-
-// ─── Section: Changelog ───────────────────────────────────────────────────────
-
-function ChangelogSection() {
-  const typeColors: Record<string, string> = {
-    added:      "bg-emerald-50 text-emerald-700 border border-emerald-200",
-    updated:    "bg-blue-50 text-blue-700 border border-blue-200",
-    deprecated: "bg-amber-50 text-amber-700 border border-amber-200",
-    breaking:   "bg-red-50 text-red-700 border border-red-200",
-  };
-  return (
-    <div className="space-y-5">
-      <div>
-        <h1 className="text-2xl font-bold text-zinc-900">Changelog</h1>
-        <p className="mt-2 text-zinc-500 text-sm">All notable changes to the Lunar CMS REST API.</p>
-      </div>
-      {CHANGELOG.slice().reverse().map((entry) => (
-        <SectionCard key={entry.version}>
-          <div className="flex items-center gap-3 mb-3">
-            <SectionHeading id={entry.version}>{entry.version}</SectionHeading>
-            <StatusBadge label={entry.date} color="zinc" />
+      {generatedPrompt && (
+        <div>
+          <div className="mb-2 flex items-center justify-between">
+            <h2 className="text-base font-semibold text-zinc-800">
+              Generated {AI_PLATFORMS.find((p) => p.id === selectedPlatform)?.label} Prompt
+            </h2>
+            <CopyBtn text={generatedPrompt} label="Copy prompt" />
           </div>
-          <ul className="space-y-2">
-            {entry.changes.map((c, i) => (
-              <li key={i} className="flex items-start gap-2.5">
-                <span className={cn("inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-semibold shrink-0 mt-0.5", typeColors[c.type])}>
-                  {c.type}
-                </span>
-                <span className="text-sm text-zinc-600">{c.description}</span>
-              </li>
+          <div className="overflow-hidden rounded-lg border border-zinc-200">
+            <pre className="max-h-96 overflow-y-auto p-4 text-xs font-mono text-zinc-700 whitespace-pre-wrap leading-relaxed bg-zinc-50">
+              {generatedPrompt}
+            </pre>
+          </div>
+          <p className="mt-2 text-xs text-zinc-400">
+            For more options, visit the{" "}
+            <a href={`/admin/integration-center`} className="text-red-600 hover:underline">
+              Integration Center
+            </a>
+            .
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Section: Endpoints (list) ─────────────────────────────────────────────────
+
+function EndpointsListSection({ onSelectEndpoint }: { onSelectEndpoint: (id: string) => void }) {
+  const grouped: Record<string, EndpointDefinition[]> = {};
+  for (const ep of ENDPOINT_REGISTRY) {
+    const label = CATEGORY_LABELS[ep.category];
+    grouped[label] = [...(grouped[label] ?? []), ep];
+  }
+
+  return (
+    <div className="space-y-10">
+      <div>
+        <p className="text-xs font-semibold uppercase tracking-widest text-red-600 mb-2">Endpoints</p>
+        <h1 className="text-3xl font-bold text-zinc-900 mb-3">REST Endpoints</h1>
+        <p className="text-zinc-500 leading-relaxed">
+          {ENDPOINT_REGISTRY.length} endpoints across {Object.keys(grouped).length} categories.
+          All endpoints require Bearer token authentication.
+        </p>
+      </div>
+
+      {Object.entries(grouped).map(([cat, eps]) => (
+        <div key={cat}>
+          <h2 className="text-base font-semibold text-zinc-800 mb-3">{cat}</h2>
+          <div className="overflow-hidden rounded-lg border border-zinc-200">
+            {eps.map((ep, i) => (
+              <button
+                key={ep.id}
+                type="button"
+                onClick={() => onSelectEndpoint(ep.id)}
+                className={cn(
+                  "flex w-full items-center gap-3 px-4 py-3.5 text-left hover:bg-zinc-50 transition-colors",
+                  i > 0 && "border-t border-zinc-100",
+                )}
+              >
+                <span className={cn("rounded px-1.5 py-0.5 text-[10px] font-bold font-mono shrink-0", METHOD_COLOR[ep.method])}>{ep.method}</span>
+                <code className="font-mono text-xs text-zinc-700 shrink-0">/v1{ep.path}</code>
+                <span className="text-sm text-zinc-400 flex-1 truncate">{ep.description}</span>
+                {ep.authentication && <Badge text="Auth" color="gray" />}
+                {ep.pagination && <Badge text="Paginated" color="gray" />}
+                <ChevronRight className="h-4 w-4 text-zinc-300 shrink-0" />
+              </button>
             ))}
-          </ul>
-        </SectionCard>
+          </div>
+        </div>
       ))}
     </div>
   );
 }
 
-// ─── Section: SDK (Coming Soon) ───────────────────────────────────────────────
+// ── Section: Endpoint Detail ──────────────────────────────────────────────────
 
-function SdkSection() {
-  const sdks = [
-    { lang: "JavaScript / TypeScript", icon: "📦", status: "coming-soon", desc: "npm install @lunar-cms/sdk" },
-    { lang: "PHP",                     icon: "🐘", status: "coming-soon", desc: "composer require lunar-cms/sdk" },
-    { lang: "Python",                  icon: "🐍", status: "coming-soon", desc: "pip install lunar-cms"          },
-    { lang: "Flutter / Dart",          icon: "💙", status: "coming-soon", desc: "pub add lunar_cms"              },
-    { lang: "Node.js",                 icon: "🟢", status: "coming-soon", desc: "npm install @lunar-cms/node"    },
-    { lang: "Ruby",                    icon: "💎", status: "coming-soon", desc: "gem install lunar-cms"          },
-  ];
-  return (
-    <div className="space-y-5">
-      <div>
-        <h1 className="text-2xl font-bold text-zinc-900">SDKs</h1>
-        <p className="mt-2 text-zinc-500 text-sm">Official client libraries are in development. In the meantime, the REST API works great with any HTTP client.</p>
-      </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {sdks.map((sdk) => (
-          <SectionCard key={sdk.lang} className="opacity-75">
-            <div className="flex items-center gap-2 mb-2">
-              <span className="text-2xl">{sdk.icon}</span>
-              <div>
-                <p className="text-sm font-semibold text-zinc-800">{sdk.lang}</p>
-                <code className="text-[11px] text-zinc-500 font-mono">{sdk.desc}</code>
-              </div>
-            </div>
-            <StatusBadge label="Coming Soon" color="zinc" />
-          </SectionCard>
-        ))}
-      </div>
-      <InfoBox type="info">
-        Want to be notified when SDKs launch? Star the repository or follow the <strong>Changelog</strong> for updates.
-      </InfoBox>
-    </div>
-  );
-}
-
-// ─── Section: Webhooks (Coming Soon) ─────────────────────────────────────────
-
-function WebhooksSection() {
-  return (
-    <div className="space-y-5">
-      <div>
-        <div className="flex items-center gap-2 mb-2">
-          <h1 className="text-2xl font-bold text-zinc-900">Webhooks</h1>
-          <StatusBadge label="Coming Soon" color="amber" />
-        </div>
-        <p className="mt-2 text-zinc-500 text-sm">Webhooks will let you receive real-time notifications when content changes in Lunar CMS.</p>
-      </div>
-      <SectionCard>
-        <SectionHeading id="planned-events">Planned Events</SectionHeading>
-        <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {[
-            { event: "post.published",   desc: "A blog post was published" },
-            { event: "post.updated",     desc: "A blog post was updated"   },
-            { event: "post.deleted",     desc: "A blog post was deleted"   },
-            { event: "media.uploaded",   desc: "A media file was uploaded" },
-            { event: "comment.created",  desc: "A new comment was added"   },
-            { event: "workspace.updated", desc: "Workspace settings changed" },
-          ].map((e) => (
-            <div key={e.event} className="flex items-start gap-2 rounded-lg border border-zinc-100 bg-zinc-50 p-3">
-              <code className="text-xs font-mono text-violet-700 shrink-0">{e.event}</code>
-              <p className="text-xs text-zinc-500">{e.desc}</p>
-            </div>
-          ))}
-        </div>
-      </SectionCard>
-      <SectionCard>
-        <SectionHeading id="planned-payload">Planned Payload Shape</SectionHeading>
-        <CodeBlock className="mt-3" language="json" code={`{
-  "event": "post.published",
-  "timestamp": "2025-06-01T10:30:00Z",
-  "workspace_id": "ws_xxx",
-  "data": {
-    "slug": "new-post",
-    "title": "New Post Title"
-  }
-}`} />
-      </SectionCard>
-    </div>
-  );
-}
-
-// ─── Top Nav ──────────────────────────────────────────────────────────────────
-
-function DocTopNav({
-  onToggleSidebar,
-  sidebarCollapsed,
-  query,
-  onSearch,
-  searchResults,
-  onSelectResult,
+function EndpointDetailSection({
+  endpointId,
+  baseUrl,
+  apiKey,
+  isFav,
+  onToggleFav,
+  
 }: {
-  onToggleSidebar: () => void;
-  sidebarCollapsed: boolean;
-  query: string;
-  onSearch: (q: string) => void;
-  searchResults: ReturnType<typeof searchDocs>;
-  onSelectResult: (section: string, endpointId?: string) => void;
+  endpointId: string;
+  baseUrl: string;
+  apiKey: string;
+  isFav: boolean;
+  onToggleFav: (id: string) => void;
+  
 }) {
-  const [focused, setFocused] = useState(false);
+  const ep = ENDPOINT_REGISTRY.find((e) => e.id === endpointId);
+  const [lang, setLang] = useState<CodeLanguage>("curl");
+  const [activeTab, setActiveTab] = useState<"params" | "response" | "errors">("params");
+
+  if (!ep) return <div className="p-8 text-zinc-400">Endpoint not found.</div>;
+
+  const params = buildParamList(ep);
+  const snippet = generateSnippet(ep, lang, baseUrl, apiKey || "pk_live_your_key_here");
+  const responseJson = JSON.stringify(ep.exampleResponse, null, 2);
+
+  // If this endpoint uses content-engagement edge function, show the prod URL too
+  const isEdgeFn = !!ep.functionName;
+  const edgeFnNote = isEdgeFn
+    ? `This endpoint is served by the \`${ep.functionName}\` Supabase Edge Function.\nProduction URL: ${PROD_API_URL}${ep.path}`
+    : null;
+
   return (
-    <header className="fixed top-0 left-0 right-0 z-40 flex h-14 items-center gap-3 border-b border-zinc-200 bg-white px-4">
-      <button
-        type="button"
-        onClick={onToggleSidebar}
-        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-zinc-200 text-zinc-500 hover:bg-zinc-50 transition-colors"
-      >
-        {sidebarCollapsed ? <Menu className="h-4 w-4" /> : <X className="h-4 w-4" />}
-      </button>
-
-      <Link to="/admin/dashboard" className="flex items-center gap-2 text-sm text-zinc-500 hover:text-zinc-900 transition-colors shrink-0">
-        <ArrowLeft className="h-3.5 w-3.5" />
-        <span className="hidden sm:inline">Dashboard</span>
-      </Link>
-
-      <div className="mx-2 h-4 w-px bg-zinc-200 shrink-0" />
-
-      <div className="flex items-center gap-2 shrink-0">
-        <div className="flex h-7 w-7 items-center justify-center rounded-full bg-violet-600 text-white text-[11px] font-bold">
-          L
+    <div className="space-y-8">
+      {/* Header */}
+      <div className="pb-6 border-b border-zinc-100">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              <span className={cn("rounded px-2 py-0.5 text-xs font-bold font-mono", METHOD_COLOR[ep.method])}>{ep.method}</span>
+              <code className="font-mono text-base font-semibold text-zinc-800">/v1{ep.path}</code>
+            </div>
+            <h1 className="text-2xl font-bold text-zinc-900">{ep.title}</h1>
+            <p className="mt-1 text-zinc-500 text-sm leading-relaxed max-w-2xl">{ep.longDescription ?? ep.description}</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => onToggleFav(ep.id)}
+            className="shrink-0 flex items-center gap-1.5 rounded-lg border border-zinc-200 px-2.5 py-1.5 text-xs text-zinc-500 hover:text-zinc-800 transition-colors"
+          >
+            {isFav ? <Star className="h-3.5 w-3.5 text-amber-500 fill-amber-500" /> : <StarOff className="h-3.5 w-3.5" />}
+            {isFav ? "Saved" : "Save"}
+          </button>
         </div>
-        <span className="font-semibold text-sm text-zinc-900 hidden sm:inline">Lunar CMS</span>
-        <span className="text-zinc-400 text-sm hidden sm:inline">/</span>
-        <span className="text-sm text-zinc-600 hidden sm:inline">Docs</span>
+
+        <div className="mt-3 flex flex-wrap gap-1.5">
+          {ep.authentication && <Badge text="Requires Auth" color="gray" />}
+          {ep.pagination && <Badge text="Paginated" color="blue" />}
+          {ep.search && <Badge text="Searchable" color="green" />}
+          {isEdgeFn && <Badge text="Edge Function" color="amber" />}
+          <Badge text={`Added in ${ep.addedInVersion}`} color="gray" />
+        </div>
       </div>
 
-      <div className="flex-1 max-w-md mx-auto relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-zinc-400 pointer-events-none" />
-        <input
-          type="text"
-          placeholder="Search docs…"
-          value={query}
-          onChange={(e) => onSearch(e.target.value)}
-          onFocus={() => setFocused(true)}
-          onBlur={() => setTimeout(() => setFocused(false), 200)}
-          className="w-full rounded-lg border border-zinc-200 bg-zinc-50 pl-9 pr-4 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-violet-300"
-        />
-        {focused && query && searchResults.length > 0 && (
-          <div className="absolute top-full left-0 right-0 mt-1 rounded-xl border border-zinc-200 bg-white shadow-lg z-50 max-h-64 overflow-y-auto">
-            {searchResults.slice(0, 8).map((r) => (
+      {/* Edge fn note */}
+      {edgeFnNote && (
+        <Callout type="info" title="Supabase Edge Function">
+          <p>This endpoint is served by the <code className="font-mono">{ep.functionName}</code> Supabase Edge Function.</p>
+          <p className="mt-1 font-mono text-xs break-all">{PROD_API_URL}{ep.path}</p>
+        </Callout>
+      )}
+
+      {/* Code Snippet */}
+      <div>
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="text-sm font-semibold text-zinc-700">Code Example</h2>
+          <div className="flex flex-wrap gap-1">
+            {ALL_LANGUAGES.map((l) => (
               <button
-                key={r.id}
+                key={l}
                 type="button"
-                onMouseDown={() => {
-                  onSelectResult(r.section, r.endpointId);
-                  onSearch("");
-                }}
-                className="flex w-full items-start gap-2 px-3 py-2 text-left hover:bg-zinc-50 transition-colors border-b border-zinc-50 last:border-0"
+                onClick={() => setLang(l)}
+                className={cn(
+                  "rounded px-2 py-0.5 text-xs font-medium transition-colors",
+                  l === lang ? "bg-red-600 text-white" : "border border-zinc-200 text-zinc-500 hover:text-zinc-800",
+                )}
               >
-                <span className="text-[10px] bg-zinc-100 text-zinc-600 rounded px-1 py-0.5 shrink-0 mt-0.5 font-medium">{r.section}</span>
-                <div>
-                  <p className="text-xs font-medium text-zinc-900">{r.title}</p>
-                  {r.description && <p className="text-[11px] text-zinc-500 mt-0.5 line-clamp-1">{r.description}</p>}
-                </div>
+                {LANGUAGE_LABELS[l]}
               </button>
             ))}
           </div>
+        </div>
+        <CodeBlock code={snippet} language={lang === "curl" ? "bash" : lang} />
+      </div>
+
+      {/* Tabs */}
+      <div>
+        <div className="flex gap-1 border-b border-zinc-200 mb-4">
+          {([
+            { id: "params",   label: `Parameters (${params.length})` },
+            { id: "response", label: "Response" },
+            { id: "errors",   label: `Errors (${ep.possibleErrors.length})` },
+          ] as const).map((t) => (
+            <button
+              key={t.id}
+              type="button"
+              onClick={() => setActiveTab(t.id)}
+              className={cn(
+                "px-3 py-2 text-sm font-medium transition-colors border-b-2 -mb-px",
+                activeTab === t.id ? "border-red-600 text-red-600" : "border-transparent text-zinc-500 hover:text-zinc-800",
+              )}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+
+        {activeTab === "params" && (
+          params.length === 0 ? (
+            <p className="text-sm text-zinc-400">No parameters.</p>
+          ) : (
+            <div className="overflow-hidden rounded-lg border border-zinc-200">
+              <table className="w-full text-sm">
+                <thead className="bg-zinc-50">
+                  <tr>
+                    {["Name", "In", "Type", "Required", "Default", "Description"].map((h) => (
+                      <th key={h} className="px-4 py-2.5 text-left text-xs font-semibold text-zinc-500">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {params.map((p, i) => (
+                    <tr key={`${p.name}-${i}`} className={cn(i > 0 && "border-t border-zinc-100")}>
+                      <td className="px-4 py-3"><code className="font-mono text-xs bg-zinc-100 px-1 rounded">{p.name}</code></td>
+                      <td className="px-4 py-3"><Badge text={p.source === "path" ? "path" : "query"} color="gray" /></td>
+                      <td className="px-4 py-3 text-zinc-500 text-xs">{formatParamType(p)}</td>
+                      <td className="px-4 py-3">
+                        {p.required
+                          ? <Badge text="required" color="red" />
+                          : <Badge text="optional" color="gray" />}
+                      </td>
+                      <td className="px-4 py-3 font-mono text-xs text-zinc-400">{p.default ?? "—"}</td>
+                      <td className="px-4 py-3 text-xs text-zinc-500">{p.description}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )
         )}
-        {focused && query && searchResults.length === 0 && (
-          <div className="absolute top-full left-0 right-0 mt-1 rounded-xl border border-zinc-200 bg-white shadow-lg z-50 px-3 py-4 text-center text-xs text-zinc-400">
-            No results for "{query}"
+
+        {activeTab === "response" && (
+          <div className="space-y-4">
+            <CodeBlock code={responseJson} language="json" />
+            {ep.responseFields && ep.responseFields.length > 0 && (
+              <div className="overflow-hidden rounded-lg border border-zinc-200">
+                <table className="w-full text-sm">
+                  <thead className="bg-zinc-50">
+                    <tr>
+                      {["Field", "Type", "Nullable", "Description"].map((h) => (
+                        <th key={h} className="px-4 py-2.5 text-left text-xs font-semibold text-zinc-500">{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {ep.responseFields.map((f, i) => (
+                      <tr key={f.name} className={cn(i > 0 && "border-t border-zinc-100")}>
+                        <td className="px-4 py-3"><code className="font-mono text-xs bg-zinc-100 px-1 rounded">{f.name}</code></td>
+                        <td className="px-4 py-3 text-zinc-500 text-xs">{f.type}</td>
+                        <td className="px-4 py-3">{f.nullable ? <Badge text="nullable" color="amber" /> : <span className="text-xs text-zinc-300">—</span>}</td>
+                        <td className="px-4 py-3 text-xs text-zinc-500">{f.description}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
+
+        {activeTab === "errors" && (
+          <div className="space-y-3">
+            {ep.possibleErrors.map((code) => {
+              const doc = ERROR_DOCS.find((e) => e.code === code);
+              if (!doc) return null;
+              return (
+                <div key={code} className="flex items-start gap-3 rounded-lg border border-zinc-200 p-3">
+                  <Badge text={String(code)} color={code >= 500 ? "red" : "amber"} />
+                  <div>
+                    <p className="text-sm font-medium text-zinc-800">{doc.name}</p>
+                    <p className="text-xs text-zinc-500 mt-0.5">{doc.resolution}</p>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         )}
       </div>
 
-      <div className="flex items-center gap-2 ml-auto shrink-0">
-        <StatusBadge label="v1 · Stable" color="green" />
-        <Link
-          to="/admin/api-explorer"
-          className="hidden sm:flex items-center gap-1.5 text-xs font-medium text-violet-600 hover:text-violet-800 border border-violet-200 bg-violet-50 rounded-lg px-2.5 py-1.5 transition-colors"
+      {/* AI Prompt shortcut */}
+      <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-4">
+        <div className="flex items-center gap-2 mb-2">
+          <Sparkles className="h-4 w-4 text-red-600" />
+          <h2 className="text-sm font-semibold text-zinc-800">Generate AI Prompt</h2>
+        </div>
+        <p className="text-xs text-zinc-500 mb-3">
+          Create an implementation prompt for this endpoint tailored to your AI coding assistant.
+        </p>
+        <a
+          href={`/admin/integration-center`}
+          className="inline-flex items-center gap-1.5 rounded-lg bg-red-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-red-700 transition-colors"
         >
-          <Terminal className="h-3.5 w-3.5" /> API Explorer
           <ExternalLink className="h-3 w-3" />
-        </Link>
+          Open Integration Center
+        </a>
       </div>
-    </header>
+    </div>
   );
 }
 
-// ─── TOC per section ──────────────────────────────────────────────────────────
+// ── Section: Changelog ────────────────────────────────────────────────────────
 
-const SECTION_TOC: Record<string, TocEntry[]> = {
-  introduction:   [{ id: "what-is-lunar", label: "What is Lunar CMS?" }, { id: "base-url", label: "Base URL" }, { id: "next-steps", label: "Next Steps" }],
-  authentication: [{ id: "bearer-token", label: "Bearer Token" }, { id: "key-types", label: "Key Types" }, { id: "auth-errors", label: "Auth Errors" }, { id: "security", label: "Security" }],
-  "api-keys":     [{ id: "creating-keys", label: "Creating Keys" }, { id: "key-lifecycle", label: "Lifecycle" }, { id: "env-vars", label: "Env Variables" }],
-  "first-request":[{ id: "endpoint", label: "Endpoint" }, { id: "code-example", label: "Code Example" }, { id: "response", label: "Response" }],
-  endpoints:      [],
-  pagination:     [{ id: "parameters", label: "Parameters" }, { id: "example", label: "Example" }, { id: "response-meta", label: "Response Meta" }],
-  filtering:      [{ id: "common-filters", label: "Common Filters" }, { id: "combining-filters", label: "Combining Filters" }],
-  "search-api":   [{ id: "endpoint", label: "Endpoint" }, { id: "example", label: "Example" }, { id: "response", label: "Response" }],
-  errors:         [{ id: "error-format", label: "Error Format" }, ...ERROR_DOCS.map((e) => ({ id: `error-${e.code}`, label: `${e.code} ${e.name}` }))],
-  "rate-limits":  [{ id: "limits-table", label: "Rate Limits" }, { id: "rate-limit-headers", label: "Headers" }, { id: "backoff", label: "Exponential Backoff" }],
-  versioning:     [{ id: "version-strategy", label: "Version Strategy" }, { id: "deprecation", label: "Deprecation" }],
-  "code-examples":[{ id: "select-endpoint", label: "Select Endpoint" }, { id: "language", label: "Language" }],
-  frameworks:     [{ id: "env-setup", label: "Env Setup" }, { id: "fetch-example", label: "Fetch Content" }, { id: "more-frameworks", label: "More Frameworks" }],
-  "ai-prompts":   [{ id: "prompt", label: "Prompt" }],
-  faq:            [],
-  changelog:      CHANGELOG.slice().reverse().map((e) => ({ id: e.version, label: e.version })),
-  sdk:            [],
-  webhooks:       [{ id: "planned-events", label: "Planned Events" }, { id: "planned-payload", label: "Payload Shape" }],
-};
+function ChangelogSection() {
+  const CHANGE_COLOR = {
+    added:      "text-emerald-700 bg-emerald-50 border-emerald-200",
+    updated:    "text-blue-700 bg-blue-50 border-blue-200",
+    deprecated: "text-amber-700 bg-amber-50 border-amber-200",
+    breaking:   "text-red-700 bg-red-50 border-red-200",
+  };
 
-// ─── Main Portal ──────────────────────────────────────────────────────────────
+  return (
+    <div className="space-y-10">
+      <div>
+        <p className="text-xs font-semibold uppercase tracking-widest text-red-600 mb-2">Resources</p>
+        <h1 className="text-3xl font-bold text-zinc-900 mb-3">Changelog</h1>
+        <p className="text-zinc-500 leading-relaxed">API changes by version, newest first.</p>
+      </div>
+
+      <div className="space-y-8">
+        {[...CHANGELOG].reverse().map((entry) => (
+          <div key={entry.version} className="relative pl-6">
+            <div className="absolute left-0 top-2 h-full w-px bg-zinc-200" />
+            <div className="absolute left-[-3px] top-2 h-2 w-2 rounded-full bg-red-600" />
+            <div className="mb-3 flex items-center gap-3">
+              <span className="font-semibold text-sm text-zinc-800">Version {entry.version}</span>
+              <Badge text={entry.date} color="gray" />
+            </div>
+            <div className="space-y-2">
+              {entry.changes.map((c, i) => (
+                <div key={i} className="flex items-start gap-2">
+                  <span className={cn("mt-0.5 inline-flex rounded border px-1.5 py-0.5 text-[9px] font-bold uppercase shrink-0", CHANGE_COLOR[c.type])}>
+                    {c.type}
+                  </span>
+                  <p className="text-sm text-zinc-500">{c.description}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── Main Component ────────────────────────────────────────────────────────────
 
 function DevDocsPortal() {
-  const navigate = useNavigate();
-  const { section, endpointId, q: initialQ } = Route.useSearch();
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [searchQuery, setSearchQuery] = useState(initialQ ?? "");
-  const [activeHeading, setActiveHeading] = useState("");
+  const { section, endpointId } = Route.useSearch();
+  const navigate = useNavigate({ from: Route.fullPath });
 
-  const searchResults = useMemo(
-    () => (searchQuery.trim().length > 1 ? searchDocs(searchQuery) : []),
-    [searchQuery],
-  );
+  const [apiKey, setApiKey] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
+  const [showSearch, setShowSearch] = useState(false);
 
-  const onNavigate = useCallback(
-    (s: string, epId?: string) => {
-      navigate({ to: "/admin/docs", search: { section: s, endpointId: epId } });
-      window.scrollTo({ top: 0, behavior: "smooth" });
-    },
-    [navigate],
-  );
+  const { favs, toggle: toggleFav } = useFavorites("global");
+  const { recent, push: pushRecent } = useRecentlyViewed("global");
 
-  const tocEntries = useMemo(() => {
-    if (endpointId) return [
-      { id: "request-url", label: "Request URL" },
-      { id: "parameters", label: "Parameters" },
-      { id: "code-examples", label: "Code Examples" },
-      { id: "response", label: "Response" },
-    ];
-    return SECTION_TOC[section] ?? [];
-  }, [section, endpointId]);
+  // Use window.location.origin for dev; shows real Replit URL
+  const baseUrl = typeof window !== "undefined"
+    ? window.location.origin
+    : "https://your-app.replit.app";
 
-  // Observe headings for TOC highlighting
+  const goTo = useCallback((s: string, epId?: string) => {
+    navigate({ search: { section: s, endpointId: epId } });
+    if (epId) pushRecent(epId);
+  }, [navigate, pushRecent]);
+
   useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const visible = entries.filter((e) => e.isIntersecting);
-        if (visible.length > 0) setActiveHeading(visible[0].target.id);
-      },
-      { rootMargin: "-20% 0px -70% 0px" },
-    );
-    const headings = document.querySelectorAll("[id]");
-    headings.forEach((h) => observer.observe(h));
-    return () => observer.disconnect();
-  }, [section, endpointId]);
+    if (!searchQuery.trim()) { setSearchResults([]); return; }
+    setSearchResults(searchDocs(searchQuery, 8));
+  }, [searchQuery]);
 
-  function renderSection() {
+  const recentEps = useMemo(() =>
+    recent.map((rid) => ENDPOINT_REGISTRY.find((e) => e.id === rid)).filter(Boolean) as EndpointDefinition[],
+    [recent],
+  );
+
+  const favEps = useMemo(() =>
+    favs.map((fid) => ENDPOINT_REGISTRY.find((e) => e.id === fid)).filter(Boolean) as EndpointDefinition[],
+    [favs],
+  );
+
+  function renderContent() {
+    if (endpointId) {
+      return (
+        <EndpointDetailSection
+          endpointId={endpointId}
+          baseUrl={baseUrl}
+          apiKey={apiKey}
+          isFav={favs.includes(endpointId)}
+          onToggleFav={toggleFav}
+          
+        />
+      );
+    }
+
     switch (section) {
-      case "introduction":   return <IntroductionSection onNavigate={onNavigate} />;
-      case "quick-start":    return <QuickStartSection />;
-      case "authentication": return <AuthenticationSection />;
-      case "api-keys":       return <ApiKeysSection />;
-      case "first-request":  return <FirstRequestSection />;
-      case "endpoints":      return <EndpointsSection endpointId={endpointId} onSelectEndpoint={(id) => onNavigate("endpoints", id || undefined)} />;
-      case "pagination":     return <PaginationSection />;
-      case "filtering":      return <FilteringSection />;
-      case "search-api":     return <SearchApiSection />;
+      case "overview":       return <OverviewSection baseUrl={baseUrl} />;
+      case "authentication": return <AuthSection baseUrl={baseUrl} />;
+      case "api-keys":       return <ApiKeysSection  />;
+      case "first-request":  return <FirstRequestSection baseUrl={baseUrl} apiKey={apiKey} />;
+      case "pagination":     return <PaginationSection baseUrl={baseUrl} />;
+      case "filtering":      return <FilteringSection baseUrl={baseUrl} />;
+      case "search":         return <SearchSection baseUrl={baseUrl} />;
       case "errors":         return <ErrorsSection />;
       case "rate-limits":    return <RateLimitsSection />;
-      case "versioning":     return <VersioningSection />;
-      case "code-examples":  return <CodeExamplesSection />;
+      case "versioning":     return <VersioningSection baseUrl={baseUrl} />;
+      case "code-examples":  return <CodeExamplesSection baseUrl={baseUrl} apiKey={apiKey} />;
       case "frameworks":     return <FrameworksSection />;
-      case "ai-prompts":     return <AiPromptsSection />;
-      case "faq":            return <FaqSection />;
+      case "ai-prompts":     return <AiPromptsSection baseUrl={baseUrl}  />;
+      case "endpoints":      return <EndpointsListSection onSelectEndpoint={(epId) => goTo("endpoints", epId)} />;
       case "changelog":      return <ChangelogSection />;
-      case "sdk":            return <SdkSection />;
-      case "webhooks":       return <WebhooksSection />;
-      default:               return <IntroductionSection onNavigate={onNavigate} />;
+      default:               return <OverviewSection baseUrl={baseUrl} />;
     }
   }
 
   return (
-    <div className="min-h-screen bg-zinc-50">
-      <DocTopNav
-        onToggleSidebar={() => setSidebarCollapsed((p) => !p)}
-        sidebarCollapsed={sidebarCollapsed}
-        query={searchQuery}
-        onSearch={setSearchQuery}
-        searchResults={searchResults}
-        onSelectResult={onNavigate}
-      />
+    <div className="flex h-full overflow-hidden bg-white">
+      {/* Doc sidebar */}
+      <DocSidebar section={section ?? "overview"} endpointId={endpointId} onNavigate={goTo} />
 
-      <DocSidebar
-        section={section}
-        endpointId={endpointId}
-        onNavigate={onNavigate}
-        collapsed={sidebarCollapsed}
-        onToggle={() => setSidebarCollapsed((p) => !p)}
-      />
+      {/* Main area */}
+      <div className="flex flex-1 flex-col overflow-hidden">
+        {/* Top bar */}
+        <div className="flex shrink-0 items-center gap-3 border-b border-zinc-200 bg-white px-6 py-3">
+          {/* Search */}
+          <div className="relative flex-1 max-w-sm">
+            <Search className="absolute left-2.5 top-2 h-4 w-4 text-zinc-400" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => { setSearchQuery(e.target.value); setShowSearch(true); }}
+              onFocus={() => setShowSearch(true)}
+              onBlur={() => setTimeout(() => setShowSearch(false), 200)}
+              placeholder="Search documentation..."
+              className="w-full rounded-lg border border-zinc-200 bg-zinc-50 py-1.5 pl-8 pr-3 text-sm focus:outline-none focus:ring-1 focus:ring-red-500"
+            />
+            {showSearch && searchResults.length > 0 && (
+              <div className="absolute top-full left-0 z-50 mt-1 w-80 rounded-lg border border-zinc-200 bg-white shadow-lg">
+                {searchResults.map((r) => (
+                  <button
+                    key={r.id}
+                    type="button"
+                    onMouseDown={() => { goTo(r.section, r.endpointId); setSearchQuery(""); }}
+                    className="flex w-full flex-col gap-0.5 px-3 py-2.5 text-left hover:bg-zinc-50 transition-colors border-b border-zinc-100 last:border-0"
+                  >
+                    <span className="text-sm font-medium text-zinc-800">{r.title}</span>
+                    <span className="text-xs text-zinc-400 truncate">{r.description}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
 
-      <div
-        className={cn(
-          "pt-14 transition-all duration-200",
-          sidebarCollapsed ? "pl-0" : "pl-60",
-        )}
-      >
-        <div className="mx-auto max-w-5xl px-6 py-8 flex gap-8">
-          <main className="flex-1 min-w-0">
-            {renderSection()}
-          </main>
-          <DocTOC entries={tocEntries} activeId={activeHeading} />
+          {/* API key input */}
+          <div className="relative">
+            <Key className="absolute left-2.5 top-2 h-3.5 w-3.5 text-zinc-400" />
+            <input
+              type="text"
+              value={apiKey}
+              onChange={(e) => setApiKey(e.target.value)}
+              placeholder="Paste API key to pre-fill examples"
+              className="w-64 rounded-lg border border-zinc-200 bg-zinc-50 py-1.5 pl-8 pr-3 font-mono text-xs focus:outline-none focus:ring-1 focus:ring-red-500"
+            />
+          </div>
+
+          {/* Prod URL quick-copy */}
+          <div className="hidden lg:flex items-center gap-2 text-xs text-zinc-400 border border-zinc-200 rounded-lg px-3 py-1.5">
+            <Globe className="h-3.5 w-3.5 text-red-600" />
+            <code className="font-mono text-zinc-600 text-[10px] max-w-[200px] truncate">{PROD_API_URL}</code>
+            <CopyBtn text={PROD_API_URL} />
+          </div>
+        </div>
+
+        {/* Content + TOC */}
+        <div className="flex flex-1 overflow-hidden">
+          {/* Scrollable content */}
+          <div className="flex-1 overflow-y-auto">
+            <div className="mx-auto max-w-3xl px-8 py-10">
+              {/* Recently viewed / favorites on overview */}
+              {section === "overview" && !endpointId && (recentEps.length > 0 || favEps.length > 0) && (
+                <div className="mb-10 space-y-4">
+                  {recentEps.length > 0 && (
+                    <div>
+                      <div className="mb-2 flex items-center gap-2 text-xs font-semibold text-zinc-400">
+                        <Eye className="h-3.5 w-3.5" /> Recently Viewed
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {recentEps.map((ep) => (
+                          <button
+                            key={ep.id}
+                            type="button"
+                            onClick={() => goTo("endpoints", ep.id)}
+                            className="flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-2.5 py-1.5 text-xs hover:bg-zinc-50 transition-colors"
+                          >
+                            <span className={cn("rounded px-1 py-0.5 text-[9px] font-bold font-mono", METHOD_COLOR[ep.method])}>{ep.method}</span>
+                            <code className="font-mono">/v1{ep.path}</code>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {favEps.length > 0 && (
+                    <div>
+                      <div className="mb-2 flex items-center gap-2 text-xs font-semibold text-zinc-400">
+                        <Star className="h-3.5 w-3.5 text-amber-500" /> Favorites
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {favEps.map((ep) => (
+                          <button
+                            key={ep.id}
+                            type="button"
+                            onClick={() => goTo("endpoints", ep.id)}
+                            className="flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-2.5 py-1.5 text-xs hover:bg-zinc-50 transition-colors"
+                          >
+                            <span className={cn("rounded px-1 py-0.5 text-[9px] font-bold font-mono", METHOD_COLOR[ep.method])}>{ep.method}</span>
+                            <code className="font-mono">/v1{ep.path}</code>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {renderContent()}
+            </div>
+          </div>
+
+          {/* Right TOC */}
+          <DocToc section={section ?? "overview"} endpointId={endpointId} />
         </div>
       </div>
     </div>
