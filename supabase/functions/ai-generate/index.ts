@@ -136,7 +136,7 @@ Deno.serve(async (req: Request) => {
     return json({ error: "Unauthorized" }, 401);
   }
 
-  const isServiceRole = authHeader === `Bearer ${supabaseServiceKey}`;
+  const isServiceRole = isTrustedCaller(authHeader);
   let actorEmail = "server";
   if (!isServiceRole) {
     const callerClient = createClient(supabaseUrl, supabaseAnonKey, {
