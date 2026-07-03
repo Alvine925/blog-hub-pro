@@ -2,9 +2,9 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { AiAssistant } from "@/components/dashboard/AiAssistant";
 import { queryOptions, useSuspenseQuery, useQuery } from "@tanstack/react-query";
 import {
-  FileText, Eye, Send, FilePen, ArrowRight, Clock, Plus,
-  BarChart2, Sparkles, Activity, TrendingUp, Globe, Target, Lightbulb,
-  Key, Zap, AlertCircle, ScrollText,
+  FileText, Eye, ArrowRight, Clock,
+  BarChart2, Activity, Globe, Target, Lightbulb,
+  Key, Zap, FolderOpen,
 } from "lucide-react";
 import { getDashboardStats } from "@/lib/apikey.functions";
 import { publishScheduledPosts } from "@/lib/schedule.functions";
@@ -175,10 +175,10 @@ function Dashboard() {
           <p className="mt-0.5 text-sm text-muted-foreground">Overview of your content and workspace.</p>
         </div>
         <Link
-          to="/admin/blogs/new"
-          className="flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+          to="/admin/workspaces"
+          className="flex items-center gap-1.5 rounded-md border border-border bg-background px-3 py-1.5 text-sm font-medium hover:bg-muted transition-colors"
         >
-          <Plus className="h-3.5 w-3.5" /> New Post
+          <FolderOpen className="h-3.5 w-3.5" /> Workspaces
         </Link>
       </div>
 
@@ -262,10 +262,10 @@ function Dashboard() {
               <div className="py-12 text-center">
                 <p className="text-sm text-muted-foreground">No published posts yet.</p>
                 <Link
-                  to="/admin/blogs/new"
+                  to="/admin/workspaces"
                   className="mt-3 inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:underline"
                 >
-                  <Sparkles className="h-3.5 w-3.5" /> Write first post
+                  <FolderOpen className="h-3.5 w-3.5" /> Open a workspace to start writing
                 </Link>
               </div>
             ) : (
@@ -317,13 +317,20 @@ function Dashboard() {
               stats.recent.map((post) => (
                 <div key={post.id} className="flex items-center gap-3 border-b border-border py-3 last:border-0">
                   <StatusDot status={post.status} />
-                  <Link
-                    to="/admin/blogs/$id"
-                    params={{ id: post.id }}
-                    className="min-w-0 flex-1 truncate text-sm font-medium hover:text-primary transition-colors"
-                  >
-                    {post.title || "Untitled"}
-                  </Link>
+                  {/* Title links to the workspace editor if we have a workspace_id */}
+                  {post.workspace_id ? (
+                    <Link
+                      to="/admin/workspaces/$id/blogs/$postId/edit"
+                      params={{ id: post.workspace_id, postId: post.id }}
+                      className="min-w-0 flex-1 truncate text-sm font-medium hover:text-primary transition-colors"
+                    >
+                      {post.title || "Untitled"}
+                    </Link>
+                  ) : (
+                    <span className="min-w-0 flex-1 truncate text-sm font-medium text-muted-foreground">
+                      {post.title || "Untitled"}
+                    </span>
+                  )}
                   <Link
                     to="/admin/blog-stats/$postId"
                     params={{ postId: post.id }}

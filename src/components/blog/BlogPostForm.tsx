@@ -16,6 +16,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
+import { DraftFromIdeaPanel } from "@/components/blog/DraftFromIdeaPanel";
 import {
   Select,
   SelectContent,
@@ -333,6 +334,23 @@ export function BlogPostForm({ initial, workspaceId }: BlogPostFormProps) {
     <div className="grid gap-8 lg:grid-cols-3">
       {/* ── Main column ─────────────────────────────── */}
       <div className="space-y-8 lg:col-span-2">
+
+        {/* Draft from idea — new posts only */}
+        {!isEdit && (
+          <div className="flex items-center gap-3 rounded-xl border border-dashed border-primary/30 bg-primary/5 px-4 py-3">
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-primary">Have an idea?</p>
+              <p className="text-xs text-muted-foreground">Describe it and AI will draft a title, outline, and opening paragraph instantly.</p>
+            </div>
+            <DraftFromIdeaPanel
+              onDraftReady={({ title: t, excerpt: e, content: c }) => {
+                setTitle(t);
+                setExcerpt(e);
+                setContent(c);
+              }}
+            />
+          </div>
+        )}
 
         {/* Post basics */}
         <div className="space-y-4">

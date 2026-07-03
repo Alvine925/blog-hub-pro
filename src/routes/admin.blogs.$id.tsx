@@ -1,6 +1,5 @@
-import { createFileRoute, Link, notFound } from "@tanstack/react-router";
-import { ChevronLeft } from "lucide-react";
-import { BlogPostForm } from "@/components/blog/BlogPostForm";
+import { createFileRoute, Link, redirect, notFound } from "@tanstack/react-router";
+import { FolderOpen, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { adminGetPost } from "@/lib/blog.functions";
 
@@ -9,12 +8,20 @@ export const Route = createFileRoute("/admin/blogs/$id")({
   loader: async ({ params }) => {
     const post = await adminGetPost({ data: { id: params.id } });
     if (!post) throw notFound();
+
+    // If we know the workspace, redirect straight to the workspace's editor
+    if (post.workspace_id) {
+      throw redirect({
+        to: "/admin/workspaces/$id/blogs/$postId/edit",
+        params: { id: post.workspace_id, postId: params.id },
+        replace: true,
+      });
+    }
+
+    // Fallback: post has no workspace — surface a helpful message
     return { post };
   },
-  component: EditPost,
-  errorComponent: ({ error }) => (
-    <p className="text-sm text-destructive">Failed to load post: {error.message}</p>
-  ),
+  component: EditPostFallback,
   notFoundComponent: () => (
     <div className="space-y-3">
       <p className="text-muted-foreground">This post could not be found.</p>
@@ -25,19 +32,23 @@ export const Route = createFileRoute("/admin/blogs/$id")({
   ),
 });
 
-function EditPost() {
-  const { post } = Route.useLoaderData();
+function EditPostFallback() {
   return (
-    <div className="space-y-6">
-      <div className="flex items-center gap-3">
-        <Button size="icon" variant="ghost" asChild>
-          <Link to="/admin/blogs">
-            <ChevronLeft className="h-5 w-5" />
-          </Link>
-        </Button>
-        <h1 className="text-2xl font-bold">Edit Post</h1>
+    <div className="flex flex-col items-center justify-center gap-5 py-32 text-center">
+      <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-muted">
+        <FolderOpen className="h-7 w-7 text-muted-foreground" />
       </div>
-      <BlogPostForm initial={post} />
+      <div className="space-y-1 max-w-sm">
+        <h2 className="text-lg font-semibold">This post has no workspace</h2>
+        <p className="text-sm text-muted-foreground">
+          The post exists but isn't linked to a workspace. Go to the blog list to find it.
+        </p>
+      </div>
+      <Button asChild className="gap-2">
+        <Link to="/admin/blogs">
+          <ArrowRight className="h-4 w-4" /> View all posts
+        </Link>
+      </Button>
     </div>
   );
 }

@@ -249,7 +249,7 @@ export const getDashboardStats = createServerFn({ method: "GET" }).handler(
       supabase.from("blog_posts").select("*", { count: "exact", head: true }).eq("status", "draft"),
       supabase.from("blog_posts").select("*", { count: "exact", head: true }).eq("status", "scheduled"),
       supabase.from("blog_posts").select("id, title, slug, views, status").eq("status", "published").order("views", { ascending: false }).limit(5),
-      supabase.from("blog_posts").select("id, title, status, updated_at").order("updated_at", { ascending: false }).limit(5),
+      supabase.from("blog_posts").select("id, title, status, updated_at, workspace_id").order("updated_at", { ascending: false }).limit(5),
       // API stats — graceful fallback if table doesn't exist yet
       supabase.from("api_request_logs").select("*", { count: "exact", head: true }).gte("requested_at", today + "T00:00:00Z").then(r => ({ count: r.count ?? 0 })).catch(() => ({ count: 0 })),
       supabase.from("api_request_logs").select("*", { count: "exact", head: true }).gte("requested_at", today + "T00:00:00Z").gte("status_code", 400).then(r => ({ count: r.count ?? 0 })).catch(() => ({ count: 0 })),
@@ -268,7 +268,7 @@ export const getDashboardStats = createServerFn({ method: "GET" }).handler(
       scheduled: scheduled ?? 0,
       totalViews,
       topPosts: (topPosts ?? []) as Array<{ id: string; title: string; slug: string; views: number; status: string }>,
-      recent: (recent ?? []) as Array<{ id: string; title: string; status: string; updated_at: string }>,
+      recent: (recent ?? []) as Array<{ id: string; title: string; status: string; updated_at: string; workspace_id: string | null }>,
       apiRequestsToday: (apiRequestsToday ?? 0) as number,
       apiErrorsToday: (apiErrorsToday ?? 0) as number,
       activeKeys: (activeKeys ?? 0) as number,
