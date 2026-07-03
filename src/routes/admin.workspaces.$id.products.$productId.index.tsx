@@ -1,13 +1,11 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { queryOptions, useSuspenseQuery, useQueryClient } from "@tanstack/react-query";
-import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 import { toast } from "sonner";
 import { ArrowLeft, Pencil, Trash2, Send, Package, DollarSign, Tag, Eye, Heart, MessageSquare, Share2 } from "lucide-react";
 import { adminGetProduct, deleteProduct, setProductStatus, type Product } from "@/lib/product.functions";
 import { getContentEngagementStats } from "@/lib/engagement.functions";
 import { useQuery } from "@tanstack/react-query";
-import { useServerFn } from "@tanstack/react-start";
 import { cn } from "@/lib/utils";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
