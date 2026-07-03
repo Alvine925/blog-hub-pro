@@ -4,7 +4,7 @@ import { queryOptions, useSuspenseQuery, useQueryClient } from "@tanstack/react-
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2, Clock, Eye, Send, Heart, MessageSquare, Share2 } from "lucide-react";
+import { Plus, Pencil, Trash2, Clock, Eye, Send, Heart, MessageSquare, Share2, Sparkles } from "lucide-react";
 import { adminListPosts, deletePost, setPostStatus } from "@/lib/blog.functions";
 import { formatBlogDate, type BlogPostSummary } from "@/lib/blog-types";
 import { cn } from "@/lib/utils";
@@ -12,6 +12,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { GenerateContentDialog } from "@/components/ai/GenerateContentDialog";
 
 // ── Engagement counts server fn ───────────────────────────────────────────────
 interface EngagementMap {
@@ -93,6 +94,7 @@ function WorkspaceBlogs() {
   const doStatus = useServerFn(setPostStatus);
   const [pendingDelete, setPendingDelete] = useState<BlogPostSummary | null>(null);
   const [busy, setBusy] = useState(false);
+  const [showGenerate, setShowGenerate] = useState(false);
 
   async function handleDelete() {
     if (!pendingDelete) return;
@@ -123,13 +125,22 @@ function WorkspaceBlogs() {
           <h1 className="text-xl font-semibold">Blogs</h1>
           <p className="mt-0.5 text-sm text-muted-foreground">{posts.length} posts total</p>
         </div>
-        <Link
-          to="/admin/workspaces/$id/blogs/new"
-          params={{ id: workspaceId }}
-          className="flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
-        >
-          <Plus className="h-3.5 w-3.5" /> New Post
-        </Link>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setShowGenerate(true)}
+            className="flex items-center gap-1.5 rounded-md border border-border bg-background px-3 py-1.5 text-sm font-medium hover:bg-muted transition-colors"
+          >
+            <Sparkles className="h-3.5 w-3.5 text-primary" /> Generate with AI
+          </button>
+          <Link
+            to="/admin/workspaces/$id/blogs/new"
+            params={{ id: workspaceId }}
+            className="flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+          >
+            <Plus className="h-3.5 w-3.5" /> New Post
+          </Link>
+        </div>
       </div>
 
       {/* Table */}
@@ -255,6 +266,14 @@ function WorkspaceBlogs() {
           })}
         </div>
       )}
+
+      {/* Generate with AI dialog */}
+      <GenerateContentDialog
+        open={showGenerate}
+        onOpenChange={setShowGenerate}
+        contentType="blogs"
+        workspaceId={workspaceId}
+      />
 
       {/* Delete dialog */}
       <AlertDialog open={!!pendingDelete} onOpenChange={(o) => !o && setPendingDelete(null)}>

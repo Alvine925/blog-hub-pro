@@ -68,6 +68,18 @@ const CONFIG: Record<ContentType, {
     ],
     invalidateKey: "articles",
   },
+  blogs: {
+    edgeFn:       "generate-blog-post",
+    label:        "Blog Posts",
+    icon:         PenLine,
+    description:  "AI will generate complete blog posts tailored to your workspace's brand, audience and industry — saved as drafts ready to edit.",
+    bullets: [
+      "Up to 10 blog posts with full rich-text content",
+      "Category, excerpt, cover image prompt and SEO fields",
+      "Matched to your brand voice and industry",
+    ],
+    invalidateKey: "blog_posts",
+  },
 };
 
 const STEP_LABELS = [
