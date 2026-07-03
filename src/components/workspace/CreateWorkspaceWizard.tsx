@@ -31,7 +31,8 @@ const COLLECTION_OPTIONS = [
   { id: "media",         label: "Media library",    description: "Images and file uploads",       required: true },
   { id: "documentation", label: "Documentation",    description: "Technical docs and guides" },
   { id: "products",      label: "Products",         description: "Product catalogue" },
-  { id: "faqs",          label: "FAQs",             description: "Frequently asked questions" },
+  { id: "faqs",          label: "FAQs",             description: "Frequently asked questions, auto-generated from your site" },
+  { id: "news",          label: "News",             description: "Industry news, auto-researched and written for you" },
   { id: "case-studies",  label: "Case studies",     description: "Client success stories" },
   { id: "testimonials",  label: "Testimonials",     description: "Customer reviews" },
   { id: "team",          label: "Team members",     description: "Staff profiles" },
@@ -54,9 +55,27 @@ const SETUP_TASKS = [
   "Applying website context",
   "Configuring collections",
   "Building category structure",
-  "Generating content suggestions",
+  "Generating your content",
+  "Researching industry news",
   "Finalising your setup",
 ];
+
+async function invokeEdgeFunction(
+  name: string,
+  accessToken: string,
+  body: Record<string, unknown>,
+): Promise<void> {
+  try {
+    const { error } = await supabase.functions.invoke(name, {
+      body,
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    if (error) console.error(`[CreateWorkspaceWizard] ${name} failed`, error);
+  } catch (err) {
+    // Content generation is best-effort — never block workspace creation.
+    console.error(`[CreateWorkspaceWizard] ${name} threw`, err);
+  }
+}
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -456,6 +475,40 @@ function CreatingStep({
         const result = await createOnboardingWorkspace({
           data: { userId, accessToken, name, websiteUrl: url, intelligence: intel, selectedCollections },
         });
+
+        // ── Generate content per selected type — best-effort, non-blocking ──
+        // Blogs/FAQs/News each get ~10 drafts + ~10 leftover suggestions.
+        const generationJobs: Promise<void>[] = [];
+        if (selectedCollections.includes("blogs")) {
+          generationJobs.push(
+            invokeEdgeFunction("generate-blog-post", accessToken, {
+              workspace_id: result.workspaceId,
+              batch: true,
+              count: 10,
+            }),
+          );
+        }
+        if (selectedCollections.includes("faqs")) {
+          generationJobs.push(
+            invokeEdgeFunction("generate-faqs", accessToken, {
+              workspace_id: result.workspaceId,
+              count: 10,
+              suggestion_count: 10,
+            }),
+          );
+        }
+        if (selectedCollections.includes("news")) {
+          generationJobs.push(
+            invokeEdgeFunction("generate-news", accessToken, {
+              workspace_id: result.workspaceId,
+              count: 10,
+              suggestion_count: 10,
+            }),
+          );
+        }
+        if (generationJobs.length) {
+          await Promise.allSettled(generationJobs);
+        }
 
         clearInterval(timer);
         setTaskIdx(SETUP_TASKS.length - 1);
