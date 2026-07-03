@@ -50,7 +50,7 @@ export const adminListFaqs = createServerFn({ method: "GET" })
 
     let query = supabase
       .from("faqs")
-      .select("*")
+      .select("*, workspaces(id, name)")
       .order("sort_order", { ascending: true })
       .limit(500);
 

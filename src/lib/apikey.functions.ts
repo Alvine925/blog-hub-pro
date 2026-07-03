@@ -71,6 +71,66 @@ export const listApiKeys = createServerFn({ method: "GET" })
   },
 );
 
+export const createApiKey = createServerFn({ method: "POST" })
+  .validator((input: {
+    workspaceId?: string | null;
+    name: string;
+    description?: string;
+    key_type?: "publishable" | "secret";
+  }) =>
+    z.object({
+      workspaceId: z.string().uuid().nullable().optional(),
+      name: z.string().trim().min(1).max(100),
+      description: z.string().trim().max(300).optional(),
+      key_type: z.enum(["publishable", "secret"]).default("publishable"),
+    }).parse(input),
+  )
+  .handler(async ({ data }): Promise<{ key: string; id: string }> => {
+    const { createHash, randomBytes } = await import("node:crypto");
+    const { getAdminClient } = await import("./supabase.server");
+    const supabase = await getAdminClient();
+
+    // Resolve workspace
+    let workspaceId: string | null = data.workspaceId ?? null;
+    if (!workspaceId) {
+      const { data: ws } = await supabase
+        .from("workspaces")
+        .select("id")
+        .eq("slug", "default")
+        .single();
+      workspaceId = ws?.id ?? null;
+    }
+
+    const prefix = data.key_type === "secret" ? "sk_live_" : "pk_live_";
+    const raw = randomBytes(32).toString("hex");
+    const fullKey = `${prefix}${raw}`;
+    const keyHash = createHash("sha256").update(fullKey).digest("hex");
+    const keyPrefix = `${prefix}${raw.slice(0, 8)}`;
+
+    const defaultPermissions =
+      data.key_type === "secret"
+        ? ["read:blogs", "read:pages", "read:media", "read:collections", "read:faqs", "read:news", "write:blogs", "write:pages", "write:media", "write:collections", "write:faqs", "write:news"]
+        : ["read:blogs", "read:pages", "read:media", "read:collections", "read:faqs", "read:news"];
+
+    const { data: inserted, error } = await supabase
+      .from("api_keys")
+      .insert({
+        workspace_id: workspaceId,
+        name: data.name,
+        description: data.description ?? null,
+        key_hash: keyHash,
+        key_prefix: keyPrefix,
+        key_type: data.key_type,
+        permissions: defaultPermissions,
+        status: "active",
+      })
+      .select("id")
+      .single();
+
+    if (error) throw new Error(error.message);
+    return { key: fullKey, id: (inserted as { id: string }).id };
+  });
+
 export const revokeApiKey = createServerFn({ method: "POST" })
   .validator((input: { id: string }) =>
     z.object({ id: z.string().uuid() }).parse(input),
