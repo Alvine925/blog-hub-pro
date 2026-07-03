@@ -19,6 +19,9 @@ const CONFIG: Record<ContentType, {
   description: string;
   bullets: string[];
   invalidateKey: string;
+  promptable?: boolean;
+  promptLabel?: string;
+  promptPlaceholder?: string;
 }> = {
   news: {
     edgeFn:       "generate-news",
@@ -45,16 +48,19 @@ const CONFIG: Record<ContentType, {
     invalidateKey: "faqs",
   },
   products: {
-    edgeFn:       "generate-products",
-    label:        "Products",
-    icon:         Package,
-    description:  "AI will analyse your workspace to generate realistic product catalog entries based on your industry and brand — saved as drafts.",
+    edgeFn:        "generate-products",
+    label:         "Products",
+    icon:          Package,
+    description:   "Describe what kind of products you want and AI will generate a complete catalog with descriptions, pricing and categories.",
     bullets: [
-      "Up to 10 product entries with descriptions",
-      "Pricing, category and features included",
-      "Tailored to your business context",
+      "Up to 10 product entries matching your prompt",
+      "Pricing, category, features and description included",
+      "Saved as drafts — review and edit before publishing",
     ],
-    invalidateKey: "products",
+    invalidateKey:      "products",
+    promptable:         true,
+    promptLabel:        "What kind of products should AI generate?",
+    promptPlaceholder:  "e.g. \"Premium skincare products for women aged 25–45\" or \"SaaS tools for small business accounting\"",
   },
   articles: {
     edgeFn:       "generate-articles",
@@ -112,6 +118,7 @@ export function GenerateContentDialog({
 
   const [step, setStep] = useState<Step>({ id: "idle" });
   const [stepIndex, setStepIndex] = useState(0);
+  const [userPrompt, setUserPrompt] = useState("");
 
   async function generate() {
     setStep({ id: "generating" });
@@ -127,8 +134,13 @@ export function GenerateContentDialog({
         ? { Authorization: `Bearer ${session.access_token}` }
         : {};
 
+      const body: Record<string, unknown> = { workspace_id: workspaceId, count: 10, suggestion_count: 0 };
+      if (cfg.promptable && userPrompt.trim()) {
+        body.user_prompt = userPrompt.trim();
+      }
+
       const { data, error } = await supabase.functions.invoke(cfg.edgeFn, {
-        body: { workspace_id: workspaceId, count: 10, suggestion_count: 0 },
+        body,
         headers: authHeaders,
       });
 
@@ -155,6 +167,7 @@ export function GenerateContentDialog({
     if (!open) {
       setStep({ id: "idle" });
       setStepIndex(0);
+      setUserPrompt("");
     }
     onOpenChange(open);
   }
@@ -175,6 +188,21 @@ export function GenerateContentDialog({
               <Icon className="h-5 w-5 text-primary mt-0.5 shrink-0" />
               <p className="text-sm text-muted-foreground">{cfg.description}</p>
             </div>
+
+            {cfg.promptable && (
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-foreground">{cfg.promptLabel}</label>
+                <textarea
+                  className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none"
+                  rows={3}
+                  placeholder={cfg.promptPlaceholder}
+                  value={userPrompt}
+                  onChange={(e) => setUserPrompt(e.target.value)}
+                />
+                <p className="text-[11px] text-muted-foreground">Leave blank to let AI decide based on your workspace context.</p>
+              </div>
+            )}
+
             <div className="space-y-1.5 text-xs text-muted-foreground">
               {cfg.bullets.map((b) => (
                 <div key={b} className="flex items-center gap-2">
