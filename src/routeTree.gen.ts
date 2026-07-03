@@ -68,6 +68,7 @@ import { Route as AdminWorkspacesIdFaqsIndexRouteImport } from './routes/admin.w
 import { Route as AdminWorkspacesIdBlogsIndexRouteImport } from './routes/admin.workspaces.$id.blogs.index'
 import { Route as AdminWorkspacesIdBlogsNewRouteImport } from './routes/admin.workspaces.$id.blogs.new'
 import { Route as AdminWorkspacesIdBlogsPostIdRouteImport } from './routes/admin.workspaces.$id.blogs.$postId'
+import { Route as AdminWorkspacesIdBlogsPostIdIndexRouteImport } from './routes/admin.workspaces.$id.blogs.$postId.index'
 import { Route as AdminWorkspacesIdBlogsPostIdEditRouteImport } from './routes/admin.workspaces.$id.blogs.$postId.edit'
 
 const SignupRoute = SignupRouteImport.update({
@@ -382,6 +383,12 @@ const AdminWorkspacesIdBlogsPostIdRoute =
     path: '/$postId',
     getParentRoute: () => AdminWorkspacesIdBlogsRoute,
   } as any)
+const AdminWorkspacesIdBlogsPostIdIndexRoute =
+  AdminWorkspacesIdBlogsPostIdIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AdminWorkspacesIdBlogsPostIdRoute,
+  } as any)
 const AdminWorkspacesIdBlogsPostIdEditRoute =
   AdminWorkspacesIdBlogsPostIdEditRouteImport.update({
     id: '/edit',
@@ -450,6 +457,7 @@ export interface FileRoutesByFullPath {
   '/admin/workspaces/$id/faqs/': typeof AdminWorkspacesIdFaqsIndexRoute
   '/admin/workspaces/$id/news/': typeof AdminWorkspacesIdNewsIndexRoute
   '/admin/workspaces/$id/blogs/$postId/edit': typeof AdminWorkspacesIdBlogsPostIdEditRoute
+  '/admin/workspaces/$id/blogs/$postId/': typeof AdminWorkspacesIdBlogsPostIdIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -502,12 +510,12 @@ export interface FileRoutesByTo {
   '/admin/workspaces/$id/users': typeof AdminWorkspacesIdUsersRoute
   '/admin/workspaces/$id/webhooks': typeof AdminWorkspacesIdWebhooksRoute
   '/admin/workspaces/$id': typeof AdminWorkspacesIdIndexRoute
-  '/admin/workspaces/$id/blogs/$postId': typeof AdminWorkspacesIdBlogsPostIdRouteWithChildren
   '/admin/workspaces/$id/blogs/new': typeof AdminWorkspacesIdBlogsNewRoute
   '/admin/workspaces/$id/blogs': typeof AdminWorkspacesIdBlogsIndexRoute
   '/admin/workspaces/$id/faqs': typeof AdminWorkspacesIdFaqsIndexRoute
   '/admin/workspaces/$id/news': typeof AdminWorkspacesIdNewsIndexRoute
   '/admin/workspaces/$id/blogs/$postId/edit': typeof AdminWorkspacesIdBlogsPostIdEditRoute
+  '/admin/workspaces/$id/blogs/$postId': typeof AdminWorkspacesIdBlogsPostIdIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -571,6 +579,7 @@ export interface FileRoutesById {
   '/admin/workspaces/$id/faqs/': typeof AdminWorkspacesIdFaqsIndexRoute
   '/admin/workspaces/$id/news/': typeof AdminWorkspacesIdNewsIndexRoute
   '/admin/workspaces/$id/blogs/$postId/edit': typeof AdminWorkspacesIdBlogsPostIdEditRoute
+  '/admin/workspaces/$id/blogs/$postId/': typeof AdminWorkspacesIdBlogsPostIdIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -635,6 +644,7 @@ export interface FileRouteTypes {
     | '/admin/workspaces/$id/faqs/'
     | '/admin/workspaces/$id/news/'
     | '/admin/workspaces/$id/blogs/$postId/edit'
+    | '/admin/workspaces/$id/blogs/$postId/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -687,12 +697,12 @@ export interface FileRouteTypes {
     | '/admin/workspaces/$id/users'
     | '/admin/workspaces/$id/webhooks'
     | '/admin/workspaces/$id'
-    | '/admin/workspaces/$id/blogs/$postId'
     | '/admin/workspaces/$id/blogs/new'
     | '/admin/workspaces/$id/blogs'
     | '/admin/workspaces/$id/faqs'
     | '/admin/workspaces/$id/news'
     | '/admin/workspaces/$id/blogs/$postId/edit'
+    | '/admin/workspaces/$id/blogs/$postId'
   id:
     | '__root__'
     | '/'
@@ -755,6 +765,7 @@ export interface FileRouteTypes {
     | '/admin/workspaces/$id/faqs/'
     | '/admin/workspaces/$id/news/'
     | '/admin/workspaces/$id/blogs/$postId/edit'
+    | '/admin/workspaces/$id/blogs/$postId/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -1182,6 +1193,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminWorkspacesIdBlogsPostIdRouteImport
       parentRoute: typeof AdminWorkspacesIdBlogsRoute
     }
+    '/admin/workspaces/$id/blogs/$postId/': {
+      id: '/admin/workspaces/$id/blogs/$postId/'
+      path: '/'
+      fullPath: '/admin/workspaces/$id/blogs/$postId/'
+      preLoaderRoute: typeof AdminWorkspacesIdBlogsPostIdIndexRouteImport
+      parentRoute: typeof AdminWorkspacesIdBlogsPostIdRoute
+    }
     '/admin/workspaces/$id/blogs/$postId/edit': {
       id: '/admin/workspaces/$id/blogs/$postId/edit'
       path: '/edit'
@@ -1205,12 +1223,15 @@ const AdminCollectionsRouteWithChildren =
 
 interface AdminWorkspacesIdBlogsPostIdRouteChildren {
   AdminWorkspacesIdBlogsPostIdEditRoute: typeof AdminWorkspacesIdBlogsPostIdEditRoute
+  AdminWorkspacesIdBlogsPostIdIndexRoute: typeof AdminWorkspacesIdBlogsPostIdIndexRoute
 }
 
 const AdminWorkspacesIdBlogsPostIdRouteChildren: AdminWorkspacesIdBlogsPostIdRouteChildren =
   {
     AdminWorkspacesIdBlogsPostIdEditRoute:
       AdminWorkspacesIdBlogsPostIdEditRoute,
+    AdminWorkspacesIdBlogsPostIdIndexRoute:
+      AdminWorkspacesIdBlogsPostIdIndexRoute,
   }
 
 const AdminWorkspacesIdBlogsPostIdRouteWithChildren =
