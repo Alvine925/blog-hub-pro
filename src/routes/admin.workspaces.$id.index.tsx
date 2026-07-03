@@ -72,17 +72,19 @@ const getOverview = createServerFn({ method: "GET" })
       pubRes, draftRes, schedRes, mediaRes, aiRes,
       postsRes, actRes, wsRes, compRes, kwRes, oppRes,
     ] = await Promise.all([
-      db.from("blog_posts").select("id", { count: "exact", head: true }).eq("status", "published"),
-      db.from("blog_posts").select("id", { count: "exact", head: true }).eq("status", "draft"),
-      db.from("blog_posts").select("id", { count: "exact", head: true }).eq("status", "scheduled"),
+      db.from("blog_posts").select("id", { count: "exact", head: true }).eq("workspace_id", data.id).eq("status", "published"),
+      db.from("blog_posts").select("id", { count: "exact", head: true }).eq("workspace_id", data.id).eq("status", "draft"),
+      db.from("blog_posts").select("id", { count: "exact", head: true }).eq("workspace_id", data.id).eq("status", "scheduled"),
       db.from("media_files").select("id", { count: "exact", head: true }).eq("workspace_id", data.id),
       db.from("ai_generations").select("id", { count: "exact", head: true }).eq("workspace_id", data.id),
       db.from("blog_posts")
         .select("id,title,status,updated_at,views,slug")
+        .eq("workspace_id", data.id)
         .order("updated_at", { ascending: false })
         .limit(8),
       db.from("activity_log")
         .select("id,actor_name,action,entity_label,occurred_at,entity_type")
+        .eq("workspace_id", data.id)
         .order("occurred_at", { ascending: false })
         .limit(8),
       db.from("workspaces")
