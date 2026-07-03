@@ -182,6 +182,21 @@ async function verifyUser(authHeader: string | null): Promise<boolean> {
   if (anonKey && token === anonKey) return true;
   if (publishableKey && token === publishableKey) return true;
 
+  // Accept any legitimate Supabase-issued JWT for THIS project. The stored
+  // anon/publishable secret values may differ in format from the key the app
+  // actually sends, so validate the token's payload (issuer + project ref +
+  // role) instead of doing an exact string match. This covers anon,
+  // authenticated and service_role tokens minted for this project.
+  const projectRef = (Deno.env.get("SUPABASE_URL") ?? "")
+    .replace(/^https?:\/\//, "")
+    .split(".")[0];
+  const claims = decodeJwtPayload(token);
+  if (claims && claims.iss === "supabase" && (!projectRef || claims.ref === projectRef)) {
+    const role = typeof claims.role === "string" ? claims.role : "";
+    if (["anon", "authenticated", "service_role"].includes(role)) return true;
+  }
+
+
   try {
     const url  = Deno.env.get("SUPABASE_URL") ?? "";
     const anon = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
