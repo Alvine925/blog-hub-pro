@@ -44,6 +44,8 @@ import { listCollections, getCollectionEntries } from "./services/CollectionServ
 import { listCategories } from "./services/CategoryService.ts";
 import { listTags } from "./services/TagService.ts";
 import { search } from "./services/SearchService.ts";
+import { listProducts, getProductBySlug, getFeaturedProducts } from "./services/ProductService.ts";
+import { listArticles, getArticleBySlug, getFeaturedArticles, getLatestArticles } from "./services/ArticleService.ts";
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -345,6 +347,96 @@ Deno.serve(async (req: Request) => {
         response = cached(ok(rows, { page, limit, total, totalPages }, 200, links));
       }
 
+    // ── GET /products/* ────────────────────────────────────────────────────────
+    } else if (resource === "products") {
+      if (!hasPermission(context.permissions, "read:products")) {
+        response = fail(ERRORS.FORBIDDEN.code, ERRORS.FORBIDDEN.message, 403);
+
+      } else if (segs[1] === "featured") {
+        // GET /products/featured
+        const limit = intParam(url, "limit", 10, 1, 50);
+        const data  = await getFeaturedProducts(ws, limit);
+        response = cached(ok(data, { total: data.length }));
+
+      } else if (segs[1]) {
+        // GET /products/:slug
+        const product = await getProductBySlug(ws, segs[1], kt);
+        if (!product) {
+          response = fail(ERRORS.NOT_FOUND.code, ERRORS.NOT_FOUND.message, 404);
+        } else {
+          response = cached(ok(product));
+        }
+
+      } else {
+        // GET /products
+        const page  = intParam(url, "page", 1, 1, 10_000);
+        const limit = intParam(url, "limit", 20, 1, 100);
+        const sort  = sortParam(url, ["name", "price", "created_at", "updated_at", "views", "sort_order"], "sort_order");
+        const { rows, total } = await listProducts(ws, {
+          page, limit, sort,
+          order:    orderParam(url),
+          search:   strParam(url, "search"),
+          category: strParam(url, "category"),
+          brand:    strParam(url, "brand"),
+          featured: boolParam(url, "featured"),
+          status:   strParam(url, "status"),
+          keyType:  kt,
+        });
+        const totalPages = Math.ceil(total / limit);
+        const links = buildPaginationLinks(req.url, page, totalPages);
+        response = cached(ok(rows, { page, limit, total, totalPages }, 200, links));
+      }
+
+    // ── GET /articles/* ────────────────────────────────────────────────────────
+    } else if (resource === "articles") {
+      if (!hasPermission(context.permissions, "read:articles")) {
+        response = fail(ERRORS.FORBIDDEN.code, ERRORS.FORBIDDEN.message, 403);
+
+      } else if (segs[1] === "featured") {
+        // GET /articles/featured
+        const limit = intParam(url, "limit", 10, 1, 50);
+        const data  = await getFeaturedArticles(ws, limit);
+        response = cached(ok(data, { total: data.length }));
+
+      } else if (segs[1] === "latest") {
+        // GET /articles/latest
+        const limit = intParam(url, "limit", 10, 1, 50);
+        const data  = await getLatestArticles(ws, limit);
+        response = cached(ok(data, { total: data.length }));
+
+      } else if (segs[1]) {
+        // GET /articles/:slug
+        const article = await getArticleBySlug(ws, segs[1], kt);
+        if (!article) {
+          response = fail(ERRORS.NOT_FOUND.code, ERRORS.NOT_FOUND.message, 404);
+        } else {
+          response = cached(ok(article));
+        }
+
+      } else {
+        // GET /articles
+        const page  = intParam(url, "page", 1, 1, 10_000);
+        const limit = intParam(url, "limit", 20, 1, 100);
+        const sort  = sortParam(url, ["title", "published_at", "created_at", "updated_at", "views", "reading_time"], "published_at");
+        const { rows, total } = await listArticles(ws, {
+          page, limit, sort,
+          order:        orderParam(url),
+          search:       strParam(url, "search"),
+          category:     strParam(url, "category"),
+          tag:          strParam(url, "tag"),
+          author:       strParam(url, "author"),
+          featured:     boolParam(url, "featured"),
+          article_type: strParam(url, "article_type"),
+          from:         dateParam(url, "from"),
+          to:           dateParam(url, "to"),
+          status:       strParam(url, "status"),
+          keyType:      kt,
+        });
+        const totalPages = Math.ceil(total / limit);
+        const links = buildPaginationLinks(req.url, page, totalPages);
+        response = cached(ok(rows, { page, limit, total, totalPages }, 200, links));
+      }
+
     // ── GET /search ────────────────────────────────────────────────────────────
     } else if (resource === "search") {
       const q = strParam(url, "q") ?? "";
@@ -367,7 +459,7 @@ Deno.serve(async (req: Request) => {
     } else {
       response = fail(
         ERRORS.NOT_FOUND.code,
-        "Endpoint not found. Available: /blogs, /blogs/:slug, /blogs/featured, /blogs/latest, /blogs/:slug/related, /pages, /pages/:slug, /faqs, /news, /news/:slug, /news/breaking, /news/latest, /collections, /collections/:slug, /categories, /tags, /media, /search",
+        "Endpoint not found. Available: /blogs, /blogs/:slug, /blogs/featured, /blogs/latest, /blogs/:slug/related, /pages, /pages/:slug, /faqs, /news, /news/:slug, /news/breaking, /news/latest, /articles, /articles/:slug, /articles/featured, /articles/latest, /products, /products/:slug, /products/featured, /collections, /collections/:slug, /categories, /tags, /media, /search",
         404,
       );
     }

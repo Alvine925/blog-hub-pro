@@ -5,6 +5,8 @@ export const PUBLISHABLE_PERMISSIONS = [
   "read:collections",
   "read:faqs",
   "read:news",
+  "read:products",
+  "read:articles",
   "write:engagement",
 ] as const;
 
@@ -16,6 +18,8 @@ export const SECRET_PERMISSIONS = [
   "write:collections",
   "write:faqs",
   "write:news",
+  "write:products",
+  "write:articles",
   "manage:api_keys",
   "manage:comments",
 ] as const;

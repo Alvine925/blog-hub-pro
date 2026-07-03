@@ -158,6 +158,24 @@ function PreparingStep() {
             }),
           );
         }
+        if (selectedCollections.includes("products")) {
+          generationJobs.push(
+            invokeEdgeFunction("generate-products", accessToken, {
+              workspace_id: workspaceId,
+              count: 10,
+              suggestion_count: 10,
+            }),
+          );
+        }
+        if (selectedCollections.includes("articles") || selectedCollections.includes("documentation")) {
+          generationJobs.push(
+            invokeEdgeFunction("generate-articles", accessToken, {
+              workspace_id: workspaceId,
+              count: 10,
+              suggestion_count: 10,
+            }),
+          );
+        }
         if (generationJobs.length) {
           await Promise.allSettled(generationJobs);
         }

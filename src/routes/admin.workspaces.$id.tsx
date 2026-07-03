@@ -6,7 +6,7 @@ import {
   LayoutDashboard, FileText, Layers, ImageIcon, Key, Webhook,
   BarChart2, Bell, Settings, Code2, Sparkles,
   ChevronLeft, ExternalLink, LogOut, Plus, Search, ChevronRight, Info, Plug, Zap, BookOpen, MessageSquare,
-  HelpCircle, Newspaper,
+  HelpCircle, Newspaper, Package, GraduationCap,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Workspace } from "@/lib/workspace.functions";
@@ -73,8 +73,10 @@ function buildNav(id: string): NavGroup[] {
       group: "Content",
       items: [
         { label: "Blog Posts",    to: `${base}/blogs`,        icon: FileText       },
-        { label: "FAQs",          to: `${base}/faqs`,         icon: HelpCircle     },
+        { label: "Articles",      to: `${base}/articles`,     icon: GraduationCap  },
         { label: "News",          to: `${base}/news`,         icon: Newspaper      },
+        { label: "Products",      to: `${base}/products`,     icon: Package        },
+        { label: "FAQs",          to: `${base}/faqs`,         icon: HelpCircle     },
         { label: "Comments",      to: `${base}/comments`,     icon: MessageSquare  },
         { label: "Collections",   to: `${base}/collections`,  icon: Layers         },
         { label: "Media Library", to: `${base}/media`,        icon: ImageIcon      },

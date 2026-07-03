@@ -50,6 +50,7 @@ import { Route as AdminWorkspacesIdIndexRouteImport } from './routes/admin.works
 import { Route as AdminWorkspacesIdWebhooksRouteImport } from './routes/admin.workspaces.$id.webhooks'
 import { Route as AdminWorkspacesIdUsersRouteImport } from './routes/admin.workspaces.$id.users'
 import { Route as AdminWorkspacesIdSettingsRouteImport } from './routes/admin.workspaces.$id.settings'
+import { Route as AdminWorkspacesIdProductsRouteImport } from './routes/admin.workspaces.$id.products'
 import { Route as AdminWorkspacesIdNotificationsRouteImport } from './routes/admin.workspaces.$id.notifications'
 import { Route as AdminWorkspacesIdMediaRouteImport } from './routes/admin.workspaces.$id.media'
 import { Route as AdminWorkspacesIdIntegrationCenterRouteImport } from './routes/admin.workspaces.$id.integration-center'
@@ -58,18 +59,29 @@ import { Route as AdminWorkspacesIdCommentsRouteImport } from './routes/admin.wo
 import { Route as AdminWorkspacesIdCollectionsRouteImport } from './routes/admin.workspaces.$id.collections'
 import { Route as AdminWorkspacesIdCacheInvalidationRouteImport } from './routes/admin.workspaces.$id.cache-invalidation'
 import { Route as AdminWorkspacesIdBlogsRouteImport } from './routes/admin.workspaces.$id.blogs'
+import { Route as AdminWorkspacesIdArticlesRouteImport } from './routes/admin.workspaces.$id.articles'
 import { Route as AdminWorkspacesIdApiKeysRouteImport } from './routes/admin.workspaces.$id.api-keys'
 import { Route as AdminWorkspacesIdApiExplorerRouteImport } from './routes/admin.workspaces.$id.api-explorer'
 import { Route as AdminWorkspacesIdAnalyticsRouteImport } from './routes/admin.workspaces.$id.analytics'
 import { Route as AdminWorkspacesIdAiAssistantRouteImport } from './routes/admin.workspaces.$id.ai-assistant'
 import { Route as AdminWorkspacesIdAboutRouteImport } from './routes/admin.workspaces.$id.about'
+import { Route as AdminWorkspacesIdProductsIndexRouteImport } from './routes/admin.workspaces.$id.products.index'
 import { Route as AdminWorkspacesIdNewsIndexRouteImport } from './routes/admin.workspaces.$id.news.index'
 import { Route as AdminWorkspacesIdFaqsIndexRouteImport } from './routes/admin.workspaces.$id.faqs.index'
 import { Route as AdminWorkspacesIdBlogsIndexRouteImport } from './routes/admin.workspaces.$id.blogs.index'
+import { Route as AdminWorkspacesIdArticlesIndexRouteImport } from './routes/admin.workspaces.$id.articles.index'
+import { Route as AdminWorkspacesIdProductsNewRouteImport } from './routes/admin.workspaces.$id.products.new'
+import { Route as AdminWorkspacesIdProductsProductIdRouteImport } from './routes/admin.workspaces.$id.products.$productId'
 import { Route as AdminWorkspacesIdBlogsNewRouteImport } from './routes/admin.workspaces.$id.blogs.new'
 import { Route as AdminWorkspacesIdBlogsPostIdRouteImport } from './routes/admin.workspaces.$id.blogs.$postId'
+import { Route as AdminWorkspacesIdArticlesNewRouteImport } from './routes/admin.workspaces.$id.articles.new'
+import { Route as AdminWorkspacesIdArticlesArticleIdRouteImport } from './routes/admin.workspaces.$id.articles.$articleId'
+import { Route as AdminWorkspacesIdProductsProductIdIndexRouteImport } from './routes/admin.workspaces.$id.products.$productId.index'
 import { Route as AdminWorkspacesIdBlogsPostIdIndexRouteImport } from './routes/admin.workspaces.$id.blogs.$postId.index'
+import { Route as AdminWorkspacesIdArticlesArticleIdIndexRouteImport } from './routes/admin.workspaces.$id.articles.$articleId.index'
+import { Route as AdminWorkspacesIdProductsProductIdEditRouteImport } from './routes/admin.workspaces.$id.products.$productId.edit'
 import { Route as AdminWorkspacesIdBlogsPostIdEditRouteImport } from './routes/admin.workspaces.$id.blogs.$postId.edit'
+import { Route as AdminWorkspacesIdArticlesArticleIdEditRouteImport } from './routes/admin.workspaces.$id.articles.$articleId.edit'
 
 const SignupRoute = SignupRouteImport.update({
   id: '/signup',
@@ -278,6 +290,12 @@ const AdminWorkspacesIdSettingsRoute =
     path: '/settings',
     getParentRoute: () => AdminWorkspacesIdRoute,
   } as any)
+const AdminWorkspacesIdProductsRoute =
+  AdminWorkspacesIdProductsRouteImport.update({
+    id: '/products',
+    path: '/products',
+    getParentRoute: () => AdminWorkspacesIdRoute,
+  } as any)
 const AdminWorkspacesIdNotificationsRoute =
   AdminWorkspacesIdNotificationsRouteImport.update({
     id: '/notifications',
@@ -324,6 +342,12 @@ const AdminWorkspacesIdBlogsRoute = AdminWorkspacesIdBlogsRouteImport.update({
   path: '/blogs',
   getParentRoute: () => AdminWorkspacesIdRoute,
 } as any)
+const AdminWorkspacesIdArticlesRoute =
+  AdminWorkspacesIdArticlesRouteImport.update({
+    id: '/articles',
+    path: '/articles',
+    getParentRoute: () => AdminWorkspacesIdRoute,
+  } as any)
 const AdminWorkspacesIdApiKeysRoute =
   AdminWorkspacesIdApiKeysRouteImport.update({
     id: '/api-keys',
@@ -353,6 +377,12 @@ const AdminWorkspacesIdAboutRoute = AdminWorkspacesIdAboutRouteImport.update({
   path: '/about',
   getParentRoute: () => AdminWorkspacesIdRoute,
 } as any)
+const AdminWorkspacesIdProductsIndexRoute =
+  AdminWorkspacesIdProductsIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AdminWorkspacesIdProductsRoute,
+  } as any)
 const AdminWorkspacesIdNewsIndexRoute =
   AdminWorkspacesIdNewsIndexRouteImport.update({
     id: '/news/',
@@ -371,6 +401,24 @@ const AdminWorkspacesIdBlogsIndexRoute =
     path: '/',
     getParentRoute: () => AdminWorkspacesIdBlogsRoute,
   } as any)
+const AdminWorkspacesIdArticlesIndexRoute =
+  AdminWorkspacesIdArticlesIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AdminWorkspacesIdArticlesRoute,
+  } as any)
+const AdminWorkspacesIdProductsNewRoute =
+  AdminWorkspacesIdProductsNewRouteImport.update({
+    id: '/new',
+    path: '/new',
+    getParentRoute: () => AdminWorkspacesIdProductsRoute,
+  } as any)
+const AdminWorkspacesIdProductsProductIdRoute =
+  AdminWorkspacesIdProductsProductIdRouteImport.update({
+    id: '/$productId',
+    path: '/$productId',
+    getParentRoute: () => AdminWorkspacesIdProductsRoute,
+  } as any)
 const AdminWorkspacesIdBlogsNewRoute =
   AdminWorkspacesIdBlogsNewRouteImport.update({
     id: '/new',
@@ -383,17 +431,53 @@ const AdminWorkspacesIdBlogsPostIdRoute =
     path: '/$postId',
     getParentRoute: () => AdminWorkspacesIdBlogsRoute,
   } as any)
+const AdminWorkspacesIdArticlesNewRoute =
+  AdminWorkspacesIdArticlesNewRouteImport.update({
+    id: '/new',
+    path: '/new',
+    getParentRoute: () => AdminWorkspacesIdArticlesRoute,
+  } as any)
+const AdminWorkspacesIdArticlesArticleIdRoute =
+  AdminWorkspacesIdArticlesArticleIdRouteImport.update({
+    id: '/$articleId',
+    path: '/$articleId',
+    getParentRoute: () => AdminWorkspacesIdArticlesRoute,
+  } as any)
+const AdminWorkspacesIdProductsProductIdIndexRoute =
+  AdminWorkspacesIdProductsProductIdIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AdminWorkspacesIdProductsProductIdRoute,
+  } as any)
 const AdminWorkspacesIdBlogsPostIdIndexRoute =
   AdminWorkspacesIdBlogsPostIdIndexRouteImport.update({
     id: '/',
     path: '/',
     getParentRoute: () => AdminWorkspacesIdBlogsPostIdRoute,
   } as any)
+const AdminWorkspacesIdArticlesArticleIdIndexRoute =
+  AdminWorkspacesIdArticlesArticleIdIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AdminWorkspacesIdArticlesArticleIdRoute,
+  } as any)
+const AdminWorkspacesIdProductsProductIdEditRoute =
+  AdminWorkspacesIdProductsProductIdEditRouteImport.update({
+    id: '/edit',
+    path: '/edit',
+    getParentRoute: () => AdminWorkspacesIdProductsProductIdRoute,
+  } as any)
 const AdminWorkspacesIdBlogsPostIdEditRoute =
   AdminWorkspacesIdBlogsPostIdEditRouteImport.update({
     id: '/edit',
     path: '/edit',
     getParentRoute: () => AdminWorkspacesIdBlogsPostIdRoute,
+  } as any)
+const AdminWorkspacesIdArticlesArticleIdEditRoute =
+  AdminWorkspacesIdArticlesArticleIdEditRouteImport.update({
+    id: '/edit',
+    path: '/edit',
+    getParentRoute: () => AdminWorkspacesIdArticlesArticleIdRoute,
   } as any)
 
 export interface FileRoutesByFullPath {
@@ -439,6 +523,7 @@ export interface FileRoutesByFullPath {
   '/admin/workspaces/$id/analytics': typeof AdminWorkspacesIdAnalyticsRoute
   '/admin/workspaces/$id/api-explorer': typeof AdminWorkspacesIdApiExplorerRoute
   '/admin/workspaces/$id/api-keys': typeof AdminWorkspacesIdApiKeysRoute
+  '/admin/workspaces/$id/articles': typeof AdminWorkspacesIdArticlesRouteWithChildren
   '/admin/workspaces/$id/blogs': typeof AdminWorkspacesIdBlogsRouteWithChildren
   '/admin/workspaces/$id/cache-invalidation': typeof AdminWorkspacesIdCacheInvalidationRoute
   '/admin/workspaces/$id/collections': typeof AdminWorkspacesIdCollectionsRoute
@@ -447,17 +532,28 @@ export interface FileRoutesByFullPath {
   '/admin/workspaces/$id/integration-center': typeof AdminWorkspacesIdIntegrationCenterRoute
   '/admin/workspaces/$id/media': typeof AdminWorkspacesIdMediaRoute
   '/admin/workspaces/$id/notifications': typeof AdminWorkspacesIdNotificationsRoute
+  '/admin/workspaces/$id/products': typeof AdminWorkspacesIdProductsRouteWithChildren
   '/admin/workspaces/$id/settings': typeof AdminWorkspacesIdSettingsRoute
   '/admin/workspaces/$id/users': typeof AdminWorkspacesIdUsersRoute
   '/admin/workspaces/$id/webhooks': typeof AdminWorkspacesIdWebhooksRoute
   '/admin/workspaces/$id/': typeof AdminWorkspacesIdIndexRoute
+  '/admin/workspaces/$id/articles/$articleId': typeof AdminWorkspacesIdArticlesArticleIdRouteWithChildren
+  '/admin/workspaces/$id/articles/new': typeof AdminWorkspacesIdArticlesNewRoute
   '/admin/workspaces/$id/blogs/$postId': typeof AdminWorkspacesIdBlogsPostIdRouteWithChildren
   '/admin/workspaces/$id/blogs/new': typeof AdminWorkspacesIdBlogsNewRoute
+  '/admin/workspaces/$id/products/$productId': typeof AdminWorkspacesIdProductsProductIdRouteWithChildren
+  '/admin/workspaces/$id/products/new': typeof AdminWorkspacesIdProductsNewRoute
+  '/admin/workspaces/$id/articles/': typeof AdminWorkspacesIdArticlesIndexRoute
   '/admin/workspaces/$id/blogs/': typeof AdminWorkspacesIdBlogsIndexRoute
   '/admin/workspaces/$id/faqs/': typeof AdminWorkspacesIdFaqsIndexRoute
   '/admin/workspaces/$id/news/': typeof AdminWorkspacesIdNewsIndexRoute
+  '/admin/workspaces/$id/products/': typeof AdminWorkspacesIdProductsIndexRoute
+  '/admin/workspaces/$id/articles/$articleId/edit': typeof AdminWorkspacesIdArticlesArticleIdEditRoute
   '/admin/workspaces/$id/blogs/$postId/edit': typeof AdminWorkspacesIdBlogsPostIdEditRoute
+  '/admin/workspaces/$id/products/$productId/edit': typeof AdminWorkspacesIdProductsProductIdEditRoute
+  '/admin/workspaces/$id/articles/$articleId/': typeof AdminWorkspacesIdArticlesArticleIdIndexRoute
   '/admin/workspaces/$id/blogs/$postId/': typeof AdminWorkspacesIdBlogsPostIdIndexRoute
+  '/admin/workspaces/$id/products/$productId/': typeof AdminWorkspacesIdProductsProductIdIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -510,12 +606,20 @@ export interface FileRoutesByTo {
   '/admin/workspaces/$id/users': typeof AdminWorkspacesIdUsersRoute
   '/admin/workspaces/$id/webhooks': typeof AdminWorkspacesIdWebhooksRoute
   '/admin/workspaces/$id': typeof AdminWorkspacesIdIndexRoute
+  '/admin/workspaces/$id/articles/new': typeof AdminWorkspacesIdArticlesNewRoute
   '/admin/workspaces/$id/blogs/new': typeof AdminWorkspacesIdBlogsNewRoute
+  '/admin/workspaces/$id/products/new': typeof AdminWorkspacesIdProductsNewRoute
+  '/admin/workspaces/$id/articles': typeof AdminWorkspacesIdArticlesIndexRoute
   '/admin/workspaces/$id/blogs': typeof AdminWorkspacesIdBlogsIndexRoute
   '/admin/workspaces/$id/faqs': typeof AdminWorkspacesIdFaqsIndexRoute
   '/admin/workspaces/$id/news': typeof AdminWorkspacesIdNewsIndexRoute
+  '/admin/workspaces/$id/products': typeof AdminWorkspacesIdProductsIndexRoute
+  '/admin/workspaces/$id/articles/$articleId/edit': typeof AdminWorkspacesIdArticlesArticleIdEditRoute
   '/admin/workspaces/$id/blogs/$postId/edit': typeof AdminWorkspacesIdBlogsPostIdEditRoute
+  '/admin/workspaces/$id/products/$productId/edit': typeof AdminWorkspacesIdProductsProductIdEditRoute
+  '/admin/workspaces/$id/articles/$articleId': typeof AdminWorkspacesIdArticlesArticleIdIndexRoute
   '/admin/workspaces/$id/blogs/$postId': typeof AdminWorkspacesIdBlogsPostIdIndexRoute
+  '/admin/workspaces/$id/products/$productId': typeof AdminWorkspacesIdProductsProductIdIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -561,6 +665,7 @@ export interface FileRoutesById {
   '/admin/workspaces/$id/analytics': typeof AdminWorkspacesIdAnalyticsRoute
   '/admin/workspaces/$id/api-explorer': typeof AdminWorkspacesIdApiExplorerRoute
   '/admin/workspaces/$id/api-keys': typeof AdminWorkspacesIdApiKeysRoute
+  '/admin/workspaces/$id/articles': typeof AdminWorkspacesIdArticlesRouteWithChildren
   '/admin/workspaces/$id/blogs': typeof AdminWorkspacesIdBlogsRouteWithChildren
   '/admin/workspaces/$id/cache-invalidation': typeof AdminWorkspacesIdCacheInvalidationRoute
   '/admin/workspaces/$id/collections': typeof AdminWorkspacesIdCollectionsRoute
@@ -569,17 +674,28 @@ export interface FileRoutesById {
   '/admin/workspaces/$id/integration-center': typeof AdminWorkspacesIdIntegrationCenterRoute
   '/admin/workspaces/$id/media': typeof AdminWorkspacesIdMediaRoute
   '/admin/workspaces/$id/notifications': typeof AdminWorkspacesIdNotificationsRoute
+  '/admin/workspaces/$id/products': typeof AdminWorkspacesIdProductsRouteWithChildren
   '/admin/workspaces/$id/settings': typeof AdminWorkspacesIdSettingsRoute
   '/admin/workspaces/$id/users': typeof AdminWorkspacesIdUsersRoute
   '/admin/workspaces/$id/webhooks': typeof AdminWorkspacesIdWebhooksRoute
   '/admin/workspaces/$id/': typeof AdminWorkspacesIdIndexRoute
+  '/admin/workspaces/$id/articles/$articleId': typeof AdminWorkspacesIdArticlesArticleIdRouteWithChildren
+  '/admin/workspaces/$id/articles/new': typeof AdminWorkspacesIdArticlesNewRoute
   '/admin/workspaces/$id/blogs/$postId': typeof AdminWorkspacesIdBlogsPostIdRouteWithChildren
   '/admin/workspaces/$id/blogs/new': typeof AdminWorkspacesIdBlogsNewRoute
+  '/admin/workspaces/$id/products/$productId': typeof AdminWorkspacesIdProductsProductIdRouteWithChildren
+  '/admin/workspaces/$id/products/new': typeof AdminWorkspacesIdProductsNewRoute
+  '/admin/workspaces/$id/articles/': typeof AdminWorkspacesIdArticlesIndexRoute
   '/admin/workspaces/$id/blogs/': typeof AdminWorkspacesIdBlogsIndexRoute
   '/admin/workspaces/$id/faqs/': typeof AdminWorkspacesIdFaqsIndexRoute
   '/admin/workspaces/$id/news/': typeof AdminWorkspacesIdNewsIndexRoute
+  '/admin/workspaces/$id/products/': typeof AdminWorkspacesIdProductsIndexRoute
+  '/admin/workspaces/$id/articles/$articleId/edit': typeof AdminWorkspacesIdArticlesArticleIdEditRoute
   '/admin/workspaces/$id/blogs/$postId/edit': typeof AdminWorkspacesIdBlogsPostIdEditRoute
+  '/admin/workspaces/$id/products/$productId/edit': typeof AdminWorkspacesIdProductsProductIdEditRoute
+  '/admin/workspaces/$id/articles/$articleId/': typeof AdminWorkspacesIdArticlesArticleIdIndexRoute
   '/admin/workspaces/$id/blogs/$postId/': typeof AdminWorkspacesIdBlogsPostIdIndexRoute
+  '/admin/workspaces/$id/products/$productId/': typeof AdminWorkspacesIdProductsProductIdIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -626,6 +742,7 @@ export interface FileRouteTypes {
     | '/admin/workspaces/$id/analytics'
     | '/admin/workspaces/$id/api-explorer'
     | '/admin/workspaces/$id/api-keys'
+    | '/admin/workspaces/$id/articles'
     | '/admin/workspaces/$id/blogs'
     | '/admin/workspaces/$id/cache-invalidation'
     | '/admin/workspaces/$id/collections'
@@ -634,17 +751,28 @@ export interface FileRouteTypes {
     | '/admin/workspaces/$id/integration-center'
     | '/admin/workspaces/$id/media'
     | '/admin/workspaces/$id/notifications'
+    | '/admin/workspaces/$id/products'
     | '/admin/workspaces/$id/settings'
     | '/admin/workspaces/$id/users'
     | '/admin/workspaces/$id/webhooks'
     | '/admin/workspaces/$id/'
+    | '/admin/workspaces/$id/articles/$articleId'
+    | '/admin/workspaces/$id/articles/new'
     | '/admin/workspaces/$id/blogs/$postId'
     | '/admin/workspaces/$id/blogs/new'
+    | '/admin/workspaces/$id/products/$productId'
+    | '/admin/workspaces/$id/products/new'
+    | '/admin/workspaces/$id/articles/'
     | '/admin/workspaces/$id/blogs/'
     | '/admin/workspaces/$id/faqs/'
     | '/admin/workspaces/$id/news/'
+    | '/admin/workspaces/$id/products/'
+    | '/admin/workspaces/$id/articles/$articleId/edit'
     | '/admin/workspaces/$id/blogs/$postId/edit'
+    | '/admin/workspaces/$id/products/$productId/edit'
+    | '/admin/workspaces/$id/articles/$articleId/'
     | '/admin/workspaces/$id/blogs/$postId/'
+    | '/admin/workspaces/$id/products/$productId/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -697,12 +825,20 @@ export interface FileRouteTypes {
     | '/admin/workspaces/$id/users'
     | '/admin/workspaces/$id/webhooks'
     | '/admin/workspaces/$id'
+    | '/admin/workspaces/$id/articles/new'
     | '/admin/workspaces/$id/blogs/new'
+    | '/admin/workspaces/$id/products/new'
+    | '/admin/workspaces/$id/articles'
     | '/admin/workspaces/$id/blogs'
     | '/admin/workspaces/$id/faqs'
     | '/admin/workspaces/$id/news'
+    | '/admin/workspaces/$id/products'
+    | '/admin/workspaces/$id/articles/$articleId/edit'
     | '/admin/workspaces/$id/blogs/$postId/edit'
+    | '/admin/workspaces/$id/products/$productId/edit'
+    | '/admin/workspaces/$id/articles/$articleId'
     | '/admin/workspaces/$id/blogs/$postId'
+    | '/admin/workspaces/$id/products/$productId'
   id:
     | '__root__'
     | '/'
@@ -747,6 +883,7 @@ export interface FileRouteTypes {
     | '/admin/workspaces/$id/analytics'
     | '/admin/workspaces/$id/api-explorer'
     | '/admin/workspaces/$id/api-keys'
+    | '/admin/workspaces/$id/articles'
     | '/admin/workspaces/$id/blogs'
     | '/admin/workspaces/$id/cache-invalidation'
     | '/admin/workspaces/$id/collections'
@@ -755,17 +892,28 @@ export interface FileRouteTypes {
     | '/admin/workspaces/$id/integration-center'
     | '/admin/workspaces/$id/media'
     | '/admin/workspaces/$id/notifications'
+    | '/admin/workspaces/$id/products'
     | '/admin/workspaces/$id/settings'
     | '/admin/workspaces/$id/users'
     | '/admin/workspaces/$id/webhooks'
     | '/admin/workspaces/$id/'
+    | '/admin/workspaces/$id/articles/$articleId'
+    | '/admin/workspaces/$id/articles/new'
     | '/admin/workspaces/$id/blogs/$postId'
     | '/admin/workspaces/$id/blogs/new'
+    | '/admin/workspaces/$id/products/$productId'
+    | '/admin/workspaces/$id/products/new'
+    | '/admin/workspaces/$id/articles/'
     | '/admin/workspaces/$id/blogs/'
     | '/admin/workspaces/$id/faqs/'
     | '/admin/workspaces/$id/news/'
+    | '/admin/workspaces/$id/products/'
+    | '/admin/workspaces/$id/articles/$articleId/edit'
     | '/admin/workspaces/$id/blogs/$postId/edit'
+    | '/admin/workspaces/$id/products/$productId/edit'
+    | '/admin/workspaces/$id/articles/$articleId/'
     | '/admin/workspaces/$id/blogs/$postId/'
+    | '/admin/workspaces/$id/products/$productId/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -1067,6 +1215,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminWorkspacesIdSettingsRouteImport
       parentRoute: typeof AdminWorkspacesIdRoute
     }
+    '/admin/workspaces/$id/products': {
+      id: '/admin/workspaces/$id/products'
+      path: '/products'
+      fullPath: '/admin/workspaces/$id/products'
+      preLoaderRoute: typeof AdminWorkspacesIdProductsRouteImport
+      parentRoute: typeof AdminWorkspacesIdRoute
+    }
     '/admin/workspaces/$id/notifications': {
       id: '/admin/workspaces/$id/notifications'
       path: '/notifications'
@@ -1123,6 +1278,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminWorkspacesIdBlogsRouteImport
       parentRoute: typeof AdminWorkspacesIdRoute
     }
+    '/admin/workspaces/$id/articles': {
+      id: '/admin/workspaces/$id/articles'
+      path: '/articles'
+      fullPath: '/admin/workspaces/$id/articles'
+      preLoaderRoute: typeof AdminWorkspacesIdArticlesRouteImport
+      parentRoute: typeof AdminWorkspacesIdRoute
+    }
     '/admin/workspaces/$id/api-keys': {
       id: '/admin/workspaces/$id/api-keys'
       path: '/api-keys'
@@ -1158,6 +1320,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminWorkspacesIdAboutRouteImport
       parentRoute: typeof AdminWorkspacesIdRoute
     }
+    '/admin/workspaces/$id/products/': {
+      id: '/admin/workspaces/$id/products/'
+      path: '/'
+      fullPath: '/admin/workspaces/$id/products/'
+      preLoaderRoute: typeof AdminWorkspacesIdProductsIndexRouteImport
+      parentRoute: typeof AdminWorkspacesIdProductsRoute
+    }
     '/admin/workspaces/$id/news/': {
       id: '/admin/workspaces/$id/news/'
       path: '/news'
@@ -1179,6 +1348,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminWorkspacesIdBlogsIndexRouteImport
       parentRoute: typeof AdminWorkspacesIdBlogsRoute
     }
+    '/admin/workspaces/$id/articles/': {
+      id: '/admin/workspaces/$id/articles/'
+      path: '/'
+      fullPath: '/admin/workspaces/$id/articles/'
+      preLoaderRoute: typeof AdminWorkspacesIdArticlesIndexRouteImport
+      parentRoute: typeof AdminWorkspacesIdArticlesRoute
+    }
+    '/admin/workspaces/$id/products/new': {
+      id: '/admin/workspaces/$id/products/new'
+      path: '/new'
+      fullPath: '/admin/workspaces/$id/products/new'
+      preLoaderRoute: typeof AdminWorkspacesIdProductsNewRouteImport
+      parentRoute: typeof AdminWorkspacesIdProductsRoute
+    }
+    '/admin/workspaces/$id/products/$productId': {
+      id: '/admin/workspaces/$id/products/$productId'
+      path: '/$productId'
+      fullPath: '/admin/workspaces/$id/products/$productId'
+      preLoaderRoute: typeof AdminWorkspacesIdProductsProductIdRouteImport
+      parentRoute: typeof AdminWorkspacesIdProductsRoute
+    }
     '/admin/workspaces/$id/blogs/new': {
       id: '/admin/workspaces/$id/blogs/new'
       path: '/new'
@@ -1193,6 +1383,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminWorkspacesIdBlogsPostIdRouteImport
       parentRoute: typeof AdminWorkspacesIdBlogsRoute
     }
+    '/admin/workspaces/$id/articles/new': {
+      id: '/admin/workspaces/$id/articles/new'
+      path: '/new'
+      fullPath: '/admin/workspaces/$id/articles/new'
+      preLoaderRoute: typeof AdminWorkspacesIdArticlesNewRouteImport
+      parentRoute: typeof AdminWorkspacesIdArticlesRoute
+    }
+    '/admin/workspaces/$id/articles/$articleId': {
+      id: '/admin/workspaces/$id/articles/$articleId'
+      path: '/$articleId'
+      fullPath: '/admin/workspaces/$id/articles/$articleId'
+      preLoaderRoute: typeof AdminWorkspacesIdArticlesArticleIdRouteImport
+      parentRoute: typeof AdminWorkspacesIdArticlesRoute
+    }
+    '/admin/workspaces/$id/products/$productId/': {
+      id: '/admin/workspaces/$id/products/$productId/'
+      path: '/'
+      fullPath: '/admin/workspaces/$id/products/$productId/'
+      preLoaderRoute: typeof AdminWorkspacesIdProductsProductIdIndexRouteImport
+      parentRoute: typeof AdminWorkspacesIdProductsProductIdRoute
+    }
     '/admin/workspaces/$id/blogs/$postId/': {
       id: '/admin/workspaces/$id/blogs/$postId/'
       path: '/'
@@ -1200,12 +1411,33 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminWorkspacesIdBlogsPostIdIndexRouteImport
       parentRoute: typeof AdminWorkspacesIdBlogsPostIdRoute
     }
+    '/admin/workspaces/$id/articles/$articleId/': {
+      id: '/admin/workspaces/$id/articles/$articleId/'
+      path: '/'
+      fullPath: '/admin/workspaces/$id/articles/$articleId/'
+      preLoaderRoute: typeof AdminWorkspacesIdArticlesArticleIdIndexRouteImport
+      parentRoute: typeof AdminWorkspacesIdArticlesArticleIdRoute
+    }
+    '/admin/workspaces/$id/products/$productId/edit': {
+      id: '/admin/workspaces/$id/products/$productId/edit'
+      path: '/edit'
+      fullPath: '/admin/workspaces/$id/products/$productId/edit'
+      preLoaderRoute: typeof AdminWorkspacesIdProductsProductIdEditRouteImport
+      parentRoute: typeof AdminWorkspacesIdProductsProductIdRoute
+    }
     '/admin/workspaces/$id/blogs/$postId/edit': {
       id: '/admin/workspaces/$id/blogs/$postId/edit'
       path: '/edit'
       fullPath: '/admin/workspaces/$id/blogs/$postId/edit'
       preLoaderRoute: typeof AdminWorkspacesIdBlogsPostIdEditRouteImport
       parentRoute: typeof AdminWorkspacesIdBlogsPostIdRoute
+    }
+    '/admin/workspaces/$id/articles/$articleId/edit': {
+      id: '/admin/workspaces/$id/articles/$articleId/edit'
+      path: '/edit'
+      fullPath: '/admin/workspaces/$id/articles/$articleId/edit'
+      preLoaderRoute: typeof AdminWorkspacesIdArticlesArticleIdEditRouteImport
+      parentRoute: typeof AdminWorkspacesIdArticlesArticleIdRoute
     }
   }
 }
@@ -1220,6 +1452,43 @@ const AdminCollectionsRouteChildren: AdminCollectionsRouteChildren = {
 
 const AdminCollectionsRouteWithChildren =
   AdminCollectionsRoute._addFileChildren(AdminCollectionsRouteChildren)
+
+interface AdminWorkspacesIdArticlesArticleIdRouteChildren {
+  AdminWorkspacesIdArticlesArticleIdEditRoute: typeof AdminWorkspacesIdArticlesArticleIdEditRoute
+  AdminWorkspacesIdArticlesArticleIdIndexRoute: typeof AdminWorkspacesIdArticlesArticleIdIndexRoute
+}
+
+const AdminWorkspacesIdArticlesArticleIdRouteChildren: AdminWorkspacesIdArticlesArticleIdRouteChildren =
+  {
+    AdminWorkspacesIdArticlesArticleIdEditRoute:
+      AdminWorkspacesIdArticlesArticleIdEditRoute,
+    AdminWorkspacesIdArticlesArticleIdIndexRoute:
+      AdminWorkspacesIdArticlesArticleIdIndexRoute,
+  }
+
+const AdminWorkspacesIdArticlesArticleIdRouteWithChildren =
+  AdminWorkspacesIdArticlesArticleIdRoute._addFileChildren(
+    AdminWorkspacesIdArticlesArticleIdRouteChildren,
+  )
+
+interface AdminWorkspacesIdArticlesRouteChildren {
+  AdminWorkspacesIdArticlesArticleIdRoute: typeof AdminWorkspacesIdArticlesArticleIdRouteWithChildren
+  AdminWorkspacesIdArticlesNewRoute: typeof AdminWorkspacesIdArticlesNewRoute
+  AdminWorkspacesIdArticlesIndexRoute: typeof AdminWorkspacesIdArticlesIndexRoute
+}
+
+const AdminWorkspacesIdArticlesRouteChildren: AdminWorkspacesIdArticlesRouteChildren =
+  {
+    AdminWorkspacesIdArticlesArticleIdRoute:
+      AdminWorkspacesIdArticlesArticleIdRouteWithChildren,
+    AdminWorkspacesIdArticlesNewRoute: AdminWorkspacesIdArticlesNewRoute,
+    AdminWorkspacesIdArticlesIndexRoute: AdminWorkspacesIdArticlesIndexRoute,
+  }
+
+const AdminWorkspacesIdArticlesRouteWithChildren =
+  AdminWorkspacesIdArticlesRoute._addFileChildren(
+    AdminWorkspacesIdArticlesRouteChildren,
+  )
 
 interface AdminWorkspacesIdBlogsPostIdRouteChildren {
   AdminWorkspacesIdBlogsPostIdEditRoute: typeof AdminWorkspacesIdBlogsPostIdEditRoute
@@ -1258,12 +1527,50 @@ const AdminWorkspacesIdBlogsRouteWithChildren =
     AdminWorkspacesIdBlogsRouteChildren,
   )
 
+interface AdminWorkspacesIdProductsProductIdRouteChildren {
+  AdminWorkspacesIdProductsProductIdEditRoute: typeof AdminWorkspacesIdProductsProductIdEditRoute
+  AdminWorkspacesIdProductsProductIdIndexRoute: typeof AdminWorkspacesIdProductsProductIdIndexRoute
+}
+
+const AdminWorkspacesIdProductsProductIdRouteChildren: AdminWorkspacesIdProductsProductIdRouteChildren =
+  {
+    AdminWorkspacesIdProductsProductIdEditRoute:
+      AdminWorkspacesIdProductsProductIdEditRoute,
+    AdminWorkspacesIdProductsProductIdIndexRoute:
+      AdminWorkspacesIdProductsProductIdIndexRoute,
+  }
+
+const AdminWorkspacesIdProductsProductIdRouteWithChildren =
+  AdminWorkspacesIdProductsProductIdRoute._addFileChildren(
+    AdminWorkspacesIdProductsProductIdRouteChildren,
+  )
+
+interface AdminWorkspacesIdProductsRouteChildren {
+  AdminWorkspacesIdProductsProductIdRoute: typeof AdminWorkspacesIdProductsProductIdRouteWithChildren
+  AdminWorkspacesIdProductsNewRoute: typeof AdminWorkspacesIdProductsNewRoute
+  AdminWorkspacesIdProductsIndexRoute: typeof AdminWorkspacesIdProductsIndexRoute
+}
+
+const AdminWorkspacesIdProductsRouteChildren: AdminWorkspacesIdProductsRouteChildren =
+  {
+    AdminWorkspacesIdProductsProductIdRoute:
+      AdminWorkspacesIdProductsProductIdRouteWithChildren,
+    AdminWorkspacesIdProductsNewRoute: AdminWorkspacesIdProductsNewRoute,
+    AdminWorkspacesIdProductsIndexRoute: AdminWorkspacesIdProductsIndexRoute,
+  }
+
+const AdminWorkspacesIdProductsRouteWithChildren =
+  AdminWorkspacesIdProductsRoute._addFileChildren(
+    AdminWorkspacesIdProductsRouteChildren,
+  )
+
 interface AdminWorkspacesIdRouteChildren {
   AdminWorkspacesIdAboutRoute: typeof AdminWorkspacesIdAboutRoute
   AdminWorkspacesIdAiAssistantRoute: typeof AdminWorkspacesIdAiAssistantRoute
   AdminWorkspacesIdAnalyticsRoute: typeof AdminWorkspacesIdAnalyticsRoute
   AdminWorkspacesIdApiExplorerRoute: typeof AdminWorkspacesIdApiExplorerRoute
   AdminWorkspacesIdApiKeysRoute: typeof AdminWorkspacesIdApiKeysRoute
+  AdminWorkspacesIdArticlesRoute: typeof AdminWorkspacesIdArticlesRouteWithChildren
   AdminWorkspacesIdBlogsRoute: typeof AdminWorkspacesIdBlogsRouteWithChildren
   AdminWorkspacesIdCacheInvalidationRoute: typeof AdminWorkspacesIdCacheInvalidationRoute
   AdminWorkspacesIdCollectionsRoute: typeof AdminWorkspacesIdCollectionsRoute
@@ -1272,6 +1579,7 @@ interface AdminWorkspacesIdRouteChildren {
   AdminWorkspacesIdIntegrationCenterRoute: typeof AdminWorkspacesIdIntegrationCenterRoute
   AdminWorkspacesIdMediaRoute: typeof AdminWorkspacesIdMediaRoute
   AdminWorkspacesIdNotificationsRoute: typeof AdminWorkspacesIdNotificationsRoute
+  AdminWorkspacesIdProductsRoute: typeof AdminWorkspacesIdProductsRouteWithChildren
   AdminWorkspacesIdSettingsRoute: typeof AdminWorkspacesIdSettingsRoute
   AdminWorkspacesIdUsersRoute: typeof AdminWorkspacesIdUsersRoute
   AdminWorkspacesIdWebhooksRoute: typeof AdminWorkspacesIdWebhooksRoute
@@ -1286,6 +1594,7 @@ const AdminWorkspacesIdRouteChildren: AdminWorkspacesIdRouteChildren = {
   AdminWorkspacesIdAnalyticsRoute: AdminWorkspacesIdAnalyticsRoute,
   AdminWorkspacesIdApiExplorerRoute: AdminWorkspacesIdApiExplorerRoute,
   AdminWorkspacesIdApiKeysRoute: AdminWorkspacesIdApiKeysRoute,
+  AdminWorkspacesIdArticlesRoute: AdminWorkspacesIdArticlesRouteWithChildren,
   AdminWorkspacesIdBlogsRoute: AdminWorkspacesIdBlogsRouteWithChildren,
   AdminWorkspacesIdCacheInvalidationRoute:
     AdminWorkspacesIdCacheInvalidationRoute,
@@ -1296,6 +1605,7 @@ const AdminWorkspacesIdRouteChildren: AdminWorkspacesIdRouteChildren = {
     AdminWorkspacesIdIntegrationCenterRoute,
   AdminWorkspacesIdMediaRoute: AdminWorkspacesIdMediaRoute,
   AdminWorkspacesIdNotificationsRoute: AdminWorkspacesIdNotificationsRoute,
+  AdminWorkspacesIdProductsRoute: AdminWorkspacesIdProductsRouteWithChildren,
   AdminWorkspacesIdSettingsRoute: AdminWorkspacesIdSettingsRoute,
   AdminWorkspacesIdUsersRoute: AdminWorkspacesIdUsersRoute,
   AdminWorkspacesIdWebhooksRoute: AdminWorkspacesIdWebhooksRoute,
