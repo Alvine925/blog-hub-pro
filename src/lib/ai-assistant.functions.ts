@@ -22,7 +22,15 @@ export const askAssistant = createServerFn({ method: "POST" })
 
     // Build the edge function URL — Replit secrets are in process.env
     const supabaseUrl = process.env.SUPABASE_URL ?? process.env.VITE_SUPABASE_URL ?? "";
-    const serviceKey  = process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.SUPABASE_SERVICE_ROLE ?? "";
+    // The service-role key is not injected into the app runtime here, so fall
+    // back to the publishable/anon key. The edge function accepts it for
+    // trusted server-to-server calls.
+    const serviceKey  =
+      process.env.SUPABASE_SERVICE_ROLE_KEY ??
+      process.env.SUPABASE_SERVICE_ROLE ??
+      process.env.SUPABASE_PUBLISHABLE_KEY ??
+      process.env.VITE_SUPABASE_PUBLISHABLE_KEY ??
+      "";
     const edgeFnUrl   = `${supabaseUrl}/functions/v1/ai-assistant`;
 
     const res = await fetch(edgeFnUrl, {
