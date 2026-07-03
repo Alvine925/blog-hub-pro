@@ -325,12 +325,15 @@ function CreateKeyForm({ onCreated }: { onCreated: (key: string) => void }) {
     if (!name.trim()) { toast.error("Enter a name for the key"); return; }
     setCreating(true);
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const authHeaders = session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {};
       const { data, error } = await supabase.functions.invoke("generate-api-key", {
         body: {
           name: name.trim(),
           description: description.trim() || undefined,
           key_type: keyType,
         },
+        headers: authHeaders,
       });
       if (error) throw new Error(error.message);
       if (!data?.success) throw new Error(data?.error?.message ?? "Failed to generate key");

@@ -60,6 +60,8 @@ export function GenerateBlogDialog({
     }, 2800);
 
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const authHeaders = session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {};
       const { data, error } = await supabase.functions.invoke("generate-blog-post", {
         body: {
           workspace_id: workspaceId,
@@ -70,6 +72,7 @@ export function GenerateBlogDialog({
             reason: opportunity.reason,
           },
         },
+        headers: authHeaders,
       });
 
       clearInterval(interval);

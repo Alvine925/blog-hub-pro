@@ -5,6 +5,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { marked } from "marked";
 import { supabase } from "@/integrations/supabase/client";
+
 import {
   Loader2, Upload, Eye, X, FileCode, Sparkles, Wand2, Clock,
   History, ChevronDown, ChevronUp, ImageIcon,
@@ -51,6 +52,11 @@ import {
   checkSlugAvailable,
 } from "@/lib/blog.functions";
 import { listPostVersions } from "@/lib/version.functions";
+
+async function getAuthHeaders(): Promise<Record<string, string>> {
+  const { data: { session } } = await supabase.auth.getSession();
+  return session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {};
+}
 
 interface BlogPostFormProps {
   initial?: BlogPost;
@@ -141,6 +147,7 @@ export function BlogPostForm({ initial, workspaceId }: BlogPostFormProps) {
     try {
       const { data, error } = await supabase.functions.invoke("refine-content", {
         body: { content: html, action: "metadata" },
+        headers: await getAuthHeaders(),
       });
       if (error) throw new Error(error.message);
       if (data?.error) throw new Error(data.error);
@@ -173,6 +180,7 @@ export function BlogPostForm({ initial, workspaceId }: BlogPostFormProps) {
     try {
       const { data, error } = await supabase.functions.invoke("refine-content", {
         body: { content: current, title, mode },
+        headers: await getAuthHeaders(),
       });
       if (error) throw new Error(error.message);
       if (data?.error) throw new Error(data.error);
@@ -222,8 +230,9 @@ export function BlogPostForm({ initial, workspaceId }: BlogPostFormProps) {
           excerpt: excerpt.trim() || null,
           topic:   tags[0] ?? null,
           category,
-          post_id: initial?.id ?? null, // write cover_image back to blog_posts immediately when editing
+          post_id: initial?.id ?? null,
         },
+        headers: await getAuthHeaders(),
       });
       if (error) throw new Error(error.message);
       if (data?.error) throw new Error(data.error);
