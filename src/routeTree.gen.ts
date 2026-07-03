@@ -33,6 +33,7 @@ import { Route as AdminNotificationsRouteImport } from './routes/admin.notificat
 import { Route as AdminMediaRouteImport } from './routes/admin.media'
 import { Route as AdminIntegrationCenterRouteImport } from './routes/admin.integration-center'
 import { Route as AdminDashboardRouteImport } from './routes/admin.dashboard'
+import { Route as AdminCommentsRouteImport } from './routes/admin.comments'
 import { Route as AdminCollectionsRouteImport } from './routes/admin.collections'
 import { Route as AdminBillingRouteImport } from './routes/admin.billing'
 import { Route as AdminApiLogsRouteImport } from './routes/admin.api-logs'
@@ -209,6 +210,11 @@ const AdminIntegrationCenterRoute = AdminIntegrationCenterRouteImport.update({
 const AdminDashboardRoute = AdminDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminCommentsRoute = AdminCommentsRouteImport.update({
+  id: '/comments',
+  path: '/comments',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminCollectionsRoute = AdminCollectionsRouteImport.update({
@@ -549,6 +555,7 @@ export interface FileRoutesByFullPath {
   '/admin/api-logs': typeof AdminApiLogsRoute
   '/admin/billing': typeof AdminBillingRoute
   '/admin/collections': typeof AdminCollectionsRouteWithChildren
+  '/admin/comments': typeof AdminCommentsRoute
   '/admin/dashboard': typeof AdminDashboardRoute
   '/admin/integration-center': typeof AdminIntegrationCenterRoute
   '/admin/media': typeof AdminMediaRoute
@@ -630,6 +637,7 @@ export interface FileRoutesByTo {
   '/admin/api-logs': typeof AdminApiLogsRoute
   '/admin/billing': typeof AdminBillingRoute
   '/admin/collections': typeof AdminCollectionsRouteWithChildren
+  '/admin/comments': typeof AdminCommentsRoute
   '/admin/dashboard': typeof AdminDashboardRoute
   '/admin/integration-center': typeof AdminIntegrationCenterRoute
   '/admin/media': typeof AdminMediaRoute
@@ -705,6 +713,7 @@ export interface FileRoutesById {
   '/admin/api-logs': typeof AdminApiLogsRoute
   '/admin/billing': typeof AdminBillingRoute
   '/admin/collections': typeof AdminCollectionsRouteWithChildren
+  '/admin/comments': typeof AdminCommentsRoute
   '/admin/dashboard': typeof AdminDashboardRoute
   '/admin/integration-center': typeof AdminIntegrationCenterRoute
   '/admin/media': typeof AdminMediaRoute
@@ -790,6 +799,7 @@ export interface FileRouteTypes {
     | '/admin/api-logs'
     | '/admin/billing'
     | '/admin/collections'
+    | '/admin/comments'
     | '/admin/dashboard'
     | '/admin/integration-center'
     | '/admin/media'
@@ -871,6 +881,7 @@ export interface FileRouteTypes {
     | '/admin/api-logs'
     | '/admin/billing'
     | '/admin/collections'
+    | '/admin/comments'
     | '/admin/dashboard'
     | '/admin/integration-center'
     | '/admin/media'
@@ -945,6 +956,7 @@ export interface FileRouteTypes {
     | '/admin/api-logs'
     | '/admin/billing'
     | '/admin/collections'
+    | '/admin/comments'
     | '/admin/dashboard'
     | '/admin/integration-center'
     | '/admin/media'
@@ -1194,6 +1206,13 @@ declare module '@tanstack/react-router' {
       path: '/dashboard'
       fullPath: '/admin/dashboard'
       preLoaderRoute: typeof AdminDashboardRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/comments': {
+      id: '/admin/comments'
+      path: '/comments'
+      fullPath: '/admin/comments'
+      preLoaderRoute: typeof AdminCommentsRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/collections': {
@@ -1835,6 +1854,7 @@ interface AdminRouteChildren {
   AdminApiLogsRoute: typeof AdminApiLogsRoute
   AdminBillingRoute: typeof AdminBillingRoute
   AdminCollectionsRoute: typeof AdminCollectionsRouteWithChildren
+  AdminCommentsRoute: typeof AdminCommentsRoute
   AdminDashboardRoute: typeof AdminDashboardRoute
   AdminIntegrationCenterRoute: typeof AdminIntegrationCenterRoute
   AdminMediaRoute: typeof AdminMediaRoute
@@ -1859,6 +1879,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminApiLogsRoute: AdminApiLogsRoute,
   AdminBillingRoute: AdminBillingRoute,
   AdminCollectionsRoute: AdminCollectionsRouteWithChildren,
+  AdminCommentsRoute: AdminCommentsRoute,
   AdminDashboardRoute: AdminDashboardRoute,
   AdminIntegrationCenterRoute: AdminIntegrationCenterRoute,
   AdminMediaRoute: AdminMediaRoute,

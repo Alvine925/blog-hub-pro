@@ -7,6 +7,79 @@
 import { getDb } from "../db.ts";
 import { toBlogSummary, toBlogDetail, type PublicBlogSummary, type PublicBlogDetail } from "../ContentTransformer.ts";
 
+// ── Word count ────────────────────────────────────────────────────────────────
+
+function countWords(html: string): number {
+  const text = html.replace(/<[^>]*>/g, "").trim();
+  return text ? text.split(/\s+/).length : 0;
+}
+
+// ── Social share URL builder ──────────────────────────────────────────────────
+
+function buildShareUrls(
+  slug: string,
+  title: string,
+  excerpt: string,
+): Record<string, string> {
+  // We use a relative post path; external sites prepend their own domain.
+  const postPath = `/blog/${slug}`;
+  const u = encodeURIComponent(postPath);
+  const t = encodeURIComponent(title);
+  const e = encodeURIComponent((excerpt ?? "").slice(0, 200));
+  return {
+    facebook: `https://www.facebook.com/sharer/sharer.php?u=${u}`,
+    linkedin:  `https://www.linkedin.com/shareArticle?mini=true&url=${u}&title=${t}`,
+    x:         `https://x.com/intent/tweet?url=${u}&text=${t}`,
+    whatsapp:  `https://wa.me/?text=${t}%20${u}`,
+    email:     `mailto:?subject=${t}&body=${e}%0A%0A${u}`,
+  };
+}
+
+// ── Engagement data queries ───────────────────────────────────────────────────
+
+async function fetchEngagementData(postId: string, workspaceId: string) {
+  const db = getDb();
+
+  const [likesRes, commentsRes, wsRes] = await Promise.all([
+    db.from("blog_likes" as never)
+      .select("id", { count: "exact", head: true })
+      .eq("post_id" as never, postId),
+    db.from("blog_comments" as never)
+      .select("id", { count: "exact", head: true })
+      .eq("post_id" as never, postId)
+      .eq("status" as never, "approved")
+      .is("deleted_at" as never, null),
+    db.from("workspaces")
+      .select("engagement_features, show_branding")
+      .eq("id", workspaceId)
+      .maybeSingle(),
+  ]);
+
+  const wsRow = wsRes.data as Record<string, unknown> | null;
+
+  const defaultFeatures = {
+    likes: true, comments: true, socialShare: true,
+    relatedPosts: true, poweredBy: false, viewTracking: true,
+  };
+  const features = {
+    ...defaultFeatures,
+    ...(typeof wsRow?.engagement_features === "object" && wsRow.engagement_features !== null
+      ? wsRow.engagement_features as Record<string, boolean>
+      : {}),
+  };
+
+  const showBranding = Boolean(wsRow?.show_branding);
+  const branding = showBranding
+    ? { enabled: true, text: "Powered by Lunar CMS", url: "https://lunarcms.com" }
+    : { enabled: false };
+
+  return {
+    stats:    { likes: likesRes.count ?? 0, comment_count: commentsRes.count ?? 0 },
+    features,
+    branding,
+  };
+}
+
 // Whitelisted sort columns
 const SORT_COLS = new Set(["created_at", "updated_at", "published_at", "title", "views"]);
 
@@ -87,11 +160,20 @@ export async function listBlogs(
   };
 }
 
+export interface EnrichedBlogDetail extends PublicBlogDetail {
+  word_count:   number;
+  stats:        { views: number; likes: number; comment_count: number };
+  features:     Record<string, boolean>;
+  branding:     { enabled: boolean; text?: string; url?: string };
+  share:        Record<string, string>;
+  related:      PublicBlogSummary[];
+}
+
 export async function getBlogBySlug(
   workspaceId: string,
   slug: string,
   keyType: "publishable" | "secret",
-): Promise<PublicBlogDetail | null> {
+): Promise<EnrichedBlogDetail | null> {
   const db = getDb();
 
   let query = db
@@ -108,16 +190,35 @@ export async function getBlogBySlug(
   if (error) throw new Error(error.message);
   if (!data) return null;
 
-  // Increment view count fire-and-forget (workspace-scoped to avoid cross-tenant mutation)
+  const row       = data as Record<string, unknown>;
+  const postId    = row.id as string;
+  const detail    = toBlogDetail(row);
+  const wordCount = countWords(detail.content);
+
+  // Fetch engagement data + related posts in parallel; update view count fire-and-forget
+  const [engagement, related] = await Promise.all([
+    fetchEngagementData(postId, workspaceId),
+    getRelatedBlogs(workspaceId, slug, 5),
+  ]);
+
+  // Increment view count fire-and-forget
   getDb()
     .from("blog_posts")
-    .update({ views: (Number((data as Record<string, unknown>).views) || 0) + 1 })
+    .update({ views: (Number(row.views) || 0) + 1 })
     .eq("slug", slug)
     .eq("workspace_id", workspaceId)
     .then(() => {})
     .catch(() => {});
 
-  return toBlogDetail(data as Record<string, unknown>);
+  return {
+    ...detail,
+    word_count: wordCount,
+    stats:    { views: Number(row.views) || 0, ...engagement.stats },
+    features:  engagement.features,
+    branding:  engagement.branding,
+    share:     buildShareUrls(slug, detail.title, detail.excerpt),
+    related,
+  };
 }
 
 export async function getRelatedBlogs(

@@ -36,6 +36,7 @@ import { ok, fail, buildPaginationLinks } from "../_shared/response.ts";
 import { ERRORS }                from "../_shared/errors.ts";
 
 import { listBlogs, getBlogBySlug, getRelatedBlogs, getFeaturedBlogs, getLatestBlogs } from "./services/BlogService.ts";
+import { getEngagementForSlug, getCommentsForSlug } from "./services/EngagementService.ts";
 import { listPages, getPageBySlug } from "./services/PageService.ts";
 import { listFaqs } from "./services/FaqService.ts";
 import { listNews, getNewsBySlug, getBreakingNews, getLatestNews } from "./services/NewsService.ts";
@@ -135,6 +136,31 @@ Deno.serve(async (req: Request) => {
         const limit  = intParam(url, "limit", 5, 1, 20);
         const result = await getRelatedBlogs(ws, segs[1], limit);
         response = cached(ok(result, { total: result.length }));
+
+      } else if (segs[1] && segs[2] === "likes") {
+        // GET /blogs/:slug/likes
+        const visitorId = req.headers.get("x-visitor-id")?.toLowerCase() ?? null;
+        const result    = await getEngagementForSlug(ws, segs[1], visitorId, "likes");
+        if (!result) response = fail(ERRORS.NOT_FOUND.code, ERRORS.NOT_FOUND.message, 404);
+        else         response = cached(ok(result));
+
+      } else if (segs[1] && segs[2] === "stats") {
+        // GET /blogs/:slug/stats
+        const result = await getEngagementForSlug(ws, segs[1], null, "stats");
+        if (!result) response = fail(ERRORS.NOT_FOUND.code, ERRORS.NOT_FOUND.message, 404);
+        else         response = cached(ok(result));
+
+      } else if (segs[1] && segs[2] === "comments") {
+        // GET /blogs/:slug/comments
+        const page  = intParam(url, "page", 1, 1, 10_000);
+        const limit = intParam(url, "limit", 20, 1, 100);
+        const result = await getCommentsForSlug(ws, segs[1], page, limit);
+        if (!result) response = fail(ERRORS.NOT_FOUND.code, ERRORS.NOT_FOUND.message, 404);
+        else {
+          const totalPages = Math.ceil(result.total / limit);
+          const links = buildPaginationLinks(req.url, page, totalPages);
+          response = cached(ok(result.comments, { page, limit, total: result.total, totalPages }, 200, links));
+        }
 
       } else if (segs[1]) {
         // GET /blogs/:slug

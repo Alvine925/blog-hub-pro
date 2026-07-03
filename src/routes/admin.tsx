@@ -2,7 +2,7 @@ import { createFileRoute, Link, Outlet, useRouterState, useNavigate } from "@tan
 import {
   LayoutDashboard, Moon, FolderOpen, CreditCard, Settings, ChevronRight,
   LogOut, Bell, BookOpen, HelpCircle, Map, FileText, Users,
-  ChevronDown, User, Key, ScrollText, Plug,
+  ChevronDown, User, Key, ScrollText, Plug, MessageSquare,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState, useEffect, useRef } from "react";
@@ -86,9 +86,10 @@ const globalNav: Array<{ group: string; items: NavItem[] }> = [
   {
     group: "Content",
     items: [
-      { label: "Blog Posts",  to: "/admin/blogs",       icon: FileText        },
-      { label: "Templates",   to: "/admin/collections", icon: Moon            },
-      { label: "Media",       to: "/admin/media",       icon: Moon            },
+      { label: "Blog Posts",  to: "/admin/blogs",        icon: FileText        },
+      { label: "Comments",    to: "/admin/comments",     icon: MessageSquare   },
+      { label: "Templates",   to: "/admin/collections",  icon: Moon            },
+      { label: "Media",       to: "/admin/media",        icon: Moon            },
     ],
   },
   {
