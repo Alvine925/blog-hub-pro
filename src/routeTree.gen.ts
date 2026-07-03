@@ -63,6 +63,8 @@ import { Route as AdminWorkspacesIdApiExplorerRouteImport } from './routes/admin
 import { Route as AdminWorkspacesIdAnalyticsRouteImport } from './routes/admin.workspaces.$id.analytics'
 import { Route as AdminWorkspacesIdAiAssistantRouteImport } from './routes/admin.workspaces.$id.ai-assistant'
 import { Route as AdminWorkspacesIdAboutRouteImport } from './routes/admin.workspaces.$id.about'
+import { Route as AdminWorkspacesIdNewsIndexRouteImport } from './routes/admin.workspaces.$id.news.index'
+import { Route as AdminWorkspacesIdFaqsIndexRouteImport } from './routes/admin.workspaces.$id.faqs.index'
 import { Route as AdminWorkspacesIdBlogsIndexRouteImport } from './routes/admin.workspaces.$id.blogs.index'
 import { Route as AdminWorkspacesIdBlogsNewRouteImport } from './routes/admin.workspaces.$id.blogs.new'
 import { Route as AdminWorkspacesIdBlogsPostIdRouteImport } from './routes/admin.workspaces.$id.blogs.$postId'
@@ -350,6 +352,18 @@ const AdminWorkspacesIdAboutRoute = AdminWorkspacesIdAboutRouteImport.update({
   path: '/about',
   getParentRoute: () => AdminWorkspacesIdRoute,
 } as any)
+const AdminWorkspacesIdNewsIndexRoute =
+  AdminWorkspacesIdNewsIndexRouteImport.update({
+    id: '/news/',
+    path: '/news/',
+    getParentRoute: () => AdminWorkspacesIdRoute,
+  } as any)
+const AdminWorkspacesIdFaqsIndexRoute =
+  AdminWorkspacesIdFaqsIndexRouteImport.update({
+    id: '/faqs/',
+    path: '/faqs/',
+    getParentRoute: () => AdminWorkspacesIdRoute,
+  } as any)
 const AdminWorkspacesIdBlogsIndexRoute =
   AdminWorkspacesIdBlogsIndexRouteImport.update({
     id: '/',
@@ -433,6 +447,8 @@ export interface FileRoutesByFullPath {
   '/admin/workspaces/$id/blogs/$postId': typeof AdminWorkspacesIdBlogsPostIdRouteWithChildren
   '/admin/workspaces/$id/blogs/new': typeof AdminWorkspacesIdBlogsNewRoute
   '/admin/workspaces/$id/blogs/': typeof AdminWorkspacesIdBlogsIndexRoute
+  '/admin/workspaces/$id/faqs/': typeof AdminWorkspacesIdFaqsIndexRoute
+  '/admin/workspaces/$id/news/': typeof AdminWorkspacesIdNewsIndexRoute
   '/admin/workspaces/$id/blogs/$postId/edit': typeof AdminWorkspacesIdBlogsPostIdEditRoute
 }
 export interface FileRoutesByTo {
@@ -489,6 +505,8 @@ export interface FileRoutesByTo {
   '/admin/workspaces/$id/blogs/$postId': typeof AdminWorkspacesIdBlogsPostIdRouteWithChildren
   '/admin/workspaces/$id/blogs/new': typeof AdminWorkspacesIdBlogsNewRoute
   '/admin/workspaces/$id/blogs': typeof AdminWorkspacesIdBlogsIndexRoute
+  '/admin/workspaces/$id/faqs': typeof AdminWorkspacesIdFaqsIndexRoute
+  '/admin/workspaces/$id/news': typeof AdminWorkspacesIdNewsIndexRoute
   '/admin/workspaces/$id/blogs/$postId/edit': typeof AdminWorkspacesIdBlogsPostIdEditRoute
 }
 export interface FileRoutesById {
@@ -550,6 +568,8 @@ export interface FileRoutesById {
   '/admin/workspaces/$id/blogs/$postId': typeof AdminWorkspacesIdBlogsPostIdRouteWithChildren
   '/admin/workspaces/$id/blogs/new': typeof AdminWorkspacesIdBlogsNewRoute
   '/admin/workspaces/$id/blogs/': typeof AdminWorkspacesIdBlogsIndexRoute
+  '/admin/workspaces/$id/faqs/': typeof AdminWorkspacesIdFaqsIndexRoute
+  '/admin/workspaces/$id/news/': typeof AdminWorkspacesIdNewsIndexRoute
   '/admin/workspaces/$id/blogs/$postId/edit': typeof AdminWorkspacesIdBlogsPostIdEditRoute
 }
 export interface FileRouteTypes {
@@ -612,6 +632,8 @@ export interface FileRouteTypes {
     | '/admin/workspaces/$id/blogs/$postId'
     | '/admin/workspaces/$id/blogs/new'
     | '/admin/workspaces/$id/blogs/'
+    | '/admin/workspaces/$id/faqs/'
+    | '/admin/workspaces/$id/news/'
     | '/admin/workspaces/$id/blogs/$postId/edit'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -668,6 +690,8 @@ export interface FileRouteTypes {
     | '/admin/workspaces/$id/blogs/$postId'
     | '/admin/workspaces/$id/blogs/new'
     | '/admin/workspaces/$id/blogs'
+    | '/admin/workspaces/$id/faqs'
+    | '/admin/workspaces/$id/news'
     | '/admin/workspaces/$id/blogs/$postId/edit'
   id:
     | '__root__'
@@ -728,6 +752,8 @@ export interface FileRouteTypes {
     | '/admin/workspaces/$id/blogs/$postId'
     | '/admin/workspaces/$id/blogs/new'
     | '/admin/workspaces/$id/blogs/'
+    | '/admin/workspaces/$id/faqs/'
+    | '/admin/workspaces/$id/news/'
     | '/admin/workspaces/$id/blogs/$postId/edit'
   fileRoutesById: FileRoutesById
 }
@@ -1121,6 +1147,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminWorkspacesIdAboutRouteImport
       parentRoute: typeof AdminWorkspacesIdRoute
     }
+    '/admin/workspaces/$id/news/': {
+      id: '/admin/workspaces/$id/news/'
+      path: '/news'
+      fullPath: '/admin/workspaces/$id/news/'
+      preLoaderRoute: typeof AdminWorkspacesIdNewsIndexRouteImport
+      parentRoute: typeof AdminWorkspacesIdRoute
+    }
+    '/admin/workspaces/$id/faqs/': {
+      id: '/admin/workspaces/$id/faqs/'
+      path: '/faqs'
+      fullPath: '/admin/workspaces/$id/faqs/'
+      preLoaderRoute: typeof AdminWorkspacesIdFaqsIndexRouteImport
+      parentRoute: typeof AdminWorkspacesIdRoute
+    }
     '/admin/workspaces/$id/blogs/': {
       id: '/admin/workspaces/$id/blogs/'
       path: '/'
@@ -1215,6 +1255,8 @@ interface AdminWorkspacesIdRouteChildren {
   AdminWorkspacesIdUsersRoute: typeof AdminWorkspacesIdUsersRoute
   AdminWorkspacesIdWebhooksRoute: typeof AdminWorkspacesIdWebhooksRoute
   AdminWorkspacesIdIndexRoute: typeof AdminWorkspacesIdIndexRoute
+  AdminWorkspacesIdFaqsIndexRoute: typeof AdminWorkspacesIdFaqsIndexRoute
+  AdminWorkspacesIdNewsIndexRoute: typeof AdminWorkspacesIdNewsIndexRoute
 }
 
 const AdminWorkspacesIdRouteChildren: AdminWorkspacesIdRouteChildren = {
@@ -1237,6 +1279,8 @@ const AdminWorkspacesIdRouteChildren: AdminWorkspacesIdRouteChildren = {
   AdminWorkspacesIdUsersRoute: AdminWorkspacesIdUsersRoute,
   AdminWorkspacesIdWebhooksRoute: AdminWorkspacesIdWebhooksRoute,
   AdminWorkspacesIdIndexRoute: AdminWorkspacesIdIndexRoute,
+  AdminWorkspacesIdFaqsIndexRoute: AdminWorkspacesIdFaqsIndexRoute,
+  AdminWorkspacesIdNewsIndexRoute: AdminWorkspacesIdNewsIndexRoute,
 }
 
 const AdminWorkspacesIdRouteWithChildren =

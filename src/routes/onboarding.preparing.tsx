@@ -23,10 +23,27 @@ const TASKS = [
   "Applying website context",
   "Configuring collections",
   "Building category structure",
-  "Generating content suggestions",
-  "Loading topic recommendations",
+  "Generating your content",
+  "Researching industry news",
   "Finalising your setup",
 ];
+
+async function invokeEdgeFunction(
+  name: string,
+  accessToken: string,
+  body: Record<string, unknown>,
+): Promise<void> {
+  try {
+    const { error } = await supabase.functions.invoke(name, {
+      body,
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    if (error) console.error(`[preparing] ${name} failed`, error);
+  } catch (err) {
+    // Content generation is best-effort — never block onboarding completion.
+    console.error(`[preparing] ${name} threw`, err);
+  }
+}
 
 function PreparingStep() {
   const navigate        = useNavigate();
@@ -109,6 +126,40 @@ function PreparingStep() {
             },
           });
           workspaceId = result.workspaceId;
+        }
+
+        // ── Generate content per selected type — best-effort, non-blocking ──
+        // Blogs/FAQs/News each get ~10 drafts + ~10 leftover suggestions.
+        const generationJobs: Promise<void>[] = [];
+        if (selectedCollections.includes("blogs")) {
+          generationJobs.push(
+            invokeEdgeFunction("generate-blog-post", accessToken, {
+              workspace_id: workspaceId,
+              batch: true,
+              count: 10,
+            }),
+          );
+        }
+        if (selectedCollections.includes("faqs")) {
+          generationJobs.push(
+            invokeEdgeFunction("generate-faqs", accessToken, {
+              workspace_id: workspaceId,
+              count: 10,
+              suggestion_count: 10,
+            }),
+          );
+        }
+        if (selectedCollections.includes("news")) {
+          generationJobs.push(
+            invokeEdgeFunction("generate-news", accessToken, {
+              workspace_id: workspaceId,
+              count: 10,
+              suggestion_count: 10,
+            }),
+          );
+        }
+        if (generationJobs.length) {
+          await Promise.allSettled(generationJobs);
         }
 
         await upsertOnboardingState({

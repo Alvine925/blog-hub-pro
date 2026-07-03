@@ -243,7 +243,7 @@ Return ONLY a valid JSON object (no markdown fences, no explanation) with this e
   "brandSummary": "A comprehensive 3-4 sentence brand context that will be used to power AI content generation"
 }
 
-Provide at least 3 competitors, 5 content opportunities, and 4 content pillars. Be specific and accurate.`;
+Provide at least 3 competitors, 20 content opportunities (a healthy mix of "blog", "faq", and "news" types so downstream generation has enough material — aim for at least 6 of each type), and 4 content pillars. Be specific and accurate.`;
 
     const raw = await callAI([
       { role: "system", content: "You are a business intelligence analyst. Always return valid JSON only, no markdown fences." },

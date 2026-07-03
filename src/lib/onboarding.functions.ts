@@ -274,13 +274,14 @@ export const createOnboardingWorkspace = createServerFn({ method: "POST" })
 
     if (intel.contentOpportunities?.length) {
       await db.from("workspace_content_opportunities").insert(
-        intel.contentOpportunities.slice(0, 10).map((co: ContentOpportunity) => ({
+        intel.contentOpportunities.slice(0, 20).map((co: ContentOpportunity) => ({
           workspace_id: workspaceId,
           title:        co.title,
           type:         co.type || "blog",
           topic:        co.topic || null,
           reason:       co.reason || null,
           priority:     co.priority || "medium",
+          status:       "suggested",
         })),
       );
     }
@@ -294,6 +295,7 @@ export const createOnboardingWorkspace = createServerFn({ method: "POST" })
       documentation:  { label: "Documentation",  description: "Technical docs and guides" },
       products:       { label: "Products",       description: "Product catalogue" },
       faqs:           { label: "FAQs",           description: "Frequently asked questions" },
+      news:           { label: "News",           description: "Industry news and updates" },
       "case-studies": { label: "Case Studies",   description: "Client success stories" },
       testimonials:   { label: "Testimonials",   description: "Customer reviews" },
       team:           { label: "Team Members",   description: "Staff profiles" },

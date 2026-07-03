@@ -465,6 +465,8 @@ Deno.serve(async (req: Request) => {
   // ── Parse body ────────────────────────────────────────────────────────────
   let body: {
     workspace_id: string;
+    batch?: boolean;
+    count?: number;
     opportunity?: { title?: string; topic?: string | null; type?: string | null; reason?: string | null; priority?: string };
     opportunity_title?: string;
     opportunity_topic?: string | null;
@@ -496,6 +498,109 @@ Deno.serve(async (req: Request) => {
       .maybeSingle();
 
     if (!ws_check) return json({ error: "Forbidden: you do not own this workspace" }, 403);
+  }
+
+  // ── Batch mode: draft up to `count` posts from unused opportunities ───────
+  // Leaves the remaining opportunities untouched so they still surface as
+  // "suggestions" in the dashboard (at least 10 by design — see analyze-website).
+  if (body.batch) {
+    const count = Math.min(Math.max(body.count ?? 10, 1), 20);
+
+    const { data: ws } = await (adminClient as any)
+      .from("workspaces")
+      .select("industry, brand_voice, content_pillars, target_audience, website_url, description")
+      .eq("id", workspaceId)
+      .maybeSingle();
+
+    const industry       = ws?.industry        ?? null;
+    const brandVoice     = ws?.brand_voice     ?? null;
+    const contentPillars = ws?.content_pillars ?? [];
+    const targetAudience = ws?.target_audience ?? null;
+    const websiteUrl     = ws?.website_url     ?? null;
+
+    const { data: opportunities } = await (adminClient as any)
+      .from("workspace_content_opportunities")
+      .select("id, title, type, topic, reason, priority")
+      .eq("workspace_id", workspaceId)
+      .eq("status", "suggested")
+      .in("type", ["blog", "guide", "comparison", "case-study"])
+      .order("priority", { ascending: true })
+      .limit(count);
+
+    const results: Array<{ opportunity_id: string; post_id?: string; slug?: string; title?: string; error?: string }> = [];
+
+    for (const o of (opportunities ?? [])) {
+      try {
+        const blogContent = await generateBlogContent({
+          opportunityTitle: o.title, topic: o.topic, type: o.type,
+          reason: o.reason, industry, brandVoice,
+          contentPillars, targetAudience, websiteUrl,
+        });
+
+        const imagePrompt = await generateImagePrompt({
+          title: blogContent.title, topic: o.topic, excerpt: blogContent.excerpt,
+          industry, brandVoice,
+        });
+
+        const baseSlug  = slugify(blogContent.title);
+        const serpQuery = `${blogContent.title} ${o.topic ?? industry ?? ""} professional photography`;
+        const coverResult = await generateCoverImage(imagePrompt, serpQuery, baseSlug, adminClient);
+
+        let slug = baseSlug || `post-${Date.now()}`;
+        let attempt = 1;
+        while (true) {
+          const { data: clash } = await (adminClient as any)
+            .from("blog_posts").select("id").eq("slug", slug).limit(1);
+          if (!clash || clash.length === 0) break;
+          slug = `${baseSlug}-${attempt++}`;
+        }
+
+        const { data: post, error: insertError } = await (adminClient as any)
+          .from("blog_posts")
+          .insert({
+            workspace_id:     workspaceId,
+            title:            blogContent.title,
+            slug,
+            excerpt:          blogContent.excerpt,
+            content:          blogContent.content,
+            cover_image:      coverResult.url,
+            category:         blogContent.category,
+            tags:             blogContent.tags,
+            author_name:      "AI Assistant",
+            seo_title:        blogContent.seoTitle,
+            meta_description: blogContent.metaDescription,
+            featured:         false,
+            status:           "draft",
+            reading_time:     Math.ceil(blogContent.content.replace(/<[^>]+>/g, "").split(/\s+/).length / 200),
+          })
+          .select("id, slug")
+          .single();
+
+        if (insertError) throw new Error(insertError.message);
+
+        await (adminClient as any)
+          .from("workspace_content_opportunities")
+          .update({ status: "generated", content_id: post.id })
+          .eq("id", o.id);
+
+        results.push({ opportunity_id: o.id, post_id: post.id, slug: post.slug, title: blogContent.title });
+      } catch (e) {
+        results.push({ opportunity_id: o.id, error: e instanceof Error ? e.message : String(e) });
+      }
+    }
+
+    const { count: remainingSuggestions } = await (adminClient as any)
+      .from("workspace_content_opportunities")
+      .select("id", { count: "exact", head: true })
+      .eq("workspace_id", workspaceId)
+      .eq("status", "suggested");
+
+    return json({
+      generated: results.filter((r) => r.post_id).length,
+      failed:    results.filter((r) => r.error).length,
+      results,
+      remaining_suggestions: remainingSuggestions ?? 0,
+    });
   }
 
   const opp = body.opportunity ?? {};
