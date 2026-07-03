@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { queryOptions, useSuspenseQuery, useQueryClient, useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState, useMemo, useEffect, useRef } from "react";
@@ -39,6 +39,7 @@ function WorkspaceNews() {
   const { id: workspaceId } = Route.useParams();
   const { data: news } = useSuspenseQuery(listQuery(workspaceId));
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const doDelete = useServerFn(deleteNews);
   const doStatus = useServerFn(setNewsStatus);
   const doUpsert = useServerFn(upsertNews);
@@ -239,14 +240,15 @@ function WorkspaceNews() {
           {news.map((item) => (
             <div
               key={item.id}
+              onClick={() => navigate({ to: "/admin/workspaces/$id/news/$newsId", params: { id: workspaceId, newsId: item.id } })}
               className={cn(
-                "group flex items-center gap-3 border-b border-border py-3 last:border-0 hover:bg-muted/30 -mx-2 px-2 rounded-lg transition-colors",
+                "group flex items-center gap-3 border-b border-border py-3 last:border-0 hover:bg-muted/30 -mx-2 px-2 rounded-lg transition-colors cursor-pointer",
                 selected.has(item.id) && "bg-primary/5"
               )}
             >
               <button
                 type="button"
-                onClick={() => toggleSelect(item.id)}
+                onClick={(e) => { e.stopPropagation(); toggleSelect(item.id); }}
                 className="shrink-0 text-muted-foreground hover:text-primary transition-colors"
               >
                 {selected.has(item.id)
@@ -272,7 +274,7 @@ function WorkspaceNews() {
               </span>
               <span className="w-24 shrink-0 text-xs text-muted-foreground hidden md:block">{item.category}</span>
               <span className={cn("w-20 shrink-0 text-xs hidden lg:block", STATUS_STYLE[item.status])}>{item.status}</span>
-              <div className="w-20 shrink-0 flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+              <div className="w-20 shrink-0 flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
                 <button type="button" onClick={() => startEdit(item)} className="flex h-7 w-7 items-center justify-center rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors" title="Edit">
                   <Pencil className="h-3.5 w-3.5" />
                 </button>

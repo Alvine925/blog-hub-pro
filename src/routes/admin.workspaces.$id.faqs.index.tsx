@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { queryOptions, useSuspenseQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState, useEffect, useRef } from "react";
@@ -37,6 +37,7 @@ function WorkspaceFaqs() {
   const { id: workspaceId } = Route.useParams();
   const { data: faqs } = useSuspenseQuery(listQuery(workspaceId));
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const doDelete = useServerFn(deleteFaq);
   const doStatus = useServerFn(setFaqStatus);
   const doUpsert = useServerFn(upsertFaq);
@@ -195,8 +196,8 @@ function WorkspaceFaqs() {
           </div>
 
           {faqs.map((faq) => (
-            <div key={faq.id} className={cn("group flex items-center gap-3 border-b border-border py-3 last:border-0 hover:bg-muted/30 -mx-2 px-2 rounded-lg transition-colors", selected.has(faq.id) && "bg-primary/5")}>
-              <button type="button" onClick={() => toggleSelect(faq.id)} className="shrink-0 text-muted-foreground hover:text-primary transition-colors">
+            <div key={faq.id} onClick={() => navigate({ to: "/admin/workspaces/$id/faqs/$faqId", params: { id: workspaceId, faqId: faq.id } })} className={cn("group flex items-center gap-3 border-b border-border py-3 last:border-0 hover:bg-muted/30 -mx-2 px-2 rounded-lg transition-colors cursor-pointer", selected.has(faq.id) && "bg-primary/5")}>
+              <button type="button" onClick={(e) => { e.stopPropagation(); toggleSelect(faq.id); }} className="shrink-0 text-muted-foreground hover:text-primary transition-colors">
                 {selected.has(faq.id) ? <CheckSquare className="h-3.5 w-3.5 text-primary" /> : <Square className="h-3.5 w-3.5" />}
               </button>
               <div className="flex-1 min-w-0">
@@ -205,7 +206,7 @@ function WorkspaceFaqs() {
               </div>
               <span className="w-24 shrink-0 text-xs text-muted-foreground hidden sm:block">{faq.category}</span>
               <span className={cn("w-20 shrink-0 text-xs hidden md:block", STATUS_STYLE[faq.status])}>{faq.status}</span>
-              <div className="w-20 shrink-0 flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+              <div className="w-20 shrink-0 flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
                 <button type="button" onClick={() => startEdit(faq)} className="flex h-7 w-7 items-center justify-center rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors" title="Edit"><Pencil className="h-3.5 w-3.5" /></button>
                 <button type="button" onClick={() => togglePublish(faq)} className="flex h-7 w-7 items-center justify-center rounded text-muted-foreground hover:text-emerald-600 hover:bg-emerald-50 transition-colors" title={faq.status === "published" ? "Unpublish" : "Publish"}><Send className="h-3.5 w-3.5" /></button>
                 <button type="button" onClick={() => setPendingDelete(faq)} className="flex h-7 w-7 items-center justify-center rounded text-muted-foreground hover:text-red-600 hover:bg-red-50 transition-colors" title="Delete"><Trash2 className="h-3.5 w-3.5" /></button>

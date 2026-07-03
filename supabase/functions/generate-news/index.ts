@@ -302,8 +302,8 @@ Deno.serve(async (req: Request) => {
         source_url:        i.source?.link ?? null,
         breaking:          false,
         featured:          false,
-        status:            "published",
-        published_at:      new Date().toISOString(),
+        status:            "draft",
+        published_at:      null,
         seo_title:         r.seoTitle,
         meta_description:  r.metaDescription,
       };

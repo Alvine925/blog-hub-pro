@@ -219,7 +219,7 @@ Deno.serve(async (req: Request) => {
       answer: f.answer,
       category: f.category || "General",
       sort_order: existingQuestions.length + i,
-      status: "published",
+      status: "draft",
     }));
 
     const { data: inserted, error: insertError } = await (adminClient as any)

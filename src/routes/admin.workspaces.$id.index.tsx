@@ -6,7 +6,7 @@ import {
   FileText, Layers, ImageIcon, Sparkles, Key, Clock, Activity,
   Plus, Eye, Send, FilePen, ArrowRight, Zap, TrendingUp,
   Globe, Tag, BookOpen, ExternalLink, BarChart2, Lightbulb,
-  ChevronRight,
+  ChevronRight, Newspaper, HelpCircle, Package,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { GenerateBlogDialog } from "@/components/blog/GenerateBlogDialog";
@@ -48,17 +48,24 @@ interface WorkspaceIntel {
     suggestedTags?: string[];
   } | null;
 }
+interface RecentContent {
+  id: string; title: string; status: string; updated_at: string;
+}
 interface Overview {
   stats: {
     postsTotal: number; postsPublished: number; postsDraft: number;
     postsScheduled: number; collections: number; mediaFiles: number; aiGenerations: number;
   };
-  recentPosts: RecentPost[];
-  recentActivity: ActivityEntry[];
-  intel: WorkspaceIntel | null;
-  competitors: Competitor[];
-  keywords: Keyword[];
-  opportunities: ContentOpportunity[];
+  recentPosts:     RecentPost[];
+  recentNews:      RecentContent[];
+  recentArticles:  RecentContent[];
+  recentFaqs:      Array<{ id: string; question: string; status: string; updated_at: string }>;
+  recentProducts:  Array<{ id: string; name: string; status: string; updated_at: string }>;
+  recentActivity:  ActivityEntry[];
+  intel:           WorkspaceIntel | null;
+  competitors:     Competitor[];
+  keywords:        Keyword[];
+  opportunities:   ContentOpportunity[];
 }
 
 // ── Server fn ─────────────────────────────────────────────────────────────────
@@ -71,6 +78,7 @@ const getOverview = createServerFn({ method: "GET" })
     const [
       pubRes, draftRes, schedRes, mediaRes, aiRes,
       postsRes, actRes, wsRes, compRes, kwRes, oppRes,
+      newsRes, artRes, faqRes, prodRes,
     ] = await Promise.all([
       db.from("blog_posts").select("id", { count: "exact", head: true }).eq("workspace_id", data.id).eq("status", "published"),
       db.from("blog_posts").select("id", { count: "exact", head: true }).eq("workspace_id", data.id).eq("status", "draft"),
@@ -96,6 +104,14 @@ const getOverview = createServerFn({ method: "GET" })
       db.from("workspace_content_opportunities")
         .select("*").eq("workspace_id", data.id)
         .order("priority", { ascending: true }).limit(8),
+      db.from("news").select("id,title,status,updated_at").eq("workspace_id", data.id)
+        .order("updated_at", { ascending: false }).limit(5),
+      db.from("articles").select("id,title,status,updated_at").eq("workspace_id", data.id)
+        .order("updated_at", { ascending: false }).limit(5),
+      db.from("faqs").select("id,question,status,updated_at").eq("workspace_id", data.id)
+        .order("updated_at", { ascending: false }).limit(5),
+      db.from("products").select("id,name,status,updated_at").eq("workspace_id", data.id)
+        .order("updated_at", { ascending: false }).limit(5),
     ]);
 
     const pub   = pubRes.count   ?? 0;
@@ -113,6 +129,10 @@ const getOverview = createServerFn({ method: "GET" })
         aiGenerations:  aiRes.count    ?? 0,
       },
       recentPosts:    postsRes.data  ?? [],
+      recentNews:     newsRes.data   ?? [],
+      recentArticles: artRes.data    ?? [],
+      recentFaqs:     faqRes.data    ?? [],
+      recentProducts: prodRes.data   ?? [],
       recentActivity: actRes.data    ?? [],
       intel:          wsRes.data     ?? null,
       competitors:    compRes.data   ?? [],
@@ -124,7 +144,7 @@ const getOverview = createServerFn({ method: "GET" })
 // ── Route ─────────────────────────────────────────────────────────────────────
 const overviewQuery = (id: string) =>
   queryOptions({
-    queryKey: ["workspace-overview", id, "v3"],
+    queryKey: ["workspace-overview", id, "v4"],
     queryFn:  () => getOverview({ data: { id } }),
   });
 
@@ -196,10 +216,14 @@ function WorkspaceOverview() {
   const { data } = useSuspenseQuery(overviewQuery(id));
   const {
     stats, recentPosts, recentActivity,
-    intel         = null,
-    competitors   = [],
-    keywords      = [],
-    opportunities = [],
+    recentNews     = [],
+    recentArticles = [],
+    recentFaqs     = [],
+    recentProducts = [],
+    intel          = null,
+    competitors    = [],
+    keywords       = [],
+    opportunities  = [],
   } = data as any;
 
   const [generateDialogOpen, setGenerateDialogOpen] = useState(false);
@@ -527,8 +551,8 @@ function WorkspaceOverview() {
                 {recentPosts.map((post: any) => (
                   <div key={post.id} className="flex items-center gap-3 py-2.5 hover:opacity-80 transition-opacity">
                     <Link
-                      to="/admin/blogs/$id"
-                      params={{ id: post.id }}
+                      to="/admin/workspaces/$id/blogs/$postId"
+                      params={{ id, postId: post.id }}
                       className="min-w-0 flex-1 truncate text-sm font-medium hover:text-primary transition-colors"
                     >
                       {post.title || "Untitled"}
@@ -545,6 +569,98 @@ function WorkspaceOverview() {
               </div>
             )}
           </div>
+
+          {/* Recent News — only when data exists */}
+          {(recentNews as any[]).length > 0 && (
+            <div className="space-y-4">
+              <SectionHeading
+                icon={Newspaper}
+                title="Recent News"
+                action={<Link to={`${base}/news`} className="flex items-center gap-1 text-xs text-primary font-medium hover:underline">View all <ArrowRight className="h-3 w-3" /></Link>}
+              />
+              <div className="divide-y divide-border/60">
+                {(recentNews as any[]).map((item) => (
+                  <div key={item.id} className="flex items-center gap-3 py-2.5 hover:opacity-80 transition-opacity">
+                    <Link to="/admin/workspaces/$id/news/$newsId" params={{ id, newsId: item.id }}
+                      className="min-w-0 flex-1 truncate text-sm font-medium hover:text-primary transition-colors">
+                      {item.title || "Untitled"}
+                    </Link>
+                    <StatusBadge status={item.status} />
+                    <span className="shrink-0 text-xs text-muted-foreground hidden sm:block">{fmtDate(item.updated_at)}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Recent Articles — only when data exists */}
+          {(recentArticles as any[]).length > 0 && (
+            <div className="space-y-4">
+              <SectionHeading
+                icon={BookOpen}
+                title="Recent Articles"
+                action={<Link to={`${base}/articles`} className="flex items-center gap-1 text-xs text-primary font-medium hover:underline">View all <ArrowRight className="h-3 w-3" /></Link>}
+              />
+              <div className="divide-y divide-border/60">
+                {(recentArticles as any[]).map((item) => (
+                  <div key={item.id} className="flex items-center gap-3 py-2.5 hover:opacity-80 transition-opacity">
+                    <Link to="/admin/workspaces/$id/articles/$articleId" params={{ id, articleId: item.id }}
+                      className="min-w-0 flex-1 truncate text-sm font-medium hover:text-primary transition-colors">
+                      {item.title || "Untitled"}
+                    </Link>
+                    <StatusBadge status={item.status} />
+                    <span className="shrink-0 text-xs text-muted-foreground hidden sm:block">{fmtDate(item.updated_at)}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Recent FAQs — only when data exists */}
+          {(recentFaqs as any[]).length > 0 && (
+            <div className="space-y-4">
+              <SectionHeading
+                icon={HelpCircle}
+                title="Recent FAQs"
+                action={<Link to={`${base}/faqs`} className="flex items-center gap-1 text-xs text-primary font-medium hover:underline">View all <ArrowRight className="h-3 w-3" /></Link>}
+              />
+              <div className="divide-y divide-border/60">
+                {(recentFaqs as any[]).map((item) => (
+                  <div key={item.id} className="flex items-center gap-3 py-2.5 hover:opacity-80 transition-opacity">
+                    <Link to="/admin/workspaces/$id/faqs/$faqId" params={{ id, faqId: item.id }}
+                      className="min-w-0 flex-1 truncate text-sm font-medium hover:text-primary transition-colors">
+                      {item.question || "Untitled"}
+                    </Link>
+                    <StatusBadge status={item.status} />
+                    <span className="shrink-0 text-xs text-muted-foreground hidden sm:block">{fmtDate(item.updated_at)}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Recent Products — only when data exists */}
+          {(recentProducts as any[]).length > 0 && (
+            <div className="space-y-4">
+              <SectionHeading
+                icon={Package}
+                title="Recent Products"
+                action={<Link to={`${base}/products`} className="flex items-center gap-1 text-xs text-primary font-medium hover:underline">View all <ArrowRight className="h-3 w-3" /></Link>}
+              />
+              <div className="divide-y divide-border/60">
+                {(recentProducts as any[]).map((item) => (
+                  <div key={item.id} className="flex items-center gap-3 py-2.5 hover:opacity-80 transition-opacity">
+                    <Link to="/admin/workspaces/$id/products/$productId" params={{ id, productId: item.id }}
+                      className="min-w-0 flex-1 truncate text-sm font-medium hover:text-primary transition-colors">
+                      {item.name || "Untitled"}
+                    </Link>
+                    <StatusBadge status={item.status} />
+                    <span className="shrink-0 text-xs text-muted-foreground hidden sm:block">{fmtDate(item.updated_at)}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Quick Actions */}
           <div className="space-y-4">

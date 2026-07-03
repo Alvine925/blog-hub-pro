@@ -1,13 +1,18 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
-import { TrendingUp, Eye, Activity, HardDrive } from "lucide-react";
+import { TrendingUp, Eye, Activity, HardDrive, Newspaper, BookOpen, HelpCircle, Package } from "lucide-react";
+
+interface TopItem { id: string; title: string; views: number; }
 
 interface AnalyticsData {
   totalViews: number;
   apiRequests: number;
   storageBytes: number;
-  topPosts: Array<{ id: string; title: string; views: number; slug: string }>;
+  topPosts:     TopItem[];
+  topNews:      TopItem[];
+  topArticles:  TopItem[];
+  topProducts:  TopItem[];
   daily: Array<{ date: string; views: number; requests: number }>;
 }
 
@@ -17,40 +22,39 @@ const getAnalytics = createServerFn({ method: "GET" })
     const { getAdminClient } = await import("@/lib/supabase.server");
     const db = getAdminClient() as any;
 
-    const [viewsRes, apiRes, storageRes, topPostsRes, dailyRes] = await Promise.all([
-      db.from("blog_posts").select("views").eq("status", "published"),
-      db.from("api_request_logs")
-        .select("id", { count: "exact", head: true })
-        .eq("workspace_id", data.workspaceId),
-      db.from("storage_usage")
-        .select("total_bytes")
-        .eq("workspace_id", data.workspaceId)
-        .order("recorded_at", { ascending: false })
-        .limit(1)
-        .maybeSingle(),
-      db.from("blog_posts")
-        .select("id,title,views,slug")
-        .eq("status", "published")
-        .order("views", { ascending: false })
-        .limit(10),
-      db.from("analytics_daily")
-        .select("date,page_views,api_calls")
-        .eq("workspace_id", data.workspaceId)
-        .order("date", { ascending: false })
-        .limit(14),
+    const [viewsRes, apiRes, storageRes, topPostsRes, dailyRes,
+           newsViewsRes, artViewsRes, topNewsRes, topArtRes, topProdRes] = await Promise.all([
+      db.from("blog_posts").select("views").eq("workspace_id", data.workspaceId),
+      db.from("api_request_logs").select("id", { count: "exact", head: true }).eq("workspace_id", data.workspaceId),
+      db.from("storage_usage").select("total_bytes").eq("workspace_id", data.workspaceId)
+        .order("recorded_at", { ascending: false }).limit(1).maybeSingle(),
+      db.from("blog_posts").select("id,title,views").eq("workspace_id", data.workspaceId)
+        .eq("status", "published").order("views", { ascending: false }).limit(8),
+      db.from("analytics_daily").select("date,page_views,api_calls").eq("workspace_id", data.workspaceId)
+        .order("date", { ascending: false }).limit(14),
+      db.from("news").select("views").eq("workspace_id", data.workspaceId),
+      db.from("articles").select("views").eq("workspace_id", data.workspaceId),
+      db.from("news").select("id,title,views").eq("workspace_id", data.workspaceId)
+        .order("views", { ascending: false }).limit(8),
+      db.from("articles").select("id,title,views").eq("workspace_id", data.workspaceId)
+        .order("views", { ascending: false }).limit(8),
+      db.from("products").select("id,name,views").eq("workspace_id", data.workspaceId)
+        .order("views", { ascending: false }).limit(8),
     ]);
 
-    const totalViews = (viewsRes.data ?? []).reduce((s: number, p: any) => s + (p.views ?? 0), 0);
+    const sum = (rows: any[] | null) => (rows ?? []).reduce((s: number, r: any) => s + (r.views ?? 0), 0);
+    const totalViews = sum(viewsRes.data) + sum(newsViewsRes.data) + sum(artViewsRes.data);
 
     return {
       totalViews,
-      apiRequests: apiRes.count ?? 0,
+      apiRequests:  apiRes.count ?? 0,
       storageBytes: storageRes.data?.total_bytes ?? 0,
-      topPosts: topPostsRes.data ?? [],
+      topPosts:     (topPostsRes.data ?? []).map((r: any) => ({ id: r.id, title: r.title, views: r.views ?? 0 })),
+      topNews:      (topNewsRes.data ?? []).map((r: any) => ({ id: r.id, title: r.title, views: r.views ?? 0 })),
+      topArticles:  (topArtRes.data ?? []).map((r: any) => ({ id: r.id, title: r.title, views: r.views ?? 0 })),
+      topProducts:  (topProdRes.data ?? []).map((r: any) => ({ id: r.id, title: r.name,  views: r.views ?? 0 })),
       daily: (dailyRes.data ?? []).reverse().map((d: any) => ({
-        date: d.date,
-        views: d.page_views ?? 0,
-        requests: d.api_calls ?? 0,
+        date: d.date, views: d.page_views ?? 0, requests: d.api_calls ?? 0,
       })),
     };
   });
@@ -150,9 +154,9 @@ function WorkspaceAnalytics() {
 
         {/* Top posts */}
         <section>
-          <div className="mb-0 border-b border-border pb-3">
+          <div className="mb-0 border-b border-border pb-3 flex items-center gap-2">
             <h2 className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
-              Top Posts by Views
+              Top Blog Posts by Views
             </h2>
           </div>
           {data.topPosts.length === 0 ? (
@@ -161,10 +165,86 @@ function WorkspaceAnalytics() {
             <div>
               {data.topPosts.map((post) => (
                 <div key={post.id} className="border-b border-border py-3 last:border-0">
-                  <p className="mb-1.5 truncate text-sm font-medium">{post.title || "Untitled"}</p>
+                  <Link to="/admin/workspaces/$id/blogs/$postId" params={{ id, postId: post.id }}
+                    className="mb-1.5 truncate text-sm font-medium hover:text-primary transition-colors block">{post.title || "Untitled"}</Link>
                   <SparkBar value={post.views} max={maxTopViews} />
                 </div>
               ))}
+            </div>
+          )}
+        </section>
+      </div>
+
+      {/* News, Articles, Products top content */}
+      <div className="mt-12 grid gap-12 lg:grid-cols-3">
+        {/* Top News */}
+        <section>
+          <div className="mb-0 border-b border-border pb-3 flex items-center gap-2">
+            <Newspaper className="h-3.5 w-3.5 text-muted-foreground" />
+            <h2 className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">Top News by Views</h2>
+          </div>
+          {data.topNews.length === 0 ? (
+            <p className="py-6 text-sm text-muted-foreground">No news yet.</p>
+          ) : (
+            <div>
+              {data.topNews.map((item) => {
+                const mx = Math.max(...data.topNews.map((n) => n.views), 1);
+                return (
+                  <div key={item.id} className="border-b border-border py-3 last:border-0">
+                    <Link to="/admin/workspaces/$id/news/$newsId" params={{ id, newsId: item.id }}
+                      className="mb-1.5 truncate text-sm font-medium hover:text-primary transition-colors block">{item.title || "Untitled"}</Link>
+                    <SparkBar value={item.views} max={mx} />
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </section>
+
+        {/* Top Articles */}
+        <section>
+          <div className="mb-0 border-b border-border pb-3 flex items-center gap-2">
+            <BookOpen className="h-3.5 w-3.5 text-muted-foreground" />
+            <h2 className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">Top Articles by Views</h2>
+          </div>
+          {data.topArticles.length === 0 ? (
+            <p className="py-6 text-sm text-muted-foreground">No articles yet.</p>
+          ) : (
+            <div>
+              {data.topArticles.map((item) => {
+                const mx = Math.max(...data.topArticles.map((a) => a.views), 1);
+                return (
+                  <div key={item.id} className="border-b border-border py-3 last:border-0">
+                    <Link to="/admin/workspaces/$id/articles/$articleId" params={{ id, articleId: item.id }}
+                      className="mb-1.5 truncate text-sm font-medium hover:text-primary transition-colors block">{item.title || "Untitled"}</Link>
+                    <SparkBar value={item.views} max={mx} />
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </section>
+
+        {/* Top Products */}
+        <section>
+          <div className="mb-0 border-b border-border pb-3 flex items-center gap-2">
+            <Package className="h-3.5 w-3.5 text-muted-foreground" />
+            <h2 className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">Top Products by Views</h2>
+          </div>
+          {data.topProducts.length === 0 ? (
+            <p className="py-6 text-sm text-muted-foreground">No products yet.</p>
+          ) : (
+            <div>
+              {data.topProducts.map((item) => {
+                const mx = Math.max(...data.topProducts.map((p) => p.views), 1);
+                return (
+                  <div key={item.id} className="border-b border-border py-3 last:border-0">
+                    <Link to="/admin/workspaces/$id/products/$productId" params={{ id, productId: item.id }}
+                      className="mb-1.5 truncate text-sm font-medium hover:text-primary transition-colors block">{item.title || "Untitled"}</Link>
+                    <SparkBar value={item.views} max={mx} />
+                  </div>
+                );
+              })}
             </div>
           )}
         </section>

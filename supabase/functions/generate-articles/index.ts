@@ -278,8 +278,8 @@ Deno.serve(async (req: Request) => {
         word_count:       countWords(a.content || ""),
         seo_title:        a.seo_title || a.title,
         meta_description: a.meta_description || a.excerpt || "",
-        status:           "published",
-        published_at:     now,
+        status:           "draft",
+        published_at:     null,
       };
     });
 
