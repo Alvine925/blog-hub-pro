@@ -1,0 +1,634 @@
+# IMPLEMENTATION PROMPT
+
+# EXTEND LUNAR CMS INTO A COMPLETE HEADLESS CONTENT PLATFORM
+
+## Objective
+
+Lunar CMS currently has a mature Blog module with REST APIs, developer tools, workspaces, authentication, API Keys, AI generation, and content management.
+
+The next phase is to evolve Lunar CMS from a **Blog CMS** into a **complete Headless Content Platform**.
+
+This must be done by extending the existing architecture, **not** by creating separate systems.
+
+All new content types must integrate seamlessly with the existing architecture and behave exactly like the Blog module.
+
+---
+
+# IMPORTANT
+
+Before writing any code, inspect the existing project.
+
+The following systems already exist and must be reused:
+
+* Authentication
+* Workspaces
+* API Keys
+* REST API
+* API Gateway
+* Content Router
+* Developer Portal
+* API Documentation
+* API Explorer
+* AI Content Generation
+* Rich Text Editor
+* Media Library
+* SEO System
+* Search
+* Categories
+* Tags
+* Slug Generation
+* Publishing Workflow
+* Drafts
+* Scheduling
+* Analytics
+* Feature Flags
+* Workspace Settings
+
+Do not duplicate any of these systems.
+
+Everything should extend the existing architecture.
+
+---
+
+# OBJECTIVE
+
+Lunar CMS should support multiple content types.
+
+Instead of only
+
+```text
+Blogs
+```
+
+The CMS should become
+
+```text
+Content
+
+├── Blogs
+├── Articles
+├── News
+├── Products
+├── FAQs
+├── Pages
+```
+
+All of these must behave consistently.
+
+---
+
+# PHASE 1 — CONTENT ARCHITECTURE
+
+Review the existing Blog architecture.
+
+Use it as the blueprint.
+
+Every new content type should inherit the same capabilities wherever applicable.
+
+Do not copy and paste code.
+
+Refactor shared functionality into reusable services if necessary.
+
+---
+
+# PHASE 2 — NEW CONTENT TYPES
+
+Implement support for the following content types.
+
+## 1. Articles
+
+Purpose
+
+General long-form content.
+
+Examples
+
+* Guides
+* Tutorials
+* Case Studies
+* Documentation
+* Educational Content
+
+Capabilities
+
+* Rich Text
+* Categories
+* Tags
+* Featured Image
+* Author
+* SEO
+* Slug
+* Draft
+* Scheduled Publishing
+* Analytics
+* Search
+* Related Articles
+* AI Generation
+
+REST API
+
+```http
+GET    /v1/articles
+GET    /v1/articles/{slug}
+POST   /v1/articles
+PUT    /v1/articles/{id}
+DELETE /v1/articles/{id}
+```
+
+---
+
+## 2. News
+
+Purpose
+
+Time-sensitive updates.
+
+Examples
+
+* Company News
+* Press Releases
+* Product Updates
+* Announcements
+
+Capabilities
+
+* Featured Image
+* Categories
+* SEO
+* Publish Date
+* Expiry Date (optional)
+* Breaking News Flag
+* Featured News
+* Related News
+
+REST API
+
+```http
+GET    /v1/news
+GET    /v1/news/{slug}
+POST   /v1/news
+PUT    /v1/news/{id}
+DELETE /v1/news/{id}
+```
+
+---
+
+## 3. Products
+
+Purpose
+
+Product catalog management.
+
+This is **not** an e-commerce checkout system.
+
+It is a content management system for products.
+
+Support
+
+* Product Name
+* Slug
+* Description
+* Rich Text
+* Gallery
+* Featured Image
+* Categories
+* SKU
+* Brand
+* Price
+* Compare Price
+* Currency
+* Product Status
+* Specifications
+* Features
+* Downloads
+* SEO
+* Related Products
+
+REST API
+
+```http
+GET    /v1/products
+GET    /v1/products/{slug}
+POST   /v1/products
+PUT    /v1/products/{id}
+DELETE /v1/products/{id}
+```
+
+Future-ready for integrations with external commerce platforms.
+
+---
+
+## 4. FAQs
+
+Purpose
+
+Frequently Asked Questions.
+
+Each FAQ should contain
+
+* Question
+* Answer
+* Category
+* Sort Order
+* Status
+* SEO (optional)
+
+Support
+
+* Categories
+* Search
+* Featured FAQs
+* Ordering
+
+REST API
+
+```http
+GET    /v1/faqs
+GET    /v1/faqs/{id}
+POST   /v1/faqs
+PUT    /v1/faqs/{id}
+DELETE /v1/faqs/{id}
+```
+
+---
+
+# PHASE 3 — ADMIN DASHBOARD
+
+Extend the existing Admin Dashboard.
+
+Add the following menu items.
+
+```text
+Dashboard
+
+Content
+
+    Blogs
+
+    Articles
+
+    News
+
+    Products
+
+    FAQs
+
+Pages
+
+Media
+
+Categories
+
+Tags
+
+Comments
+
+Analytics
+
+Developer
+
+Settings
+```
+
+Do not create a separate dashboard.
+
+Reuse the existing layout.
+
+Reuse the existing navigation.
+
+Reuse the existing design system.
+
+---
+
+# PHASE 4 — WORKSPACE DASHBOARD
+
+Inside each Workspace, replace the current blog-only experience with a unified content experience.
+
+Instead of
+
+```text
+Blog Posts
+```
+
+The interface should dynamically support
+
+```text
+Content
+
+Blogs
+
+Articles
+
+News
+
+Products
+
+FAQs
+```
+
+Every content type should have
+
+* List View
+* Create
+* Edit
+* Delete
+* Preview
+* Publish
+* Drafts
+* Search
+* Filters
+* Bulk Actions
+
+The user experience should remain consistent across all modules.
+
+---
+
+# PHASE 5 — CONTENT EDITOR
+
+Reuse the existing editor.
+
+Do not create separate editors.
+
+The editor should dynamically adapt depending on the selected content type.
+
+Example
+
+Product Editor
+
+Shows
+
+* Price
+* SKU
+* Gallery
+* Specifications
+
+FAQ Editor
+
+Shows
+
+* Question
+* Answer
+* Category
+
+News Editor
+
+Shows
+
+* Breaking News
+* Publish Date
+
+Article Editor
+
+Shows
+
+* Rich Text
+* Author
+* Tags
+
+The core editing experience should remain consistent.
+
+---
+
+# PHASE 6 — DATABASE
+
+Review the current schema.
+
+Reuse existing tables where possible.
+
+Create only the new tables required.
+
+Suggested tables
+
+* articles
+* news
+* products
+* faqs
+
+Reuse
+
+* categories
+* tags
+* media
+* seo
+* analytics
+* feature_flags
+
+where appropriate.
+
+Every table must include
+
+* workspace_id
+* slug (where applicable)
+* status
+* timestamps
+* soft delete support (if already used)
+
+Ensure proper indexing and foreign key relationships.
+
+---
+
+# PHASE 7 — REST API
+
+Every content type must be available through the existing REST API.
+
+Do not build a second API.
+
+Reuse
+
+* Authentication
+* API Keys
+* Workspace Resolution
+* Permissions
+* Pagination
+* Filtering
+* Response Builder
+* Content Transformer
+
+Every endpoint should behave exactly like the Blog API.
+
+---
+
+# PHASE 8 — API DOCUMENTATION
+
+Automatically register the new endpoints.
+
+Update
+
+* Documentation
+* API Explorer
+* Try It
+* Code Examples
+* AI Documentation Assistant
+
+Developers should immediately see the new content types without manual configuration.
+
+---
+
+# PHASE 9 — AI CONTENT GENERATION
+
+Extend the AI generation system.
+
+Support
+
+Generate Blog
+
+Generate Article
+
+Generate News
+
+Generate Product Description
+
+Generate FAQ
+
+The AI should understand the selected content type and generate appropriate content.
+
+Do not create separate AI systems.
+
+Reuse the existing AI architecture.
+
+---
+
+# PHASE 10 — SEARCH
+
+Extend the existing search engine.
+
+Support searching across
+
+* Blogs
+* Articles
+* News
+* Products
+* FAQs
+
+Allow filtering by content type.
+
+---
+
+# PHASE 11 — ANALYTICS
+
+Every content type should support analytics.
+
+Examples
+
+* Views
+* Likes (where applicable)
+* Comments (where applicable)
+* Shares
+* Reading Time (articles, blogs, news)
+* Product Views
+* FAQ Views
+
+Reuse the existing analytics architecture.
+
+---
+
+# PHASE 12 — EXTERNAL WEBSITE API
+
+External websites should be able to fetch every content type exactly as they fetch blogs today.
+
+Examples
+
+```http
+GET /v1/blogs
+
+GET /v1/articles
+
+GET /v1/news
+
+GET /v1/products
+
+GET /v1/faqs
+```
+
+Each endpoint should support
+
+* Pagination
+* Search
+* Filtering
+* Categories
+* Sorting
+* SEO Metadata
+* Feature Flags
+* Related Content (where applicable)
+
+No special integration should be required.
+
+Developers should only change the endpoint they request.
+
+---
+
+# PHASE 13 — BACKWARDS COMPATIBILITY
+
+Do not break the existing Blog functionality.
+
+Existing integrations must continue working.
+
+The Blog module should simply become one content type within a larger content platform.
+
+---
+
+# PHASE 14 — CODE QUALITY
+
+Ensure
+
+* No duplicate services.
+* No duplicate middleware.
+* No duplicate editors.
+* No duplicate API logic.
+* No duplicate repositories.
+* Shared functionality is abstracted into reusable modules.
+
+Maintain the existing architecture and coding standards.
+
+---
+
+# FINAL VERIFICATION
+
+Do not mark this task complete until the following have been verified.
+
+✓ Blogs continue to function exactly as before.
+
+✓ Articles are fully implemented.
+
+✓ News is fully implemented.
+
+✓ Products are fully implemented.
+
+✓ FAQs are fully implemented.
+
+✓ All content types appear in both the main Admin Dashboard and the Workspace Dashboard.
+
+✓ The previous "Blog Posts" navigation has been replaced with a unified content navigation supporting all content types.
+
+✓ Every content type supports CRUD operations.
+
+✓ Every content type is available through the existing REST API.
+
+✓ API documentation, API Explorer and developer tools automatically include the new endpoints.
+
+✓ AI content generation supports every new content type.
+
+✓ Search supports all content types.
+
+✓ Analytics supports all applicable content types.
+
+✓ Existing functionality has been reused wherever possible.
+
+✓ No duplicate architecture has been introduced.
+
+---
+
+# DELIVERABLES
+
+After implementation, provide a detailed report including:
+
+1. Files inspected.
+2. Files modified.
+3. New database tables created.
+4. New API endpoints added.
+5. Dashboard navigation changes.
+6. Workspace navigation changes.
+7. AI generation enhancements.
+8. API documentation updates.
+9. Components and services reused.
+10. Confirmation that Lunar CMS has successfully evolved from a Blog CMS into a multi-content, headless content management platform while preserving backwards compatibility.
