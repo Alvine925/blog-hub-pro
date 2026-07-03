@@ -23,9 +23,8 @@ import {
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import { supabase } from "@/integrations/supabase/client";
 import {
-  listApiKeys, revokeApiKey, deleteApiKey, type ApiKey,
+  listApiKeys, createApiKey, revokeApiKey, deleteApiKey, type ApiKey,
 } from "@/lib/apikey.functions";
 import { formatBlogDate } from "@/lib/blog-types";
 import { cn } from "@/lib/utils";
@@ -320,25 +319,21 @@ function CreateKeyForm({ onCreated }: { onCreated: (key: string) => void }) {
   const [description, setDescription] = useState("");
   const [keyType, setKeyType] = useState<"publishable" | "secret">("publishable");
   const [creating, setCreating] = useState(false);
+  const doCreate = useServerFn(createApiKey);
 
   async function handleCreate() {
     if (!name.trim()) { toast.error("Enter a name for the key"); return; }
     setCreating(true);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const authHeaders = session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {};
-      const { data, error } = await supabase.functions.invoke("generate-api-key", {
-        body: {
+      const result = await doCreate({
+        data: {
           name: name.trim(),
           description: description.trim() || undefined,
           key_type: keyType,
         },
-        headers: authHeaders,
       });
-      if (error) throw new Error(error.message);
-      if (!data?.success) throw new Error(data?.error?.message ?? "Failed to generate key");
       setName(""); setDescription("");
-      onCreated(data.data.key);
+      onCreated(result.key);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed to create key");
     } finally {
@@ -354,7 +349,7 @@ function CreateKeyForm({ onCreated }: { onCreated: (key: string) => void }) {
       </div>
 
       <p className="text-xs text-muted-foreground">
-        Keys are generated using CSPRNG inside a Supabase Edge Function. Only a SHA-256 hash is stored — the raw key is shown once.
+        Keys are generated server-side using CSPRNG. Only a SHA-256 hash is stored — the raw key is shown once.
       </p>
 
       {/* Key type */}

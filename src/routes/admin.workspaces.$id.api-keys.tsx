@@ -8,8 +8,7 @@ import {
   Globe, Lock, AlertTriangle, Shield, CheckCircle2, ChevronDown, ChevronRight,
   ExternalLink, Zap,
 } from "lucide-react";
-import { listApiKeys, revokeApiKey, deleteApiKey, type ApiKey } from "@/lib/apikey.functions";
-import { supabase } from "@/integrations/supabase/client";
+import { listApiKeys, createApiKey, revokeApiKey, deleteApiKey, type ApiKey } from "@/lib/apikey.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -250,6 +249,7 @@ function WorkspaceApiKeys() {
   const { id: workspaceId } = useParams({ from: "/admin/workspaces/$id/api-keys" });
   const { data: keys } = useSuspenseQuery(keysQuery(workspaceId));
   const queryClient = useQueryClient();
+  const doCreate = useServerFn(createApiKey);
   const doRevoke = useServerFn(revokeApiKey);
   const doDelete = useServerFn(deleteApiKey);
 
@@ -268,16 +268,9 @@ function WorkspaceApiKeys() {
     if (!name.trim()) return;
     setBusy(true);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const authHeaders = session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {};
-      const { data, error } = await supabase.functions.invoke("generate-api-key", {
-        body: { name: name.trim(), key_type: keyType },
-        headers: authHeaders,
-      });
-      if (error) throw new Error(error.message);
-      if (!data?.success) throw new Error(data?.error?.message ?? "Failed to generate key");
+      const result = await doCreate({ data: { workspaceId, name: name.trim(), key_type: keyType } });
       setName(""); setShowForm(false);
-      setNewKeyDialog({ key: data.data.key });
+      setNewKeyDialog({ key: result.key });
       setShowKey(false);
       await queryClient.invalidateQueries({ queryKey: ["admin", "api_keys", workspaceId] });
     } catch (err) {
