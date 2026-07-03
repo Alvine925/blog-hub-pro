@@ -1266,7 +1266,6 @@ export const ENDPOINT_REGISTRY: EndpointDefinition[] = [
 
   {
     id: "get-news-likes", method: "GET", path: "/news/:slug/likes",
-    functionName: "content-engagement",
     title: "Get News Likes", category: "content-engagement", authentication: true,
     description: "Returns the total like count for a news item and whether the current visitor has liked it.",
     pagination: false, search: false, filters: [], queryParams: [],
@@ -1278,7 +1277,6 @@ export const ENDPOINT_REGISTRY: EndpointDefinition[] = [
   },
   {
     id: "like-news", method: "POST", path: "/news/:slug/likes",
-    functionName: "content-engagement",
     title: "Like a News Item", category: "content-engagement", authentication: true,
     description: "Like a news item. Idempotent per visitor. Requires `write:engagement` permission.",
     pagination: false, search: false, filters: [], queryParams: [],
@@ -1290,7 +1288,6 @@ export const ENDPOINT_REGISTRY: EndpointDefinition[] = [
   },
   {
     id: "get-news-comments", method: "GET", path: "/news/:slug/comments",
-    functionName: "content-engagement",
     title: "List News Comments", category: "content-engagement", authentication: true,
     description: "Returns approved, threaded comments for a news item. Supports pagination.",
     pagination: true, search: false, filters: [],
@@ -1306,7 +1303,6 @@ export const ENDPOINT_REGISTRY: EndpointDefinition[] = [
   },
   {
     id: "post-news-comment", method: "POST", path: "/news/:slug/comments",
-    functionName: "content-engagement",
     title: "Submit a News Comment", category: "content-engagement", authentication: true,
     description: "Submit a comment on a news item. Requires `write:engagement`. Auto-approval depends on workspace settings.",
     pagination: false, search: false, filters: [], queryParams: [],
@@ -1319,7 +1315,6 @@ export const ENDPOINT_REGISTRY: EndpointDefinition[] = [
   },
   {
     id: "record-news-view", method: "POST", path: "/news/:slug/view",
-    functionName: "content-engagement",
     title: "Record News View", category: "content-engagement", authentication: true,
     description: "Records a page view for a news item, deduplicated per visitor per 30 minutes.",
     pagination: false, search: false, filters: [], queryParams: [],
@@ -1332,7 +1327,6 @@ export const ENDPOINT_REGISTRY: EndpointDefinition[] = [
   },
   {
     id: "get-news-stats", method: "GET", path: "/news/:slug/stats",
-    functionName: "content-engagement",
     title: "Get News Stats", category: "content-engagement", authentication: true,
     description: "Aggregated engagement stats (views, likes, comments, shares) plus workspace feature flags and branding for a news item.",
     pagination: false, search: false, filters: [], queryParams: [],
@@ -1347,7 +1341,6 @@ export const ENDPOINT_REGISTRY: EndpointDefinition[] = [
 
   {
     id: "get-article-likes", method: "GET", path: "/articles/:slug/likes",
-    functionName: "content-engagement",
     title: "Get Article Likes", category: "content-engagement", authentication: true,
     description: "Returns the total like count for an article and whether the current visitor has liked it.",
     pagination: false, search: false, filters: [], queryParams: [],
@@ -1359,7 +1352,6 @@ export const ENDPOINT_REGISTRY: EndpointDefinition[] = [
   },
   {
     id: "get-article-comments", method: "GET", path: "/articles/:slug/comments",
-    functionName: "content-engagement",
     title: "List Article Comments", category: "content-engagement", authentication: true,
     description: "Returns approved, threaded comments for an article. Supports pagination.",
     pagination: true, search: false, filters: [],
@@ -1375,7 +1367,6 @@ export const ENDPOINT_REGISTRY: EndpointDefinition[] = [
   },
   {
     id: "record-article-view", method: "POST", path: "/articles/:slug/view",
-    functionName: "content-engagement",
     title: "Record Article View", category: "content-engagement", authentication: true,
     description: "Records a page view for an article, deduplicated per visitor per 30 minutes.",
     pagination: false, search: false, filters: [], queryParams: [],
@@ -1388,7 +1379,6 @@ export const ENDPOINT_REGISTRY: EndpointDefinition[] = [
   },
   {
     id: "get-article-stats", method: "GET", path: "/articles/:slug/stats",
-    functionName: "content-engagement",
     title: "Get Article Stats", category: "content-engagement", authentication: true,
     description: "Aggregated engagement stats plus workspace feature flags and branding for an article.",
     pagination: false, search: false, filters: [], queryParams: [],
@@ -1400,7 +1390,6 @@ export const ENDPOINT_REGISTRY: EndpointDefinition[] = [
   },
   {
     id: "get-article-related", method: "GET", path: "/articles/:slug/related",
-    functionName: "content-engagement",
     title: "Get Related Articles", category: "content-engagement", authentication: true,
     description: "Returns related articles from the same category, ordered by views.",
     pagination: false, search: false, filters: [],
@@ -1416,7 +1405,6 @@ export const ENDPOINT_REGISTRY: EndpointDefinition[] = [
 
   {
     id: "get-product-likes", method: "GET", path: "/products/:slug/likes",
-    functionName: "content-engagement",
     title: "Get Product Likes", category: "content-engagement", authentication: true,
     description: "Returns the total like count for a product and whether the current visitor has liked it.",
     pagination: false, search: false, filters: [], queryParams: [],
@@ -1428,7 +1416,6 @@ export const ENDPOINT_REGISTRY: EndpointDefinition[] = [
   },
   {
     id: "get-product-comments", method: "GET", path: "/products/:slug/comments",
-    functionName: "content-engagement",
     title: "List Product Comments", category: "content-engagement", authentication: true,
     description: "Returns approved, threaded comments for a product. Supports pagination.",
     pagination: true, search: false, filters: [],
@@ -1444,7 +1431,6 @@ export const ENDPOINT_REGISTRY: EndpointDefinition[] = [
   },
   {
     id: "record-product-view", method: "POST", path: "/products/:slug/view",
-    functionName: "content-engagement",
     title: "Record Product View", category: "content-engagement", authentication: true,
     description: "Records a page view for a product, deduplicated per visitor per 30 minutes.",
     pagination: false, search: false, filters: [], queryParams: [],
@@ -1457,7 +1443,6 @@ export const ENDPOINT_REGISTRY: EndpointDefinition[] = [
   },
   {
     id: "get-product-stats", method: "GET", path: "/products/:slug/stats",
-    functionName: "content-engagement",
     title: "Get Product Stats", category: "content-engagement", authentication: true,
     description: "Aggregated engagement stats plus workspace feature flags and branding for a product.",
     pagination: false, search: false, filters: [], queryParams: [],
@@ -1469,7 +1454,6 @@ export const ENDPOINT_REGISTRY: EndpointDefinition[] = [
   },
   {
     id: "get-product-related", method: "GET", path: "/products/:slug/related",
-    functionName: "content-engagement",
     title: "Get Related Products", category: "content-engagement", authentication: true,
     description: "Returns related products from the same category, ordered by views.",
     pagination: false, search: false, filters: [],
@@ -1482,7 +1466,6 @@ export const ENDPOINT_REGISTRY: EndpointDefinition[] = [
   },
   {
     id: "moderate-content-comment", method: "PUT", path: "/comments/:type/:id",
-    functionName: "content-engagement",
     title: "Moderate a Comment", category: "content-engagement", authentication: true,
     description: "Update a comment's moderation status. Requires a **secret key** with `manage:comments` permission. `:type` = `news` | `articles` | `products`.",
     pagination: false, search: false, filters: [], queryParams: [],
