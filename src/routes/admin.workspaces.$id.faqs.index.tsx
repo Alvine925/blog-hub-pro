@@ -4,6 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Pencil, Trash2, Send, Sparkles, X, Save, Plus } from "lucide-react";
+import { GenerateContentDialog } from "@/components/ai/GenerateContentDialog";
 import { adminListFaqs, upsertFaq, deleteFaq, setFaqStatus, type Faq } from "@/lib/faq.functions";
 import { cn } from "@/lib/utils";
 import {
@@ -39,6 +40,7 @@ function WorkspaceFaqs() {
   const [editing, setEditing] = useState<Faq | null>(null);
   const [form, setForm] = useState({ question: "", answer: "", category: "General" });
   const [busy, setBusy] = useState(false);
+  const [generateOpen, setGenerateOpen] = useState(false);
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ["admin", "faqs"] });
 
@@ -100,13 +102,22 @@ function WorkspaceFaqs() {
             {faqs.length} question{faqs.length !== 1 ? "s" : ""} — auto-generated from your site analysis during onboarding
           </p>
         </div>
-        <Link
-          to="/admin/workspaces/$id/faqs/new"
-          params={{ id: workspaceId }}
-          className="flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
-        >
-          <Plus className="h-3.5 w-3.5" /> New
-        </Link>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setGenerateOpen(true)}
+            className="flex items-center gap-1.5 rounded-md border border-primary/30 bg-primary/5 px-3 py-1.5 text-sm font-medium text-primary hover:bg-primary/10 transition-colors"
+          >
+            <Sparkles className="h-3.5 w-3.5" /> Generate with AI
+          </button>
+          <Link
+            to="/admin/workspaces/$id/faqs/new"
+            params={{ id: workspaceId }}
+            className="flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+          >
+            <Plus className="h-3.5 w-3.5" /> New
+          </Link>
+        </div>
       </div>
 
       {faqs.length === 0 ? (
@@ -239,6 +250,13 @@ function WorkspaceFaqs() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <GenerateContentDialog
+        open={generateOpen}
+        onOpenChange={setGenerateOpen}
+        contentType="faqs"
+        workspaceId={workspaceId}
+      />
     </div>
   );
 }

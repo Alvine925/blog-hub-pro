@@ -3,7 +3,8 @@ import { queryOptions, useSuspenseQuery, useQueryClient, useQuery } from "@tanst
 import { useServerFn } from "@tanstack/react-start";
 import { useState, useMemo } from "react";
 import { toast } from "sonner";
-import { Pencil, Trash2, Send, Newspaper, ExternalLink, X, Save, Plus, Eye, Heart, MessageSquare } from "lucide-react";
+import { Pencil, Trash2, Send, Newspaper, ExternalLink, X, Save, Plus, Eye, Heart, MessageSquare, Sparkles } from "lucide-react";
+import { GenerateContentDialog } from "@/components/ai/GenerateContentDialog";
 import { adminListNews, upsertNews, deleteNews, setNewsStatus, type NewsItem } from "@/lib/news.functions";
 import { getBatchContentEngagementStats } from "@/lib/engagement.functions";
 import { cn } from "@/lib/utils";
@@ -41,6 +42,7 @@ function WorkspaceNews() {
   const [editing, setEditing] = useState<NewsItem | null>(null);
   const [form, setForm] = useState({ title: "", excerpt: "", content: "", category: "General" });
   const [busy, setBusy] = useState(false);
+  const [generateOpen, setGenerateOpen] = useState(false);
 
   // Batch engagement stats — one request for all items, no N+1
   const newsIds = useMemo(() => news.map((n) => n.id), [news]);
@@ -112,13 +114,22 @@ function WorkspaceNews() {
             {news.length} item{news.length !== 1 ? "s" : ""} — researched and written from real industry news
           </p>
         </div>
-        <Link
-          to="/admin/workspaces/$id/news/new"
-          params={{ id: workspaceId }}
-          className="flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
-        >
-          <Plus className="h-3.5 w-3.5" /> New
-        </Link>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setGenerateOpen(true)}
+            className="flex items-center gap-1.5 rounded-md border border-primary/30 bg-primary/5 px-3 py-1.5 text-sm font-medium text-primary hover:bg-primary/10 transition-colors"
+          >
+            <Sparkles className="h-3.5 w-3.5" /> Generate with AI
+          </button>
+          <Link
+            to="/admin/workspaces/$id/news/new"
+            params={{ id: workspaceId }}
+            className="flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+          >
+            <Plus className="h-3.5 w-3.5" /> New
+          </Link>
+        </div>
       </div>
 
       {news.length === 0 ? (
@@ -281,6 +292,13 @@ function WorkspaceNews() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <GenerateContentDialog
+        open={generateOpen}
+        onOpenChange={setGenerateOpen}
+        contentType="news"
+        workspaceId={workspaceId}
+      />
     </div>
   );
 }
