@@ -198,3 +198,20 @@ export const deleteNews = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { success: true };
   });
+
+export const adminGetNews = createServerFn({ method: "GET" })
+  .validator((input: { id: string; workspaceId: string } | undefined) =>
+    z.object({ id: z.string().uuid(), workspaceId: z.string().uuid() }).parse(input),
+  )
+  .handler(async ({ data }): Promise<NewsItem> => {
+    const { getAdminClient } = await import("./supabase.server");
+    const supabase = (await getAdminClient()) as any;
+    const { data: row, error } = await supabase
+      .from("news")
+      .select("*")
+      .eq("id", data.id)
+      .eq("workspace_id", data.workspaceId)
+      .single();
+    if (error) throw new Error(error.message);
+    return row as NewsItem;
+  });

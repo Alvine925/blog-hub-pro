@@ -72,14 +72,22 @@ import { Route as AdminWorkspacesIdBlogsIndexRouteImport } from './routes/admin.
 import { Route as AdminWorkspacesIdArticlesIndexRouteImport } from './routes/admin.workspaces.$id.articles.index'
 import { Route as AdminWorkspacesIdProductsNewRouteImport } from './routes/admin.workspaces.$id.products.new'
 import { Route as AdminWorkspacesIdProductsProductIdRouteImport } from './routes/admin.workspaces.$id.products.$productId'
+import { Route as AdminWorkspacesIdNewsNewRouteImport } from './routes/admin.workspaces.$id.news.new'
+import { Route as AdminWorkspacesIdNewsNewsIdRouteImport } from './routes/admin.workspaces.$id.news.$newsId'
+import { Route as AdminWorkspacesIdFaqsNewRouteImport } from './routes/admin.workspaces.$id.faqs.new'
+import { Route as AdminWorkspacesIdFaqsFaqIdRouteImport } from './routes/admin.workspaces.$id.faqs.$faqId'
 import { Route as AdminWorkspacesIdBlogsNewRouteImport } from './routes/admin.workspaces.$id.blogs.new'
 import { Route as AdminWorkspacesIdBlogsPostIdRouteImport } from './routes/admin.workspaces.$id.blogs.$postId'
 import { Route as AdminWorkspacesIdArticlesNewRouteImport } from './routes/admin.workspaces.$id.articles.new'
 import { Route as AdminWorkspacesIdArticlesArticleIdRouteImport } from './routes/admin.workspaces.$id.articles.$articleId'
 import { Route as AdminWorkspacesIdProductsProductIdIndexRouteImport } from './routes/admin.workspaces.$id.products.$productId.index'
+import { Route as AdminWorkspacesIdNewsNewsIdIndexRouteImport } from './routes/admin.workspaces.$id.news.$newsId.index'
+import { Route as AdminWorkspacesIdFaqsFaqIdIndexRouteImport } from './routes/admin.workspaces.$id.faqs.$faqId.index'
 import { Route as AdminWorkspacesIdBlogsPostIdIndexRouteImport } from './routes/admin.workspaces.$id.blogs.$postId.index'
 import { Route as AdminWorkspacesIdArticlesArticleIdIndexRouteImport } from './routes/admin.workspaces.$id.articles.$articleId.index'
 import { Route as AdminWorkspacesIdProductsProductIdEditRouteImport } from './routes/admin.workspaces.$id.products.$productId.edit'
+import { Route as AdminWorkspacesIdNewsNewsIdEditRouteImport } from './routes/admin.workspaces.$id.news.$newsId.edit'
+import { Route as AdminWorkspacesIdFaqsFaqIdEditRouteImport } from './routes/admin.workspaces.$id.faqs.$faqId.edit'
 import { Route as AdminWorkspacesIdBlogsPostIdEditRouteImport } from './routes/admin.workspaces.$id.blogs.$postId.edit'
 import { Route as AdminWorkspacesIdArticlesArticleIdEditRouteImport } from './routes/admin.workspaces.$id.articles.$articleId.edit'
 
@@ -419,6 +427,30 @@ const AdminWorkspacesIdProductsProductIdRoute =
     path: '/$productId',
     getParentRoute: () => AdminWorkspacesIdProductsRoute,
   } as any)
+const AdminWorkspacesIdNewsNewRoute =
+  AdminWorkspacesIdNewsNewRouteImport.update({
+    id: '/news/new',
+    path: '/news/new',
+    getParentRoute: () => AdminWorkspacesIdRoute,
+  } as any)
+const AdminWorkspacesIdNewsNewsIdRoute =
+  AdminWorkspacesIdNewsNewsIdRouteImport.update({
+    id: '/news/$newsId',
+    path: '/news/$newsId',
+    getParentRoute: () => AdminWorkspacesIdRoute,
+  } as any)
+const AdminWorkspacesIdFaqsNewRoute =
+  AdminWorkspacesIdFaqsNewRouteImport.update({
+    id: '/faqs/new',
+    path: '/faqs/new',
+    getParentRoute: () => AdminWorkspacesIdRoute,
+  } as any)
+const AdminWorkspacesIdFaqsFaqIdRoute =
+  AdminWorkspacesIdFaqsFaqIdRouteImport.update({
+    id: '/faqs/$faqId',
+    path: '/faqs/$faqId',
+    getParentRoute: () => AdminWorkspacesIdRoute,
+  } as any)
 const AdminWorkspacesIdBlogsNewRoute =
   AdminWorkspacesIdBlogsNewRouteImport.update({
     id: '/new',
@@ -449,6 +481,18 @@ const AdminWorkspacesIdProductsProductIdIndexRoute =
     path: '/',
     getParentRoute: () => AdminWorkspacesIdProductsProductIdRoute,
   } as any)
+const AdminWorkspacesIdNewsNewsIdIndexRoute =
+  AdminWorkspacesIdNewsNewsIdIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AdminWorkspacesIdNewsNewsIdRoute,
+  } as any)
+const AdminWorkspacesIdFaqsFaqIdIndexRoute =
+  AdminWorkspacesIdFaqsFaqIdIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AdminWorkspacesIdFaqsFaqIdRoute,
+  } as any)
 const AdminWorkspacesIdBlogsPostIdIndexRoute =
   AdminWorkspacesIdBlogsPostIdIndexRouteImport.update({
     id: '/',
@@ -466,6 +510,18 @@ const AdminWorkspacesIdProductsProductIdEditRoute =
     id: '/edit',
     path: '/edit',
     getParentRoute: () => AdminWorkspacesIdProductsProductIdRoute,
+  } as any)
+const AdminWorkspacesIdNewsNewsIdEditRoute =
+  AdminWorkspacesIdNewsNewsIdEditRouteImport.update({
+    id: '/edit',
+    path: '/edit',
+    getParentRoute: () => AdminWorkspacesIdNewsNewsIdRoute,
+  } as any)
+const AdminWorkspacesIdFaqsFaqIdEditRoute =
+  AdminWorkspacesIdFaqsFaqIdEditRouteImport.update({
+    id: '/edit',
+    path: '/edit',
+    getParentRoute: () => AdminWorkspacesIdFaqsFaqIdRoute,
   } as any)
 const AdminWorkspacesIdBlogsPostIdEditRoute =
   AdminWorkspacesIdBlogsPostIdEditRouteImport.update({
@@ -541,6 +597,10 @@ export interface FileRoutesByFullPath {
   '/admin/workspaces/$id/articles/new': typeof AdminWorkspacesIdArticlesNewRoute
   '/admin/workspaces/$id/blogs/$postId': typeof AdminWorkspacesIdBlogsPostIdRouteWithChildren
   '/admin/workspaces/$id/blogs/new': typeof AdminWorkspacesIdBlogsNewRoute
+  '/admin/workspaces/$id/faqs/$faqId': typeof AdminWorkspacesIdFaqsFaqIdRouteWithChildren
+  '/admin/workspaces/$id/faqs/new': typeof AdminWorkspacesIdFaqsNewRoute
+  '/admin/workspaces/$id/news/$newsId': typeof AdminWorkspacesIdNewsNewsIdRouteWithChildren
+  '/admin/workspaces/$id/news/new': typeof AdminWorkspacesIdNewsNewRoute
   '/admin/workspaces/$id/products/$productId': typeof AdminWorkspacesIdProductsProductIdRouteWithChildren
   '/admin/workspaces/$id/products/new': typeof AdminWorkspacesIdProductsNewRoute
   '/admin/workspaces/$id/articles/': typeof AdminWorkspacesIdArticlesIndexRoute
@@ -550,9 +610,13 @@ export interface FileRoutesByFullPath {
   '/admin/workspaces/$id/products/': typeof AdminWorkspacesIdProductsIndexRoute
   '/admin/workspaces/$id/articles/$articleId/edit': typeof AdminWorkspacesIdArticlesArticleIdEditRoute
   '/admin/workspaces/$id/blogs/$postId/edit': typeof AdminWorkspacesIdBlogsPostIdEditRoute
+  '/admin/workspaces/$id/faqs/$faqId/edit': typeof AdminWorkspacesIdFaqsFaqIdEditRoute
+  '/admin/workspaces/$id/news/$newsId/edit': typeof AdminWorkspacesIdNewsNewsIdEditRoute
   '/admin/workspaces/$id/products/$productId/edit': typeof AdminWorkspacesIdProductsProductIdEditRoute
   '/admin/workspaces/$id/articles/$articleId/': typeof AdminWorkspacesIdArticlesArticleIdIndexRoute
   '/admin/workspaces/$id/blogs/$postId/': typeof AdminWorkspacesIdBlogsPostIdIndexRoute
+  '/admin/workspaces/$id/faqs/$faqId/': typeof AdminWorkspacesIdFaqsFaqIdIndexRoute
+  '/admin/workspaces/$id/news/$newsId/': typeof AdminWorkspacesIdNewsNewsIdIndexRoute
   '/admin/workspaces/$id/products/$productId/': typeof AdminWorkspacesIdProductsProductIdIndexRoute
 }
 export interface FileRoutesByTo {
@@ -608,6 +672,8 @@ export interface FileRoutesByTo {
   '/admin/workspaces/$id': typeof AdminWorkspacesIdIndexRoute
   '/admin/workspaces/$id/articles/new': typeof AdminWorkspacesIdArticlesNewRoute
   '/admin/workspaces/$id/blogs/new': typeof AdminWorkspacesIdBlogsNewRoute
+  '/admin/workspaces/$id/faqs/new': typeof AdminWorkspacesIdFaqsNewRoute
+  '/admin/workspaces/$id/news/new': typeof AdminWorkspacesIdNewsNewRoute
   '/admin/workspaces/$id/products/new': typeof AdminWorkspacesIdProductsNewRoute
   '/admin/workspaces/$id/articles': typeof AdminWorkspacesIdArticlesIndexRoute
   '/admin/workspaces/$id/blogs': typeof AdminWorkspacesIdBlogsIndexRoute
@@ -616,9 +682,13 @@ export interface FileRoutesByTo {
   '/admin/workspaces/$id/products': typeof AdminWorkspacesIdProductsIndexRoute
   '/admin/workspaces/$id/articles/$articleId/edit': typeof AdminWorkspacesIdArticlesArticleIdEditRoute
   '/admin/workspaces/$id/blogs/$postId/edit': typeof AdminWorkspacesIdBlogsPostIdEditRoute
+  '/admin/workspaces/$id/faqs/$faqId/edit': typeof AdminWorkspacesIdFaqsFaqIdEditRoute
+  '/admin/workspaces/$id/news/$newsId/edit': typeof AdminWorkspacesIdNewsNewsIdEditRoute
   '/admin/workspaces/$id/products/$productId/edit': typeof AdminWorkspacesIdProductsProductIdEditRoute
   '/admin/workspaces/$id/articles/$articleId': typeof AdminWorkspacesIdArticlesArticleIdIndexRoute
   '/admin/workspaces/$id/blogs/$postId': typeof AdminWorkspacesIdBlogsPostIdIndexRoute
+  '/admin/workspaces/$id/faqs/$faqId': typeof AdminWorkspacesIdFaqsFaqIdIndexRoute
+  '/admin/workspaces/$id/news/$newsId': typeof AdminWorkspacesIdNewsNewsIdIndexRoute
   '/admin/workspaces/$id/products/$productId': typeof AdminWorkspacesIdProductsProductIdIndexRoute
 }
 export interface FileRoutesById {
@@ -683,6 +753,10 @@ export interface FileRoutesById {
   '/admin/workspaces/$id/articles/new': typeof AdminWorkspacesIdArticlesNewRoute
   '/admin/workspaces/$id/blogs/$postId': typeof AdminWorkspacesIdBlogsPostIdRouteWithChildren
   '/admin/workspaces/$id/blogs/new': typeof AdminWorkspacesIdBlogsNewRoute
+  '/admin/workspaces/$id/faqs/$faqId': typeof AdminWorkspacesIdFaqsFaqIdRouteWithChildren
+  '/admin/workspaces/$id/faqs/new': typeof AdminWorkspacesIdFaqsNewRoute
+  '/admin/workspaces/$id/news/$newsId': typeof AdminWorkspacesIdNewsNewsIdRouteWithChildren
+  '/admin/workspaces/$id/news/new': typeof AdminWorkspacesIdNewsNewRoute
   '/admin/workspaces/$id/products/$productId': typeof AdminWorkspacesIdProductsProductIdRouteWithChildren
   '/admin/workspaces/$id/products/new': typeof AdminWorkspacesIdProductsNewRoute
   '/admin/workspaces/$id/articles/': typeof AdminWorkspacesIdArticlesIndexRoute
@@ -692,9 +766,13 @@ export interface FileRoutesById {
   '/admin/workspaces/$id/products/': typeof AdminWorkspacesIdProductsIndexRoute
   '/admin/workspaces/$id/articles/$articleId/edit': typeof AdminWorkspacesIdArticlesArticleIdEditRoute
   '/admin/workspaces/$id/blogs/$postId/edit': typeof AdminWorkspacesIdBlogsPostIdEditRoute
+  '/admin/workspaces/$id/faqs/$faqId/edit': typeof AdminWorkspacesIdFaqsFaqIdEditRoute
+  '/admin/workspaces/$id/news/$newsId/edit': typeof AdminWorkspacesIdNewsNewsIdEditRoute
   '/admin/workspaces/$id/products/$productId/edit': typeof AdminWorkspacesIdProductsProductIdEditRoute
   '/admin/workspaces/$id/articles/$articleId/': typeof AdminWorkspacesIdArticlesArticleIdIndexRoute
   '/admin/workspaces/$id/blogs/$postId/': typeof AdminWorkspacesIdBlogsPostIdIndexRoute
+  '/admin/workspaces/$id/faqs/$faqId/': typeof AdminWorkspacesIdFaqsFaqIdIndexRoute
+  '/admin/workspaces/$id/news/$newsId/': typeof AdminWorkspacesIdNewsNewsIdIndexRoute
   '/admin/workspaces/$id/products/$productId/': typeof AdminWorkspacesIdProductsProductIdIndexRoute
 }
 export interface FileRouteTypes {
@@ -760,6 +838,10 @@ export interface FileRouteTypes {
     | '/admin/workspaces/$id/articles/new'
     | '/admin/workspaces/$id/blogs/$postId'
     | '/admin/workspaces/$id/blogs/new'
+    | '/admin/workspaces/$id/faqs/$faqId'
+    | '/admin/workspaces/$id/faqs/new'
+    | '/admin/workspaces/$id/news/$newsId'
+    | '/admin/workspaces/$id/news/new'
     | '/admin/workspaces/$id/products/$productId'
     | '/admin/workspaces/$id/products/new'
     | '/admin/workspaces/$id/articles/'
@@ -769,9 +851,13 @@ export interface FileRouteTypes {
     | '/admin/workspaces/$id/products/'
     | '/admin/workspaces/$id/articles/$articleId/edit'
     | '/admin/workspaces/$id/blogs/$postId/edit'
+    | '/admin/workspaces/$id/faqs/$faqId/edit'
+    | '/admin/workspaces/$id/news/$newsId/edit'
     | '/admin/workspaces/$id/products/$productId/edit'
     | '/admin/workspaces/$id/articles/$articleId/'
     | '/admin/workspaces/$id/blogs/$postId/'
+    | '/admin/workspaces/$id/faqs/$faqId/'
+    | '/admin/workspaces/$id/news/$newsId/'
     | '/admin/workspaces/$id/products/$productId/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -827,6 +913,8 @@ export interface FileRouteTypes {
     | '/admin/workspaces/$id'
     | '/admin/workspaces/$id/articles/new'
     | '/admin/workspaces/$id/blogs/new'
+    | '/admin/workspaces/$id/faqs/new'
+    | '/admin/workspaces/$id/news/new'
     | '/admin/workspaces/$id/products/new'
     | '/admin/workspaces/$id/articles'
     | '/admin/workspaces/$id/blogs'
@@ -835,9 +923,13 @@ export interface FileRouteTypes {
     | '/admin/workspaces/$id/products'
     | '/admin/workspaces/$id/articles/$articleId/edit'
     | '/admin/workspaces/$id/blogs/$postId/edit'
+    | '/admin/workspaces/$id/faqs/$faqId/edit'
+    | '/admin/workspaces/$id/news/$newsId/edit'
     | '/admin/workspaces/$id/products/$productId/edit'
     | '/admin/workspaces/$id/articles/$articleId'
     | '/admin/workspaces/$id/blogs/$postId'
+    | '/admin/workspaces/$id/faqs/$faqId'
+    | '/admin/workspaces/$id/news/$newsId'
     | '/admin/workspaces/$id/products/$productId'
   id:
     | '__root__'
@@ -901,6 +993,10 @@ export interface FileRouteTypes {
     | '/admin/workspaces/$id/articles/new'
     | '/admin/workspaces/$id/blogs/$postId'
     | '/admin/workspaces/$id/blogs/new'
+    | '/admin/workspaces/$id/faqs/$faqId'
+    | '/admin/workspaces/$id/faqs/new'
+    | '/admin/workspaces/$id/news/$newsId'
+    | '/admin/workspaces/$id/news/new'
     | '/admin/workspaces/$id/products/$productId'
     | '/admin/workspaces/$id/products/new'
     | '/admin/workspaces/$id/articles/'
@@ -910,9 +1006,13 @@ export interface FileRouteTypes {
     | '/admin/workspaces/$id/products/'
     | '/admin/workspaces/$id/articles/$articleId/edit'
     | '/admin/workspaces/$id/blogs/$postId/edit'
+    | '/admin/workspaces/$id/faqs/$faqId/edit'
+    | '/admin/workspaces/$id/news/$newsId/edit'
     | '/admin/workspaces/$id/products/$productId/edit'
     | '/admin/workspaces/$id/articles/$articleId/'
     | '/admin/workspaces/$id/blogs/$postId/'
+    | '/admin/workspaces/$id/faqs/$faqId/'
+    | '/admin/workspaces/$id/news/$newsId/'
     | '/admin/workspaces/$id/products/$productId/'
   fileRoutesById: FileRoutesById
 }
@@ -1369,6 +1469,34 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminWorkspacesIdProductsProductIdRouteImport
       parentRoute: typeof AdminWorkspacesIdProductsRoute
     }
+    '/admin/workspaces/$id/news/new': {
+      id: '/admin/workspaces/$id/news/new'
+      path: '/news/new'
+      fullPath: '/admin/workspaces/$id/news/new'
+      preLoaderRoute: typeof AdminWorkspacesIdNewsNewRouteImport
+      parentRoute: typeof AdminWorkspacesIdRoute
+    }
+    '/admin/workspaces/$id/news/$newsId': {
+      id: '/admin/workspaces/$id/news/$newsId'
+      path: '/news/$newsId'
+      fullPath: '/admin/workspaces/$id/news/$newsId'
+      preLoaderRoute: typeof AdminWorkspacesIdNewsNewsIdRouteImport
+      parentRoute: typeof AdminWorkspacesIdRoute
+    }
+    '/admin/workspaces/$id/faqs/new': {
+      id: '/admin/workspaces/$id/faqs/new'
+      path: '/faqs/new'
+      fullPath: '/admin/workspaces/$id/faqs/new'
+      preLoaderRoute: typeof AdminWorkspacesIdFaqsNewRouteImport
+      parentRoute: typeof AdminWorkspacesIdRoute
+    }
+    '/admin/workspaces/$id/faqs/$faqId': {
+      id: '/admin/workspaces/$id/faqs/$faqId'
+      path: '/faqs/$faqId'
+      fullPath: '/admin/workspaces/$id/faqs/$faqId'
+      preLoaderRoute: typeof AdminWorkspacesIdFaqsFaqIdRouteImport
+      parentRoute: typeof AdminWorkspacesIdRoute
+    }
     '/admin/workspaces/$id/blogs/new': {
       id: '/admin/workspaces/$id/blogs/new'
       path: '/new'
@@ -1404,6 +1532,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminWorkspacesIdProductsProductIdIndexRouteImport
       parentRoute: typeof AdminWorkspacesIdProductsProductIdRoute
     }
+    '/admin/workspaces/$id/news/$newsId/': {
+      id: '/admin/workspaces/$id/news/$newsId/'
+      path: '/'
+      fullPath: '/admin/workspaces/$id/news/$newsId/'
+      preLoaderRoute: typeof AdminWorkspacesIdNewsNewsIdIndexRouteImport
+      parentRoute: typeof AdminWorkspacesIdNewsNewsIdRoute
+    }
+    '/admin/workspaces/$id/faqs/$faqId/': {
+      id: '/admin/workspaces/$id/faqs/$faqId/'
+      path: '/'
+      fullPath: '/admin/workspaces/$id/faqs/$faqId/'
+      preLoaderRoute: typeof AdminWorkspacesIdFaqsFaqIdIndexRouteImport
+      parentRoute: typeof AdminWorkspacesIdFaqsFaqIdRoute
+    }
     '/admin/workspaces/$id/blogs/$postId/': {
       id: '/admin/workspaces/$id/blogs/$postId/'
       path: '/'
@@ -1424,6 +1566,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/admin/workspaces/$id/products/$productId/edit'
       preLoaderRoute: typeof AdminWorkspacesIdProductsProductIdEditRouteImport
       parentRoute: typeof AdminWorkspacesIdProductsProductIdRoute
+    }
+    '/admin/workspaces/$id/news/$newsId/edit': {
+      id: '/admin/workspaces/$id/news/$newsId/edit'
+      path: '/edit'
+      fullPath: '/admin/workspaces/$id/news/$newsId/edit'
+      preLoaderRoute: typeof AdminWorkspacesIdNewsNewsIdEditRouteImport
+      parentRoute: typeof AdminWorkspacesIdNewsNewsIdRoute
+    }
+    '/admin/workspaces/$id/faqs/$faqId/edit': {
+      id: '/admin/workspaces/$id/faqs/$faqId/edit'
+      path: '/edit'
+      fullPath: '/admin/workspaces/$id/faqs/$faqId/edit'
+      preLoaderRoute: typeof AdminWorkspacesIdFaqsFaqIdEditRouteImport
+      parentRoute: typeof AdminWorkspacesIdFaqsFaqIdRoute
     }
     '/admin/workspaces/$id/blogs/$postId/edit': {
       id: '/admin/workspaces/$id/blogs/$postId/edit'
@@ -1564,6 +1720,39 @@ const AdminWorkspacesIdProductsRouteWithChildren =
     AdminWorkspacesIdProductsRouteChildren,
   )
 
+interface AdminWorkspacesIdFaqsFaqIdRouteChildren {
+  AdminWorkspacesIdFaqsFaqIdEditRoute: typeof AdminWorkspacesIdFaqsFaqIdEditRoute
+  AdminWorkspacesIdFaqsFaqIdIndexRoute: typeof AdminWorkspacesIdFaqsFaqIdIndexRoute
+}
+
+const AdminWorkspacesIdFaqsFaqIdRouteChildren: AdminWorkspacesIdFaqsFaqIdRouteChildren =
+  {
+    AdminWorkspacesIdFaqsFaqIdEditRoute: AdminWorkspacesIdFaqsFaqIdEditRoute,
+    AdminWorkspacesIdFaqsFaqIdIndexRoute: AdminWorkspacesIdFaqsFaqIdIndexRoute,
+  }
+
+const AdminWorkspacesIdFaqsFaqIdRouteWithChildren =
+  AdminWorkspacesIdFaqsFaqIdRoute._addFileChildren(
+    AdminWorkspacesIdFaqsFaqIdRouteChildren,
+  )
+
+interface AdminWorkspacesIdNewsNewsIdRouteChildren {
+  AdminWorkspacesIdNewsNewsIdEditRoute: typeof AdminWorkspacesIdNewsNewsIdEditRoute
+  AdminWorkspacesIdNewsNewsIdIndexRoute: typeof AdminWorkspacesIdNewsNewsIdIndexRoute
+}
+
+const AdminWorkspacesIdNewsNewsIdRouteChildren: AdminWorkspacesIdNewsNewsIdRouteChildren =
+  {
+    AdminWorkspacesIdNewsNewsIdEditRoute: AdminWorkspacesIdNewsNewsIdEditRoute,
+    AdminWorkspacesIdNewsNewsIdIndexRoute:
+      AdminWorkspacesIdNewsNewsIdIndexRoute,
+  }
+
+const AdminWorkspacesIdNewsNewsIdRouteWithChildren =
+  AdminWorkspacesIdNewsNewsIdRoute._addFileChildren(
+    AdminWorkspacesIdNewsNewsIdRouteChildren,
+  )
+
 interface AdminWorkspacesIdRouteChildren {
   AdminWorkspacesIdAboutRoute: typeof AdminWorkspacesIdAboutRoute
   AdminWorkspacesIdAiAssistantRoute: typeof AdminWorkspacesIdAiAssistantRoute
@@ -1584,6 +1773,10 @@ interface AdminWorkspacesIdRouteChildren {
   AdminWorkspacesIdUsersRoute: typeof AdminWorkspacesIdUsersRoute
   AdminWorkspacesIdWebhooksRoute: typeof AdminWorkspacesIdWebhooksRoute
   AdminWorkspacesIdIndexRoute: typeof AdminWorkspacesIdIndexRoute
+  AdminWorkspacesIdFaqsFaqIdRoute: typeof AdminWorkspacesIdFaqsFaqIdRouteWithChildren
+  AdminWorkspacesIdFaqsNewRoute: typeof AdminWorkspacesIdFaqsNewRoute
+  AdminWorkspacesIdNewsNewsIdRoute: typeof AdminWorkspacesIdNewsNewsIdRouteWithChildren
+  AdminWorkspacesIdNewsNewRoute: typeof AdminWorkspacesIdNewsNewRoute
   AdminWorkspacesIdFaqsIndexRoute: typeof AdminWorkspacesIdFaqsIndexRoute
   AdminWorkspacesIdNewsIndexRoute: typeof AdminWorkspacesIdNewsIndexRoute
 }
@@ -1610,6 +1803,11 @@ const AdminWorkspacesIdRouteChildren: AdminWorkspacesIdRouteChildren = {
   AdminWorkspacesIdUsersRoute: AdminWorkspacesIdUsersRoute,
   AdminWorkspacesIdWebhooksRoute: AdminWorkspacesIdWebhooksRoute,
   AdminWorkspacesIdIndexRoute: AdminWorkspacesIdIndexRoute,
+  AdminWorkspacesIdFaqsFaqIdRoute: AdminWorkspacesIdFaqsFaqIdRouteWithChildren,
+  AdminWorkspacesIdFaqsNewRoute: AdminWorkspacesIdFaqsNewRoute,
+  AdminWorkspacesIdNewsNewsIdRoute:
+    AdminWorkspacesIdNewsNewsIdRouteWithChildren,
+  AdminWorkspacesIdNewsNewRoute: AdminWorkspacesIdNewsNewRoute,
   AdminWorkspacesIdFaqsIndexRoute: AdminWorkspacesIdFaqsIndexRoute,
   AdminWorkspacesIdNewsIndexRoute: AdminWorkspacesIdNewsIndexRoute,
 }

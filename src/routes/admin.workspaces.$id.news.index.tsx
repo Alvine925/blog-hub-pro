@@ -1,9 +1,9 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { queryOptions, useSuspenseQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 import { toast } from "sonner";
-import { Pencil, Trash2, Send, Newspaper, ExternalLink, X, Save } from "lucide-react";
+import { Pencil, Trash2, Send, Newspaper, ExternalLink, X, Save, Plus } from "lucide-react";
 import { adminListNews, upsertNews, deleteNews, setNewsStatus, type NewsItem } from "@/lib/news.functions";
 import { cn } from "@/lib/utils";
 import {
@@ -101,6 +101,13 @@ function WorkspaceNews() {
             {news.length} item{news.length !== 1 ? "s" : ""} — researched and written from real industry news
           </p>
         </div>
+        <Link
+          to="/admin/workspaces/$id/news/new"
+          params={{ id: workspaceId }}
+          className="flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+        >
+          <Plus className="h-3.5 w-3.5" /> New
+        </Link>
       </div>
 
       {news.length === 0 ? (

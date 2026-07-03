@@ -48,7 +48,7 @@ export interface EndpointDefinition {
   /** Detailed description for endpoint page */
   longDescription?: string;
   /** Category / group in the sidebar */
-  category: "posts" | "faqs" | "news" | "collections" | "media" | "search" | "engagement" | "meta";
+  category: "posts" | "faqs" | "news" | "collections" | "media" | "search" | "engagement" | "content-engagement" | "meta";
   /** Whether a Bearer token is required */
   authentication: boolean;
   /** Supports pagination (limit, offset) */
@@ -61,6 +61,10 @@ export interface EndpointDefinition {
   queryParams: QueryParam[];
   /** Path params (e.g. :slug) */
   pathParams?: QueryParam[];
+  /** Supabase edge function name (for edge-function-based endpoints) */
+  functionName?: string;
+  /** Example request body (for POST/PUT endpoints) */
+  requestBody?: object;
   /** Example response JSON */
   exampleResponse: object;
   /** Top-level response fields */
@@ -960,6 +964,241 @@ export const ENDPOINT_REGISTRY: EndpointDefinition[] = [
     addedInVersion: "v1",
     tags: ["stats", "analytics", "engagement", "feature-flags", "branding"],
   },
+
+  // ── content-engagement: News ─────────────────────────────────────────────
+
+  {
+    id: "get-news-likes", method: "GET", path: "/news/:slug/likes",
+    functionName: "content-engagement",
+    title: "Get News Likes", category: "content-engagement", authentication: true,
+    description: "Returns the total like count for a news item and whether the current visitor has liked it.",
+    pagination: false, search: false, filters: [], queryParams: [],
+    pathParams: [{ name: "slug", type: "string", required: true, description: "News item slug.", example: "product-launch-2026" }],
+    exampleResponse: { data: { liked: false, totalLikes: 28 } },
+    possibleErrors: [401, 403, 404, 429, 500],
+    versions: [{ version: "v1", status: "stable" }], addedInVersion: "v1",
+    tags: ["likes", "engagement", "news"],
+  },
+  {
+    id: "like-news", method: "POST", path: "/news/:slug/likes",
+    functionName: "content-engagement",
+    title: "Like a News Item", category: "content-engagement", authentication: true,
+    description: "Like a news item. Idempotent per visitor. Requires `write:engagement` permission.",
+    pagination: false, search: false, filters: [], queryParams: [],
+    pathParams: [{ name: "slug", type: "string", required: true, description: "News item slug.", example: "product-launch-2026" }],
+    exampleResponse: { data: { liked: true, totalLikes: 29 } },
+    possibleErrors: [401, 403, 404, 429, 500],
+    versions: [{ version: "v1", status: "stable" }], addedInVersion: "v1",
+    tags: ["likes", "engagement", "news", "write"],
+  },
+  {
+    id: "get-news-comments", method: "GET", path: "/news/:slug/comments",
+    functionName: "content-engagement",
+    title: "List News Comments", category: "content-engagement", authentication: true,
+    description: "Returns approved, threaded comments for a news item. Supports pagination.",
+    pagination: true, search: false, filters: [],
+    queryParams: [
+      { name: "page", type: "integer", required: false, description: "Page number.", example: "1" },
+      { name: "limit", type: "integer", required: false, description: "Items per page (max 100).", example: "20" },
+    ],
+    pathParams: [{ name: "slug", type: "string", required: true, description: "News item slug.", example: "product-launch-2026" }],
+    exampleResponse: { data: [], meta: { page: 1, limit: 20, total: 0 } },
+    possibleErrors: [401, 403, 404, 429, 500],
+    versions: [{ version: "v1", status: "stable" }], addedInVersion: "v1",
+    tags: ["comments", "engagement", "news"],
+  },
+  {
+    id: "post-news-comment", method: "POST", path: "/news/:slug/comments",
+    functionName: "content-engagement",
+    title: "Submit a News Comment", category: "content-engagement", authentication: true,
+    description: "Submit a comment on a news item. Requires `write:engagement`. Auto-approval depends on workspace settings.",
+    pagination: false, search: false, filters: [], queryParams: [],
+    pathParams: [{ name: "slug", type: "string", required: true, description: "News item slug.", example: "product-launch-2026" }],
+    requestBody: { name: "string (required)", email: "string (required)", content: "string (required)", parent_id: "uuid (optional)" },
+    exampleResponse: { data: { id: "...", author_name: "Jane", content: "Great news!", status: "pending" } },
+    possibleErrors: [401, 403, 404, 422, 429, 500],
+    versions: [{ version: "v1", status: "stable" }], addedInVersion: "v1",
+    tags: ["comments", "engagement", "news", "write"],
+  },
+  {
+    id: "record-news-view", method: "POST", path: "/news/:slug/view",
+    functionName: "content-engagement",
+    title: "Record News View", category: "content-engagement", authentication: true,
+    description: "Records a page view for a news item, deduplicated per visitor per 30 minutes.",
+    pagination: false, search: false, filters: [], queryParams: [],
+    pathParams: [{ name: "slug", type: "string", required: true, description: "News item slug.", example: "product-launch-2026" }],
+    requestBody: { referrer: "string (optional)" },
+    exampleResponse: { data: { counted: true, totalViews: 512 } },
+    possibleErrors: [401, 403, 404, 429, 500],
+    versions: [{ version: "v1", status: "stable" }], addedInVersion: "v1",
+    tags: ["views", "analytics", "engagement", "news", "write"],
+  },
+  {
+    id: "get-news-stats", method: "GET", path: "/news/:slug/stats",
+    functionName: "content-engagement",
+    title: "Get News Stats", category: "content-engagement", authentication: true,
+    description: "Aggregated engagement stats (views, likes, comments, shares) plus workspace feature flags and branding for a news item.",
+    pagination: false, search: false, filters: [], queryParams: [],
+    pathParams: [{ name: "slug", type: "string", required: true, description: "News item slug.", example: "product-launch-2026" }],
+    exampleResponse: { data: { stats: { views: 512, likes: 28, comments: 4, shares: 9 }, features: { likes: true, comments: true }, branding: { enabled: true, text: "Powered by Lunar CMS" } } },
+    possibleErrors: [401, 403, 404, 429, 500],
+    versions: [{ version: "v1", status: "stable" }], addedInVersion: "v1",
+    tags: ["stats", "analytics", "engagement", "news"],
+  },
+
+  // ── content-engagement: Articles ─────────────────────────────────────────
+
+  {
+    id: "get-article-likes", method: "GET", path: "/articles/:slug/likes",
+    functionName: "content-engagement",
+    title: "Get Article Likes", category: "content-engagement", authentication: true,
+    description: "Returns the total like count for an article and whether the current visitor has liked it.",
+    pagination: false, search: false, filters: [], queryParams: [],
+    pathParams: [{ name: "slug", type: "string", required: true, description: "Article slug.", example: "getting-started-guide" }],
+    exampleResponse: { data: { liked: false, totalLikes: 74 } },
+    possibleErrors: [401, 403, 404, 429, 500],
+    versions: [{ version: "v1", status: "stable" }], addedInVersion: "v1",
+    tags: ["likes", "engagement", "articles"],
+  },
+  {
+    id: "get-article-comments", method: "GET", path: "/articles/:slug/comments",
+    functionName: "content-engagement",
+    title: "List Article Comments", category: "content-engagement", authentication: true,
+    description: "Returns approved, threaded comments for an article. Supports pagination.",
+    pagination: true, search: false, filters: [],
+    queryParams: [
+      { name: "page", type: "integer", required: false, description: "Page number.", example: "1" },
+      { name: "limit", type: "integer", required: false, description: "Items per page (max 100).", example: "20" },
+    ],
+    pathParams: [{ name: "slug", type: "string", required: true, description: "Article slug.", example: "getting-started-guide" }],
+    exampleResponse: { data: [], meta: { page: 1, limit: 20, total: 0 } },
+    possibleErrors: [401, 403, 404, 429, 500],
+    versions: [{ version: "v1", status: "stable" }], addedInVersion: "v1",
+    tags: ["comments", "engagement", "articles"],
+  },
+  {
+    id: "record-article-view", method: "POST", path: "/articles/:slug/view",
+    functionName: "content-engagement",
+    title: "Record Article View", category: "content-engagement", authentication: true,
+    description: "Records a page view for an article, deduplicated per visitor per 30 minutes.",
+    pagination: false, search: false, filters: [], queryParams: [],
+    pathParams: [{ name: "slug", type: "string", required: true, description: "Article slug.", example: "getting-started-guide" }],
+    requestBody: { referrer: "string (optional)" },
+    exampleResponse: { data: { counted: true, totalViews: 1203 } },
+    possibleErrors: [401, 403, 404, 429, 500],
+    versions: [{ version: "v1", status: "stable" }], addedInVersion: "v1",
+    tags: ["views", "analytics", "engagement", "articles", "write"],
+  },
+  {
+    id: "get-article-stats", method: "GET", path: "/articles/:slug/stats",
+    functionName: "content-engagement",
+    title: "Get Article Stats", category: "content-engagement", authentication: true,
+    description: "Aggregated engagement stats plus workspace feature flags and branding for an article.",
+    pagination: false, search: false, filters: [], queryParams: [],
+    pathParams: [{ name: "slug", type: "string", required: true, description: "Article slug.", example: "getting-started-guide" }],
+    exampleResponse: { data: { stats: { views: 1203, likes: 74, comments: 11, shares: 22 }, features: { likes: true, comments: true }, branding: { enabled: true, text: "Powered by Lunar CMS" } } },
+    possibleErrors: [401, 403, 404, 429, 500],
+    versions: [{ version: "v1", status: "stable" }], addedInVersion: "v1",
+    tags: ["stats", "analytics", "engagement", "articles"],
+  },
+  {
+    id: "get-article-related", method: "GET", path: "/articles/:slug/related",
+    functionName: "content-engagement",
+    title: "Get Related Articles", category: "content-engagement", authentication: true,
+    description: "Returns related articles from the same category, ordered by views.",
+    pagination: false, search: false, filters: [],
+    queryParams: [{ name: "limit", type: "integer", required: false, description: "Max results (1–20, default 5).", example: "5" }],
+    pathParams: [{ name: "slug", type: "string", required: true, description: "Article slug.", example: "getting-started-guide" }],
+    exampleResponse: { data: [], meta: { total: 0 } },
+    possibleErrors: [401, 403, 404, 429, 500],
+    versions: [{ version: "v1", status: "stable" }], addedInVersion: "v1",
+    tags: ["related", "articles", "engagement"],
+  },
+
+  // ── content-engagement: Products ─────────────────────────────────────────
+
+  {
+    id: "get-product-likes", method: "GET", path: "/products/:slug/likes",
+    functionName: "content-engagement",
+    title: "Get Product Likes", category: "content-engagement", authentication: true,
+    description: "Returns the total like count for a product and whether the current visitor has liked it.",
+    pagination: false, search: false, filters: [], queryParams: [],
+    pathParams: [{ name: "slug", type: "string", required: true, description: "Product slug.", example: "wireless-headphones-pro" }],
+    exampleResponse: { data: { liked: false, totalLikes: 142 } },
+    possibleErrors: [401, 403, 404, 429, 500],
+    versions: [{ version: "v1", status: "stable" }], addedInVersion: "v1",
+    tags: ["likes", "engagement", "products"],
+  },
+  {
+    id: "get-product-comments", method: "GET", path: "/products/:slug/comments",
+    functionName: "content-engagement",
+    title: "List Product Comments", category: "content-engagement", authentication: true,
+    description: "Returns approved, threaded comments for a product. Supports pagination.",
+    pagination: true, search: false, filters: [],
+    queryParams: [
+      { name: "page", type: "integer", required: false, description: "Page number.", example: "1" },
+      { name: "limit", type: "integer", required: false, description: "Items per page (max 100).", example: "20" },
+    ],
+    pathParams: [{ name: "slug", type: "string", required: true, description: "Product slug.", example: "wireless-headphones-pro" }],
+    exampleResponse: { data: [], meta: { page: 1, limit: 20, total: 0 } },
+    possibleErrors: [401, 403, 404, 429, 500],
+    versions: [{ version: "v1", status: "stable" }], addedInVersion: "v1",
+    tags: ["comments", "engagement", "products"],
+  },
+  {
+    id: "record-product-view", method: "POST", path: "/products/:slug/view",
+    functionName: "content-engagement",
+    title: "Record Product View", category: "content-engagement", authentication: true,
+    description: "Records a page view for a product, deduplicated per visitor per 30 minutes.",
+    pagination: false, search: false, filters: [], queryParams: [],
+    pathParams: [{ name: "slug", type: "string", required: true, description: "Product slug.", example: "wireless-headphones-pro" }],
+    requestBody: { referrer: "string (optional)" },
+    exampleResponse: { data: { counted: true, totalViews: 4891 } },
+    possibleErrors: [401, 403, 404, 429, 500],
+    versions: [{ version: "v1", status: "stable" }], addedInVersion: "v1",
+    tags: ["views", "analytics", "engagement", "products", "write"],
+  },
+  {
+    id: "get-product-stats", method: "GET", path: "/products/:slug/stats",
+    functionName: "content-engagement",
+    title: "Get Product Stats", category: "content-engagement", authentication: true,
+    description: "Aggregated engagement stats plus workspace feature flags and branding for a product.",
+    pagination: false, search: false, filters: [], queryParams: [],
+    pathParams: [{ name: "slug", type: "string", required: true, description: "Product slug.", example: "wireless-headphones-pro" }],
+    exampleResponse: { data: { stats: { views: 4891, likes: 142, comments: 37, shares: 65 }, features: { likes: true, comments: true }, branding: { enabled: true, text: "Powered by Lunar CMS" } } },
+    possibleErrors: [401, 403, 404, 429, 500],
+    versions: [{ version: "v1", status: "stable" }], addedInVersion: "v1",
+    tags: ["stats", "analytics", "engagement", "products"],
+  },
+  {
+    id: "get-product-related", method: "GET", path: "/products/:slug/related",
+    functionName: "content-engagement",
+    title: "Get Related Products", category: "content-engagement", authentication: true,
+    description: "Returns related products from the same category, ordered by views.",
+    pagination: false, search: false, filters: [],
+    queryParams: [{ name: "limit", type: "integer", required: false, description: "Max results (1–20, default 5).", example: "5" }],
+    pathParams: [{ name: "slug", type: "string", required: true, description: "Product slug.", example: "wireless-headphones-pro" }],
+    exampleResponse: { data: [], meta: { total: 0 } },
+    possibleErrors: [401, 403, 404, 429, 500],
+    versions: [{ version: "v1", status: "stable" }], addedInVersion: "v1",
+    tags: ["related", "products", "engagement"],
+  },
+  {
+    id: "moderate-content-comment", method: "PUT", path: "/comments/:type/:id",
+    functionName: "content-engagement",
+    title: "Moderate a Comment", category: "content-engagement", authentication: true,
+    description: "Update a comment's moderation status. Requires a **secret key** with `manage:comments` permission. `:type` = `news` | `articles` | `products`.",
+    pagination: false, search: false, filters: [], queryParams: [],
+    pathParams: [
+      { name: "type", type: "string", required: true, description: "Content type: news, articles, or products.", example: "articles" },
+      { name: "id", type: "string", required: true, description: "Comment UUID.", example: "c1d2..." },
+    ],
+    requestBody: { status: "pending | approved | rejected | spam | trash" },
+    exampleResponse: { data: { id: "c1d2...", status: "approved" } },
+    possibleErrors: [400, 401, 403, 404, 429, 500],
+    versions: [{ version: "v1", status: "stable" }], addedInVersion: "v1",
+    tags: ["comments", "moderation", "engagement", "write"],
+  },
 ];
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -984,6 +1223,7 @@ export const CATEGORY_LABELS: Record<EndpointDefinition["category"], string> = {
   media: "Media",
   search: "Search",
   engagement: "Engagement",
+  "content-engagement": "Content Engagement",
   meta: "Meta",
 };
 

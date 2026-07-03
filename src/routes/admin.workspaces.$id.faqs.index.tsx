@@ -1,9 +1,9 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { queryOptions, useSuspenseQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 import { toast } from "sonner";
-import { Pencil, Trash2, Send, Sparkles, X, Save } from "lucide-react";
+import { Pencil, Trash2, Send, Sparkles, X, Save, Plus } from "lucide-react";
 import { adminListFaqs, upsertFaq, deleteFaq, setFaqStatus, type Faq } from "@/lib/faq.functions";
 import { cn } from "@/lib/utils";
 import {
@@ -100,6 +100,13 @@ function WorkspaceFaqs() {
             {faqs.length} question{faqs.length !== 1 ? "s" : ""} — auto-generated from your site analysis during onboarding
           </p>
         </div>
+        <Link
+          to="/admin/workspaces/$id/faqs/new"
+          params={{ id: workspaceId }}
+          className="flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+        >
+          <Plus className="h-3.5 w-3.5" /> New
+        </Link>
       </div>
 
       {faqs.length === 0 ? (

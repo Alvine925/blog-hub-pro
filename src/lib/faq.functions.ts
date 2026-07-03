@@ -150,3 +150,20 @@ export const deleteFaq = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { success: true };
   });
+
+export const adminGetFaq = createServerFn({ method: "GET" })
+  .validator((input: { id: string; workspaceId: string } | undefined) =>
+    z.object({ id: z.string().uuid(), workspaceId: z.string().uuid() }).parse(input),
+  )
+  .handler(async ({ data }): Promise<Faq> => {
+    const { getAdminClient } = await import("./supabase.server");
+    const supabase = (await getAdminClient()) as any;
+    const { data: row, error } = await supabase
+      .from("faqs")
+      .select("*")
+      .eq("id", data.id)
+      .eq("workspace_id", data.workspaceId)
+      .single();
+    if (error) throw new Error(error.message);
+    return row as Faq;
+  });
