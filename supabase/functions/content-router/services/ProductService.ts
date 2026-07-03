@@ -1,4 +1,5 @@
 import { getDb } from "../db.ts";
+import { toProductSummary, toProductDetail, type PublicProductSummary } from "../ContentTransformer.ts";
 
 export interface ListProductsParams {
   page: number;
@@ -16,7 +17,10 @@ export interface ListProductsParams {
 }
 
 const PRODUCT_SUMMARY_COLS =
-  "id,name,slug,description,cover_image,category,brand,sku,price,compare_price,currency,status,featured,tags,views,sort_order,created_at,updated_at";
+  "id,name,slug,description,cover_image,category,brand,sku,price,compare_price,currency,status,featured,tags,views,sort_order,created_at,updated_at," +
+  "seo_title,meta_description,social_title,social_description,social_image,social_image_alt,social_hashtags,open_graph_type,twitter_card";
+
+const PRODUCT_DETAIL_COLS = PRODUCT_SUMMARY_COLS + ",content,gallery,specifications,features";
 
 export async function listProducts(
   workspaceId: string,
@@ -50,7 +54,10 @@ export async function listProducts(
 
   const { data, count, error } = await q;
   if (error) throw new Error(error.message);
-  return { rows: data ?? [], total: count ?? 0 };
+  return {
+    rows:  (data ?? []).map((r) => toProductSummary(r as Record<string, unknown>)),
+    total: count ?? 0,
+  };
 }
 
 export async function getProductBySlug(
@@ -63,7 +70,7 @@ export async function getProductBySlug(
 
   const { data, error } = await db
     .from("products")
-    .select("*")
+    .select(PRODUCT_DETAIL_COLS)
     .eq("workspace_id", workspaceId)
     .eq("slug", slug)
     .in("status", allowedStatuses)
@@ -73,13 +80,14 @@ export async function getProductBySlug(
 
   // Increment views best-effort
   db.from("products").update({ views: (data.views ?? 0) + 1 }).eq("id", data.id);
-  return { ...data, views: (data.views ?? 0) + 1 };
+  const row = { ...data, views: (data.views ?? 0) + 1 } as Record<string, unknown>;
+  return toProductDetail(row);
 }
 
 export async function getFeaturedProducts(
   workspaceId: string,
   limit: number,
-): Promise<unknown[]> {
+): Promise<PublicProductSummary[]> {
   const db = getDb() as any;
   const { data } = await db
     .from("products")
@@ -89,5 +97,5 @@ export async function getFeaturedProducts(
     .eq("featured", true)
     .order("sort_order", { ascending: true })
     .limit(limit);
-  return data ?? [];
+  return (data ?? []).map((r: Record<string, unknown>) => toProductSummary(r));
 }

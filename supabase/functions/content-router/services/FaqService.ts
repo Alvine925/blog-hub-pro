@@ -19,7 +19,9 @@ export interface FaqListResult {
   total: number;
 }
 
-const FAQ_COLS = "id, question, answer, category, featured, sort_order, updated_at";
+const FAQ_COLS =
+  "id, question, answer, category, featured, sort_order, updated_at, " +
+  "social_title, social_description, social_image, social_image_alt, social_hashtags, open_graph_type, twitter_card";
 
 export async function listFaqs(
   workspaceId: string,

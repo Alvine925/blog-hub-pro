@@ -27,10 +27,11 @@ export interface NewsListResult {
 }
 
 const NEWS_SUMMARY_COLS =
-  "slug, title, excerpt, cover_image, category, source_name, source_url, breaking, featured, views, published_at, updated_at";
+  "slug, title, excerpt, cover_image, category, source_name, source_url, breaking, featured, views, published_at, updated_at, " +
+  "seo_title, meta_description, social_title, social_description, social_image, social_image_alt, social_hashtags, open_graph_type, twitter_card";
 
 const NEWS_DETAIL_COLS =
-  NEWS_SUMMARY_COLS + ", content, seo_title, meta_description";
+  NEWS_SUMMARY_COLS + ", content";
 
 export async function listNews(
   workspaceId: string,

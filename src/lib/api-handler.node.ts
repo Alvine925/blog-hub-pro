@@ -12,6 +12,7 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { createClient } from "@supabase/supabase-js";
 import { createHash } from "node:crypto";
+import { buildSocialMetadata, SOCIAL_DB_COLS } from "./SocialMetadata.js";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -116,12 +117,16 @@ function getVisitorId(req: IncomingMessage): string {
 
 // ── Fields exposed on list vs detail ─────────────────────────────────────────
 
+const SOCIAL_COLS =
+  "social_title,social_description,social_image,social_image_alt,social_hashtags,open_graph_type,twitter_card";
+
 const LIST_COLS =
-  "title,slug,excerpt,cover_image,category,tags,author_name,featured,published_at,reading_time,views,updated_at";
+  "title,slug,excerpt,cover_image,category,tags,author_name,featured,published_at,reading_time,views,updated_at," +
+  "seo_title,meta_description," + SOCIAL_COLS;
 
 const DETAIL_COLS =
   "title,slug,excerpt,content,cover_image,category,tags,author_name,featured," +
-  "published_at,reading_time,views,word_count,seo_title,meta_description,updated_at";
+  "published_at,reading_time,views,word_count,seo_title,meta_description,updated_at," + SOCIAL_COLS;
 
 // Internal fields that must never be returned to the client
 const STRIP_FIELDS = new Set([
@@ -137,6 +142,8 @@ const STRIP_FIELDS = new Set([
   "draft_content",
   "created_by",
   "updated_by",
+  // Social DB columns — exposed via the derived `social` object instead
+  ...SOCIAL_DB_COLS,
 ]);
 
 function sanitize(row: Record<string, unknown>): Record<string, unknown> {
@@ -208,7 +215,7 @@ async function validateApiKey(
       keyType: token.startsWith("sk_live_") ? "secret" : "publishable",
       permissions: Array.isArray(key.permissions)
         ? (key.permissions as string[])
-        : ["read:blogs", "read:pages", "read:media", "read:collections"],
+        : ["read:blogs", "read:pages", "read:media", "read:collections", "read:news", "read:articles", "read:products", "read:faqs"],
     },
   };
 }
@@ -387,7 +394,10 @@ export function lunarApiMiddleware() {
 
         return sendOk(
           res,
-          (data ?? []).map((r) => sanitize(r as Record<string, unknown>)),
+          (data ?? []).map((r) => {
+            const row = r as Record<string, unknown>;
+            return { ...sanitize(row), social: buildSocialMetadata(row, "article") };
+          }),
           { page, limit, total, totalPages },
           links,
         );
@@ -434,10 +444,190 @@ export function lunarApiMiddleware() {
         }
       }
 
+      // ════════════════════════════════════════════════════════════════════════
+      // GET /api/v1/news  |  GET /api/v1/news/:slug
+      // ════════════════════════════════════════════════════════════════════════
+      if (url.pathname === "/api/v1/news" && method === "GET") {
+        if (!hasPermission(context.permissions, "read:news")) {
+          return sendFail(res, 403, "FORBIDDEN", "This API key does not have permission to access this resource.");
+        }
+        const page  = Math.max(1, parseInt(url.searchParams.get("page") ?? "1", 10) || 1);
+        const limit = Math.min(100, Math.max(1, parseInt(url.searchParams.get("limit") ?? "20", 10) || 20));
+        const offset = (page - 1) * limit;
+        const category = url.searchParams.get("category")?.trim() ?? "";
+        const search   = url.searchParams.get("search")?.trim() ?? "";
+        const breaking = url.searchParams.get("breaking");
+        const featured = url.searchParams.get("featured");
+        const NEWS_LIST_COLS = "slug,title,excerpt,cover_image,category,source_name,source_url,breaking,featured,views,published_at,updated_at," + SOCIAL_COLS + ",seo_title,meta_description";
+        let query = (db as any).from("news").select(NEWS_LIST_COLS, { count: "exact" })
+          .eq("workspace_id", ws).eq("status", "published")
+          .order("published_at", { ascending: false })
+          .range(offset, offset + limit - 1);
+        if (category) query = query.ilike("category", category);
+        if (breaking === "true") query = query.eq("breaking", true);
+        if (featured === "true") query = query.eq("featured", true);
+        if (search) query = query.or(`title.ilike.%${search}%,excerpt.ilike.%${search}%`);
+        const { data: newsData, error: newsErr, count: newsCount } = await query;
+        if (newsErr) return sendFail(res, 500, "INTERNAL_SERVER_ERROR", newsErr.message);
+        const total = newsCount ?? 0;
+        const totalPages = Math.ceil(total / limit);
+        return sendOk(res,
+          (newsData ?? []).map((r: Record<string, unknown>) => ({ ...sanitize(r), social: buildSocialMetadata(r, "article") })),
+          { page, limit, total, totalPages },
+          buildPaginationLinks(rawUrl, page, totalPages),
+        );
+      }
+
+      const newsSlugMatch = url.pathname.match(/^\/api\/v1\/news\/([^/]+)$/);
+      if (newsSlugMatch && method === "GET") {
+        if (!hasPermission(context.permissions, "read:news")) {
+          return sendFail(res, 403, "FORBIDDEN", "This API key does not have permission to access this resource.");
+        }
+        const NEWS_DETAIL_COLS = "slug,title,content,excerpt,cover_image,category,source_name,source_url,breaking,featured,views,published_at,updated_at,seo_title,meta_description," + SOCIAL_COLS;
+        const { data: newsItem, error: niErr } = await (db as any).from("news")
+          .select(NEWS_DETAIL_COLS).eq("slug", newsSlugMatch[1])
+          .eq("workspace_id", ws).eq("status", "published").maybeSingle();
+        if (niErr) return sendFail(res, 500, "INTERNAL_SERVER_ERROR", niErr.message);
+        if (!newsItem) return sendFail(res, 404, "NOT_FOUND", "News item not found.");
+        const niRow = newsItem as Record<string, unknown>;
+        (db as any).from("news").update({ views: (Number(niRow.views) || 0) + 1 }).eq("slug", newsSlugMatch[1]).eq("workspace_id", ws).then(() => {}).catch(() => {});
+        return sendOk(res, { ...sanitize(niRow), social: buildSocialMetadata(niRow, "article") });
+      }
+
+      // ════════════════════════════════════════════════════════════════════════
+      // GET /api/v1/articles  |  GET /api/v1/articles/:slug
+      // ════════════════════════════════════════════════════════════════════════
+      if (url.pathname === "/api/v1/articles" && method === "GET") {
+        if (!hasPermission(context.permissions, "read:articles")) {
+          return sendFail(res, 403, "FORBIDDEN", "This API key does not have permission to access this resource.");
+        }
+        const page  = Math.max(1, parseInt(url.searchParams.get("page") ?? "1", 10) || 1);
+        const limit = Math.min(100, Math.max(1, parseInt(url.searchParams.get("limit") ?? "20", 10) || 20));
+        const offset = (page - 1) * limit;
+        const category = url.searchParams.get("category")?.trim() ?? "";
+        const search   = url.searchParams.get("search")?.trim() ?? "";
+        const featured = url.searchParams.get("featured");
+        const ART_LIST_COLS = "id,slug,title,excerpt,cover_image,category,tags,author_name,article_type,status,featured,reading_time,word_count,views,published_at,updated_at,seo_title,meta_description," + SOCIAL_COLS;
+        let query = (db as any).from("articles").select(ART_LIST_COLS, { count: "exact" })
+          .eq("workspace_id", ws).eq("status", "published")
+          .order("published_at", { ascending: false })
+          .range(offset, offset + limit - 1);
+        if (category) query = query.ilike("category", category);
+        if (featured === "true") query = query.eq("featured", true);
+        if (search) query = query.or(`title.ilike.%${search}%,excerpt.ilike.%${search}%`);
+        const { data: artData, error: artErr, count: artCount } = await query;
+        if (artErr) return sendFail(res, 500, "INTERNAL_SERVER_ERROR", artErr.message);
+        const total = artCount ?? 0;
+        const totalPages = Math.ceil(total / limit);
+        return sendOk(res,
+          (artData ?? []).map((r: Record<string, unknown>) => ({ ...sanitize(r), social: buildSocialMetadata(r, "article") })),
+          { page, limit, total, totalPages },
+          buildPaginationLinks(rawUrl, page, totalPages),
+        );
+      }
+
+      const articleSlugMatch = url.pathname.match(/^\/api\/v1\/articles\/([^/]+)$/);
+      if (articleSlugMatch && method === "GET") {
+        if (!hasPermission(context.permissions, "read:articles")) {
+          return sendFail(res, 403, "FORBIDDEN", "This API key does not have permission to access this resource.");
+        }
+        const ART_DETAIL_COLS = "id,slug,title,content,excerpt,cover_image,category,tags,author_name,article_type,status,featured,reading_time,word_count,views,published_at,updated_at,seo_title,meta_description," + SOCIAL_COLS;
+        const { data: article, error: aErr } = await (db as any).from("articles")
+          .select(ART_DETAIL_COLS).eq("slug", articleSlugMatch[1])
+          .eq("workspace_id", ws).eq("status", "published").maybeSingle();
+        if (aErr) return sendFail(res, 500, "INTERNAL_SERVER_ERROR", aErr.message);
+        if (!article) return sendFail(res, 404, "NOT_FOUND", "Article not found.");
+        const aRow = article as Record<string, unknown>;
+        (db as any).from("articles").update({ views: (Number(aRow.views) || 0) + 1 }).eq("slug", articleSlugMatch[1]).eq("workspace_id", ws).then(() => {}).catch(() => {});
+        return sendOk(res, { ...sanitize(aRow), social: buildSocialMetadata(aRow, "article") });
+      }
+
+      // ════════════════════════════════════════════════════════════════════════
+      // GET /api/v1/products  |  GET /api/v1/products/:slug
+      // ════════════════════════════════════════════════════════════════════════
+      if (url.pathname === "/api/v1/products" && method === "GET") {
+        if (!hasPermission(context.permissions, "read:products")) {
+          return sendFail(res, 403, "FORBIDDEN", "This API key does not have permission to access this resource.");
+        }
+        const page  = Math.max(1, parseInt(url.searchParams.get("page") ?? "1", 10) || 1);
+        const limit = Math.min(100, Math.max(1, parseInt(url.searchParams.get("limit") ?? "20", 10) || 20));
+        const offset = (page - 1) * limit;
+        const category = url.searchParams.get("category")?.trim() ?? "";
+        const search   = url.searchParams.get("search")?.trim() ?? "";
+        const featured = url.searchParams.get("featured");
+        const PROD_LIST_COLS = "id,slug,name,description,cover_image,category,brand,sku,price,compare_price,currency,status,featured,tags,views,sort_order,updated_at,seo_title,meta_description," + SOCIAL_COLS;
+        let query = (db as any).from("products").select(PROD_LIST_COLS, { count: "exact" })
+          .eq("workspace_id", ws).eq("status", "published")
+          .order("sort_order", { ascending: true })
+          .range(offset, offset + limit - 1);
+        if (category) query = query.ilike("category", category);
+        if (featured === "true") query = query.eq("featured", true);
+        if (search) query = query.or(`name.ilike.%${search}%,description.ilike.%${search}%`);
+        const { data: prodData, error: prodErr, count: prodCount } = await query;
+        if (prodErr) return sendFail(res, 500, "INTERNAL_SERVER_ERROR", prodErr.message);
+        const total = prodCount ?? 0;
+        const totalPages = Math.ceil(total / limit);
+        return sendOk(res,
+          (prodData ?? []).map((r: Record<string, unknown>) => ({ ...sanitize(r), social: buildSocialMetadata(r, "product") })),
+          { page, limit, total, totalPages },
+          buildPaginationLinks(rawUrl, page, totalPages),
+        );
+      }
+
+      const productSlugMatch = url.pathname.match(/^\/api\/v1\/products\/([^/]+)$/);
+      if (productSlugMatch && method === "GET") {
+        if (!hasPermission(context.permissions, "read:products")) {
+          return sendFail(res, 403, "FORBIDDEN", "This API key does not have permission to access this resource.");
+        }
+        const PROD_DETAIL_COLS = "id,slug,name,description,content,cover_image,gallery,specifications,features,category,brand,sku,price,compare_price,currency,status,featured,tags,views,sort_order,updated_at,seo_title,meta_description," + SOCIAL_COLS;
+        const { data: product, error: pErr } = await (db as any).from("products")
+          .select(PROD_DETAIL_COLS).eq("slug", productSlugMatch[1])
+          .eq("workspace_id", ws).eq("status", "published").maybeSingle();
+        if (pErr) return sendFail(res, 500, "INTERNAL_SERVER_ERROR", pErr.message);
+        if (!product) return sendFail(res, 404, "NOT_FOUND", "Product not found.");
+        const pRow = product as Record<string, unknown>;
+        (db as any).from("products").update({ views: (Number(pRow.views) || 0) + 1 }).eq("slug", productSlugMatch[1]).eq("workspace_id", ws).then(() => {}).catch(() => {});
+        return sendOk(res, { ...sanitize(pRow), social: buildSocialMetadata(pRow, "product") });
+      }
+
+      // ════════════════════════════════════════════════════════════════════════
+      // GET /api/v1/faqs
+      // ════════════════════════════════════════════════════════════════════════
+      if (url.pathname === "/api/v1/faqs" && method === "GET") {
+        if (!hasPermission(context.permissions, "read:faqs")) {
+          return sendFail(res, 403, "FORBIDDEN", "This API key does not have permission to access this resource.");
+        }
+        const page  = Math.max(1, parseInt(url.searchParams.get("page") ?? "1", 10) || 1);
+        const limit = Math.min(100, Math.max(1, parseInt(url.searchParams.get("limit") ?? "50", 10) || 50));
+        const offset = (page - 1) * limit;
+        const category = url.searchParams.get("category")?.trim() ?? "";
+        const search   = url.searchParams.get("search")?.trim() ?? "";
+        const featured = url.searchParams.get("featured");
+        const FAQ_LIST_COLS = "id,question,answer,category,featured,sort_order,updated_at," + SOCIAL_COLS;
+        let query = (db as any).from("faqs").select(FAQ_LIST_COLS, { count: "exact" })
+          .eq("workspace_id", ws).eq("status", "published")
+          .order("sort_order", { ascending: true })
+          .range(offset, offset + limit - 1);
+        if (category) query = query.ilike("category", category);
+        if (featured === "true") query = query.eq("featured", true);
+        if (search) query = query.or(`question.ilike.%${search}%,answer.ilike.%${search}%`);
+        const { data: faqData, error: faqErr, count: faqCount } = await query;
+        if (faqErr) return sendFail(res, 500, "INTERNAL_SERVER_ERROR", faqErr.message);
+        const total = faqCount ?? 0;
+        const totalPages = Math.ceil(total / limit);
+        return sendOk(res,
+          (faqData ?? []).map((r: Record<string, unknown>) => ({ ...sanitize(r), social: buildSocialMetadata(r, "website") })),
+          { page, limit, total, totalPages },
+          buildPaginationLinks(rawUrl, page, totalPages),
+        );
+      }
+
+      // ════════════════════════════════════════════════════════════════════════
       // All /api/v1/posts/:slug* routes — resolve post first
+      // ════════════════════════════════════════════════════════════════════════
       const slugBase = url.pathname.match(/^\/api\/v1\/posts\/([^/]+)/);
       if (!slugBase) {
-        return sendFail(res, 404, "NOT_FOUND", "Endpoint not found.");
+        return sendFail(res, 404, "NOT_FOUND", "Endpoint not found. Check the API documentation for available routes.");
       }
 
       const slug = slugBase[1];
@@ -500,6 +690,7 @@ export function lunarApiMiddleware() {
         return sendOk(res, {
           ...sanitize(post as Record<string, unknown>),
           wordCount: wc,
+          social: buildSocialMetadata(post as Record<string, unknown>, "article"),
           stats: {
             views: viewCount ?? (post.views as number) ?? 0,
             likes: likeCount ?? 0,

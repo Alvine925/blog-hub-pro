@@ -53,6 +53,7 @@ export const DOC_SECTIONS: DocSection[] = [
   { id: "versioning",        title: "Versioning",             group: "Reference"     },
   { id: "code-examples",     title: "Code Examples",          group: "Guides"        },
   { id: "frameworks",        title: "Framework Guides",       group: "Guides"        },
+  { id: "social-sharing",    title: "Social Sharing",         group: "Guides"        },
   { id: "ai-prompts",        title: "AI Prompts",             group: "Guides"        },
   { id: "endpoints",         title: "REST Endpoints",         group: "Endpoints"     },
   { id: "changelog",         title: "Changelog",              group: "Resources"     },
@@ -148,6 +149,19 @@ export const CHANGELOG: ChangelogEntry[] = [
       { type: "added", description: "GET /v1/search — global full-text search across all content." },
       { type: "added", description: "GET /v1/collections/:slug/entries/:id — single entry retrieval." },
       { type: "updated", description: "Pagination now returns totalPages in the meta object." },
+    ],
+  },
+  {
+    version: "v1.2",
+    date: "2026-07-03",
+    changes: [
+      { type: "added", description: "Social metadata (`social` object) embedded in all content responses — blogs, news, articles, products, FAQs." },
+      { type: "added", description: "GET /v1/articles — list published articles with full social metadata." },
+      { type: "added", description: "GET /v1/articles/:slug — retrieve a single article." },
+      { type: "added", description: "GET /v1/products — list published products with full social metadata." },
+      { type: "added", description: "GET /v1/products/:slug — retrieve a single product with gallery, specifications, and features." },
+      { type: "added", description: "Social Sharing developer guide added to documentation." },
+      { type: "updated", description: "social.type is og:type-compatible: article (blogs/news/articles), product (products), website (FAQs/pages)." },
     ],
   },
 ];

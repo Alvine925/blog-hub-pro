@@ -7,7 +7,7 @@ import {
   Copy, Check, Search, BookOpen, Key, Zap, Code2, AlertTriangle,
   Clock, Layers, Star, StarOff, Eye, ChevronRight, ExternalLink,
   Activity, Globe, Shield, Sparkles, FileText, Database, Hash,
-  ChevronDown, ChevronUp,
+  ChevronDown, ChevronUp, Share2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -66,11 +66,12 @@ const SECTION_ICONS: Record<string, React.ComponentType<{ className?: string }>>
   errors:          AlertTriangle,
   "rate-limits":   Activity,
   versioning:      Globe,
-  "code-examples": Code2,
-  frameworks:      FileText,
-  "ai-prompts":    Sparkles,
-  endpoints:       Database,
-  changelog:       Clock,
+  "code-examples":  Code2,
+  frameworks:       FileText,
+  "social-sharing": Share2,
+  "ai-prompts":     Sparkles,
+  endpoints:        Database,
+  changelog:        Clock,
 };
 
 // ── Section headings for right-side TOC ──────────────────────────────────────
@@ -86,11 +87,12 @@ const SECTION_TOC: Record<string, string[]> = {
   errors:          ["Error Codes", "Error Format"],
   "rate-limits":   ["Rate Limits", "Limits by Key Type", "Response Headers", "Retry Strategy"],
   versioning:      ["Versioning", "Version Status", "Deprecation Policy"],
-  "code-examples": ["Code Examples"],
-  frameworks:      ["Framework Guides"],
-  "ai-prompts":    ["AI Prompts"],
-  endpoints:       ["REST Endpoints"],
-  changelog:       ["Changelog"],
+  "code-examples":  ["Code Examples"],
+  frameworks:       ["Framework Guides"],
+  "social-sharing": ["Social Sharing", "Architecture", "The social Object", "Fallback Rules", "Open Graph Tags", "Twitter Card Tags", "Framework Examples", "Share Components"],
+  "ai-prompts":     ["AI Prompts"],
+  endpoints:        ["REST Endpoints"],
+  changelog:        ["Changelog"],
 };
 
 // ── Language mapping for syntax highlighter ───────────────────────────────────
@@ -1149,6 +1151,471 @@ function FrameworksSection() {
   );
 }
 
+// ── Section: Social Sharing ───────────────────────────────────────────────────
+
+const SOCIAL_FRAMEWORKS = [
+  {
+    id: "nextjs",     label: "Next.js",
+    code: `// app/blog/[slug]/page.tsx — Server Component
+export async function generateMetadata({ params }: { params: { slug: string } }) {
+  const res = await fetch(\`\${process.env.LUNAR_CMS_URL}/blogs/\${params.slug}\`, {
+    headers: { Authorization: \`Bearer \${process.env.LUNAR_CMS_API_KEY}\` },
+    next: { revalidate: 300 },
+  });
+  const { data: post } = await res.json();
+  const { social } = post;
+
+  return {
+    title: social.title,
+    description: social.description,
+    openGraph: {
+      title: social.title,
+      description: social.description,
+      images: social.image ? [{ url: social.image, alt: social.alt ?? "" }] : [],
+      type: social.type,
+    },
+    twitter: {
+      card: social.twitterCard,
+      title: social.title,
+      description: social.description,
+      images: social.image ? [social.image] : [],
+    },
+  };
+}`,
+  },
+  {
+    id: "react",      label: "React",
+    code: `// src/pages/BlogPost.tsx
+import { Helmet } from "react-helmet-async";
+
+function BlogPost({ post }) {
+  const { social } = post;
+  const pageUrl = window.location.href; // Always use client URL
+
+  return (
+    <>
+      <Helmet>
+        <meta property="og:title"       content={social.title} />
+        <meta property="og:description" content={social.description} />
+        {social.image && <meta property="og:image" content={social.image} />}
+        <meta property="og:type"        content={social.type} />
+        <meta property="og:url"         content={pageUrl} />
+        <meta name="twitter:card"       content={social.twitterCard} />
+        <meta name="twitter:title"      content={social.title} />
+        <meta name="twitter:description" content={social.description} />
+        {social.image && <meta name="twitter:image" content={social.image} />}
+      </Helmet>
+      {/* Share buttons — always share window.location.href */}
+      <button onClick={() => window.open(
+        \`https://twitter.com/intent/tweet?url=\${encodeURIComponent(pageUrl)}&text=\${encodeURIComponent(social.title)}\`,
+        "_blank"
+      )}>Share on X</button>
+    </>
+  );
+}`,
+  },
+  {
+    id: "vue",        label: "Vue 3",
+    code: `<!-- PostPage.vue -->
+<script setup>
+import { useHead } from "@unhead/vue";
+import { computed } from "vue";
+
+const props = defineProps(["post"]);
+const pageUrl = window.location.href;
+const s = computed(() => props.post.social);
+
+useHead({
+  meta: [
+    { property: "og:title",       content: s.value.title },
+    { property: "og:description", content: s.value.description },
+    { property: "og:image",       content: s.value.image ?? "" },
+    { property: "og:type",        content: s.value.type },
+    { property: "og:url",         content: pageUrl },
+    { name: "twitter:card",       content: s.value.twitterCard },
+    { name: "twitter:title",      content: s.value.title },
+    { name: "twitter:description",content: s.value.description },
+    { name: "twitter:image",      content: s.value.image ?? "" },
+  ],
+});
+</script>
+
+<template>
+  <button @click="shareX">Share on X</button>
+</template>
+
+<script>
+function shareX() {
+  const url = encodeURIComponent(window.location.href);
+  window.open(\`https://twitter.com/intent/tweet?url=\${url}\`, "_blank");
+}
+</script>`,
+  },
+  {
+    id: "nuxt",       label: "Nuxt",
+    code: `<!-- pages/blog/[slug].vue -->
+<script setup>
+const route = useRoute();
+const { data: { post } } = await useFetch(
+  \`\${useRuntimeConfig().public.lunarCmsUrl}/blogs/\${route.params.slug}\`,
+  { headers: { Authorization: \`Bearer \${useRuntimeConfig().lunarCmsKey}\` } },
+);
+const s = post.value.social;
+
+useSeoMeta({
+  ogTitle:       s.title,
+  ogDescription: s.description,
+  ogImage:       s.image ?? "",
+  ogType:        s.type,
+  ogUrl:         useRequestURL().href,
+  twitterCard:   s.twitterCard,
+  twitterTitle:  s.title,
+  twitterDescription: s.description,
+  twitterImage:  s.image ?? "",
+});
+</script>`,
+  },
+  {
+    id: "laravel",    label: "Laravel",
+    code: `{{-- resources/views/blog/show.blade.php --}}
+@section('head')
+  <meta property="og:title"       content="{{ $post['social']['title'] }}">
+  <meta property="og:description" content="{{ $post['social']['description'] }}">
+  @if($post['social']['image'])
+  <meta property="og:image"       content="{{ $post['social']['image'] }}">
+  @endif
+  <meta property="og:type"        content="{{ $post['social']['type'] }}">
+  <meta property="og:url"         content="{{ url()->current() }}">
+  <meta name="twitter:card"       content="{{ $post['social']['twitterCard'] }}">
+  <meta name="twitter:title"      content="{{ $post['social']['title'] }}">
+  <meta name="twitter:description" content="{{ $post['social']['description'] }}">
+@endsection
+
+{{-- Share button — always use the client URL --}}
+<a href="https://twitter.com/intent/tweet?url={{ urlencode(url()->current()) }}&text={{ urlencode($post['social']['title']) }}"
+   target="_blank">Share on X</a>`,
+  },
+  {
+    id: "php",        label: "PHP",
+    code: `<?php
+// Fetch post from Lunar CMS
+$response = file_get_contents($LUNAR_URL . '/blogs/' . $slug, false, stream_context_create([
+  'http' => ['header' => "Authorization: Bearer $API_KEY"],
+]));
+$post   = json_decode($response, true)['data'];
+$social = $post['social'];
+$pageUrl = (isset($_SERVER['HTTPS']) ? 'https' : 'http') . '://' . $_SERVER['HTTP_HOST'] . $_SERVER['REQUEST_URI'];
+?>
+<head>
+  <meta property="og:title"       content="<?= htmlspecialchars($social['title']) ?>">
+  <meta property="og:description" content="<?= htmlspecialchars($social['description']) ?>">
+  <?php if ($social['image']): ?>
+  <meta property="og:image"       content="<?= htmlspecialchars($social['image']) ?>">
+  <?php endif; ?>
+  <meta property="og:type"        content="<?= htmlspecialchars($social['type']) ?>">
+  <meta property="og:url"         content="<?= htmlspecialchars($pageUrl) ?>">
+  <meta name="twitter:card"       content="<?= htmlspecialchars($social['twitterCard']) ?>">
+</head>`,
+  },
+  {
+    id: "flutter",    label: "Flutter",
+    code: `// lib/widgets/share_button.dart
+import 'package:share_plus/share_plus.dart';
+
+class ShareButton extends StatelessWidget {
+  final Map<String, dynamic> social;
+  final String pageUrl; // Pass your app's deep link / web URL
+
+  const ShareButton({required this.social, required this.pageUrl, super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return IconButton(
+      icon: const Icon(Icons.share),
+      onPressed: () {
+        Share.share('\${social['title']}\\n\\n\${social['description']}\\n\\n\$pageUrl');
+      },
+    );
+  }
+}`,
+  },
+  {
+    id: "react-native", label: "React Native",
+    code: `// components/ShareButton.tsx
+import { Share } from "react-native";
+
+interface SocialMeta {
+  title: string;
+  description: string;
+  image: string | null;
+}
+
+export function ShareButton({ social, pageUrl }: { social: SocialMeta; pageUrl: string }) {
+  async function handleShare() {
+    // Always share the client app's own URL — never a Lunar CMS URL
+    await Share.share({
+      title: social.title,
+      message: \`\${social.description}\\n\\n\${pageUrl}\`,
+      url: pageUrl, // iOS only
+    });
+  }
+
+  return <Button title="Share" onPress={handleShare} />;
+}`,
+  },
+  {
+    id: "angular",    label: "Angular",
+    code: `// src/app/blog/blog-post.component.ts
+import { Component, OnInit } from "@angular/core";
+import { Meta } from "@angular/platform-browser";
+
+@Component({ selector: "app-blog-post", templateUrl: "./blog-post.component.html" })
+export class BlogPostComponent implements OnInit {
+  post: any;
+
+  constructor(private meta: Meta, private blogService: BlogService) {}
+
+  ngOnInit() {
+    this.blogService.getPost(this.slug).subscribe((data) => {
+      this.post = data;
+      const s = data.social;
+      const pageUrl = window.location.href;
+
+      this.meta.addTags([
+        { property: "og:title",       content: s.title },
+        { property: "og:description", content: s.description },
+        { property: "og:image",       content: s.image ?? "" },
+        { property: "og:type",        content: s.type },
+        { property: "og:url",         content: pageUrl },
+        { name: "twitter:card",       content: s.twitterCard },
+        { name: "twitter:title",      content: s.title },
+        { name: "twitter:description",content: s.description },
+      ]);
+    });
+  }
+}`,
+  },
+];
+
+const SOCIAL_OBJECT_EXAMPLE = `{
+  "social": {
+    "title":       "Getting Started with Lunar CMS",
+    "description": "A complete guide to integrating Lunar CMS into your frontend.",
+    "image":       "https://cdn.example.com/article-cover.jpg",
+    "alt":         "Article cover image",
+    "hashtags":    ["headlesscms", "webdev", "tutorial"],
+    "twitterCard": "summary_large_image",
+    "type":        "article"
+  }
+}`;
+
+const FALLBACK_TABLE = [
+  { field: "title",       chain: "social_title → seo_title → title / name (product) / question (FAQ)" },
+  { field: "description", chain: "social_description → meta_description → excerpt / description (product) / answer (FAQ)" },
+  { field: "image",       chain: "social_image → cover_image → featured_image" },
+  { field: "alt",         chain: "social_image_alt → null" },
+  { field: "hashtags",    chain: "social_hashtags (DB) → derived from tags array → []" },
+  { field: "twitterCard", chain: "twitter_card (DB) → \"summary_large_image\"" },
+  { field: "type",        chain: "open_graph_type (DB) → per-content-type default" },
+];
+
+const OG_TYPE_TABLE = [
+  { content: "Blog Posts",  type: "article" },
+  { content: "News",        type: "article" },
+  { content: "Articles",    type: "article" },
+  { content: "Products",    type: "product" },
+  { content: "FAQs",        type: "website" },
+  { content: "Pages",       type: "website" },
+];
+
+function SocialSharingSection() {
+  const [activeFramework, setActiveFramework] = useState("nextjs");
+  const fw = SOCIAL_FRAMEWORKS.find((f) => f.id === activeFramework) ?? SOCIAL_FRAMEWORKS[0];
+
+  return (
+    <div className="space-y-10">
+      {/* Header */}
+      <div>
+        <p className="text-xs font-semibold uppercase tracking-widest text-red-600 mb-2">Guides</p>
+        <h1 className="text-3xl font-bold text-zinc-900 mb-3">Social Sharing</h1>
+        <p className="text-zinc-500 leading-relaxed">
+          Every Lunar CMS content response includes a pre-built <code className="rounded bg-zinc-100 px-1 py-0.5 text-sm font-mono text-zinc-800">social</code> object
+          with resolved metadata for Open Graph and Twitter Card tags.
+          No extra API calls needed — everything required for professional social sharing
+          is available from your first content request.
+        </p>
+      </div>
+
+      {/* Architecture */}
+      <div>
+        <h2 className="text-xl font-bold text-zinc-900 mb-3">Architecture</h2>
+        <div className="rounded-lg border border-amber-100 bg-amber-50 px-4 py-4 text-sm text-amber-900 space-y-2">
+          <p className="font-semibold">Lunar CMS is the content provider. Your website is responsible for:</p>
+          <ul className="list-disc list-inside space-y-1 text-amber-800">
+            <li>Rendering the page and populating <code className="font-mono text-xs">{"<meta>"}</code> tags</li>
+            <li>Rendering share buttons and opening share dialogs</li>
+            <li>Sharing <strong>its own URL</strong> — always <code className="font-mono text-xs">window.location.href</code></li>
+          </ul>
+          <p className="font-semibold mt-2">Lunar CMS never generates:</p>
+          <ul className="list-disc list-inside space-y-1 text-amber-800">
+            <li>Facebook or LinkedIn share URLs</li>
+            <li>Links pointing back to Lunar CMS itself</li>
+          </ul>
+        </div>
+      </div>
+
+      {/* The social object */}
+      <div>
+        <h2 className="text-xl font-bold text-zinc-900 mb-3">The <code className="font-mono text-lg">social</code> Object</h2>
+        <p className="text-sm text-zinc-500 mb-3">
+          Present on every Blog, News, Article, Product, and FAQ response — list <em>and</em> detail endpoints.
+        </p>
+        <CodeBlock code={SOCIAL_OBJECT_EXAMPLE} language="json" />
+        <div className="mt-4 overflow-auto rounded-lg border border-zinc-200">
+          <table className="w-full text-sm">
+            <thead className="bg-zinc-50 text-left text-xs font-semibold uppercase tracking-widest text-zinc-500">
+              <tr>
+                <th className="px-4 py-2">Field</th>
+                <th className="px-4 py-2">Type</th>
+                <th className="px-4 py-2">Purpose</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-zinc-100">
+              {[
+                ["title",       "string",       "og:title and twitter:title"],
+                ["description", "string",       "og:description and twitter:description"],
+                ["image",       "string | null","og:image and twitter:image"],
+                ["alt",         "string | null","alt text for the social image"],
+                ["hashtags",    "string[]",     "Suggested hashtags — no # prefix"],
+                ["twitterCard", "string",       "twitter:card value (always summary_large_image)"],
+                ["type",        "string",       "og:type — article, product, or website"],
+              ].map(([f, t, p]) => (
+                <tr key={f} className="hover:bg-zinc-50">
+                  <td className="px-4 py-2 font-mono text-xs text-red-600">{f}</td>
+                  <td className="px-4 py-2 text-zinc-500 text-xs">{t}</td>
+                  <td className="px-4 py-2 text-zinc-700">{p}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Fallback rules */}
+      <div>
+        <h2 className="text-xl font-bold text-zinc-900 mb-3">Fallback Rules</h2>
+        <p className="text-sm text-zinc-500 mb-3">
+          When social-specific fields are not set in the CMS, values are derived automatically in this order:
+        </p>
+        <div className="overflow-auto rounded-lg border border-zinc-200">
+          <table className="w-full text-sm">
+            <thead className="bg-zinc-50 text-left text-xs font-semibold uppercase tracking-widest text-zinc-500">
+              <tr>
+                <th className="px-4 py-2">Field</th>
+                <th className="px-4 py-2">Fallback Chain</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-zinc-100">
+              {FALLBACK_TABLE.map(({ field, chain }) => (
+                <tr key={field} className="hover:bg-zinc-50">
+                  <td className="px-4 py-2 font-mono text-xs text-red-600">{field}</td>
+                  <td className="px-4 py-2 text-zinc-700 text-xs">{chain}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* OG Type by content */}
+      <div>
+        <h2 className="text-xl font-bold text-zinc-900 mb-3">Open Graph Type by Content Type</h2>
+        <div className="overflow-auto rounded-lg border border-zinc-200">
+          <table className="w-full text-sm">
+            <thead className="bg-zinc-50 text-left text-xs font-semibold uppercase tracking-widest text-zinc-500">
+              <tr>
+                <th className="px-4 py-2">Content Type</th>
+                <th className="px-4 py-2">social.type</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-zinc-100">
+              {OG_TYPE_TABLE.map(({ content, type }) => (
+                <tr key={content} className="hover:bg-zinc-50">
+                  <td className="px-4 py-2 text-zinc-700">{content}</td>
+                  <td className="px-4 py-2 font-mono text-xs text-red-600">{type}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Open Graph / Twitter Card field mapping */}
+      <div>
+        <h2 className="text-xl font-bold text-zinc-900 mb-3">Using social to Populate Meta Tags</h2>
+        <p className="text-sm text-zinc-500 mb-3">Map the <code className="font-mono text-xs">social</code> fields directly to your HTML meta tags:</p>
+        <CodeBlock
+          code={`<!-- Open Graph -->
+<meta property="og:title"       content="{social.title}">
+<meta property="og:description" content="{social.description}">
+<meta property="og:image"       content="{social.image}">  <!-- omit if null -->
+<meta property="og:type"        content="{social.type}">
+<meta property="og:url"         content="{your_page_url}">  <!-- always your site URL -->
+
+<!-- Twitter Card -->
+<meta name="twitter:card"        content="{social.twitterCard}">
+<meta name="twitter:title"       content="{social.title}">
+<meta name="twitter:description" content="{social.description}">
+<meta name="twitter:image"       content="{social.image}">  <!-- omit if null -->`}
+          language="html"
+        />
+      </div>
+
+      {/* Framework examples */}
+      <div>
+        <h2 className="text-xl font-bold text-zinc-900 mb-3">Framework Examples</h2>
+        <div className="flex flex-wrap gap-2 mb-4">
+          {SOCIAL_FRAMEWORKS.map((f) => (
+            <button
+              key={f.id}
+              type="button"
+              onClick={() => setActiveFramework(f.id)}
+              className={cn(
+                "rounded-lg border px-3 py-2 text-sm font-medium transition-colors",
+                f.id === activeFramework
+                  ? "border-red-600 bg-red-50 text-red-600"
+                  : "border-zinc-200 text-zinc-600 hover:text-zinc-900",
+              )}
+            >
+              {f.label}
+            </button>
+          ))}
+        </div>
+        <CodeBlock code={fw.code} language="typescript" />
+      </div>
+
+      {/* Best practices */}
+      <div>
+        <h2 className="text-xl font-bold text-zinc-900 mb-3">Best Practices</h2>
+        <div className="space-y-3">
+          {[
+            { title: "Always use your own page URL", body: "The shared URL must be your website's URL, not a Lunar CMS URL. Use window.location.href in the browser or the equivalent server-side URL." },
+            { title: "Check for null image", body: "social.image can be null when no image is configured. Omit the og:image and twitter:image tags entirely rather than setting them to an empty string." },
+            { title: "Hashtags don't need a # prefix", body: "The hashtags array contains raw words (e.g. [\"webdev\", \"cms\"]). Prefix with # yourself when building share URLs for X/Twitter." },
+            { title: "One request is enough", body: "The social object is embedded in every content response. You don't need a separate API call — fetching a post, article, product, or FAQ always returns the social metadata." },
+            { title: "Platforms that use this metadata", body: "Facebook, LinkedIn, X (Twitter), WhatsApp, Telegram, Slack, Discord, and Google Discover all read og:title, og:description, og:image, and og:type. Twitter Card tags are used by X as a fallback." },
+          ].map(({ title, body }) => (
+            <div key={title} className="rounded-lg border border-zinc-200 px-4 py-3">
+              <p className="font-semibold text-zinc-900 text-sm">{title}</p>
+              <p className="text-zinc-500 text-sm mt-0.5">{body}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Section: AI Prompts ───────────────────────────────────────────────────────
 
 function AiPromptsSection({ baseUrl, workspaceId }: { baseUrl: string; workspaceId: string }) {
@@ -1633,6 +2100,7 @@ function DeveloperDocs() {
       case "versioning":     return <VersioningSection baseUrl={baseUrl} />;
       case "code-examples":  return <CodeExamplesSection baseUrl={baseUrl} apiKey={apiKey} />;
       case "frameworks":     return <FrameworksSection />;
+      case "social-sharing": return <SocialSharingSection />;
       case "ai-prompts":     return <AiPromptsSection baseUrl={baseUrl} workspaceId={id} />;
       case "endpoints":      return <EndpointsListSection onSelectEndpoint={(epId) => goTo("endpoints", epId)} />;
       case "changelog":      return <ChangelogSection />;

@@ -106,10 +106,11 @@ export interface BlogListResult {
 }
 
 const BLOG_SUMMARY_COLS =
-  "slug, title, excerpt, cover_image, category, tags, author_name, featured, reading_time, views, published_at, updated_at";
+  "slug, title, excerpt, cover_image, category, tags, author_name, featured, reading_time, views, published_at, updated_at, " +
+  "seo_title, meta_description, social_title, social_description, social_image, social_image_alt, social_hashtags, open_graph_type, twitter_card";
 
 const BLOG_DETAIL_COLS =
-  BLOG_SUMMARY_COLS + ", content, seo_title, meta_description";
+  BLOG_SUMMARY_COLS + ", content";
 
 export async function listBlogs(
   workspaceId: string,
