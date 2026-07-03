@@ -8,6 +8,7 @@
 // Stores the result in blog_posts and returns the new post id.
 
 import { createClient } from "jsr:@supabase/supabase-js@2";
+import { isTrustedCaller } from "../_shared/trusted-caller.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
