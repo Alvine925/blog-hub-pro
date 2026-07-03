@@ -52,7 +52,8 @@ function getServiceKey(): string {
   // (no VITE_ prefix) is accepted here.
   const key =
     env("SUPABASE_SERVICE_ROLE_KEY") ??
-    env("SUPABASE_SERVICE_ROLE");
+    env("SUPABASE_SERVICE_ROLE") ??
+    env("VITE_SUPABASE_SERVICE_ROLE"); // fallback: key stored with VITE_ prefix in .env
   if (!key) throw new Error("Missing env var: SUPABASE_SERVICE_ROLE_KEY — set it in Replit Secrets (never use VITE_ prefix for service role keys)");
   return key;
 }
