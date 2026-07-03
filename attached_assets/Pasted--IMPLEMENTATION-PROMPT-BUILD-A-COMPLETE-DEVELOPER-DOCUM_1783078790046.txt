@@ -1,0 +1,921 @@
+# IMPLEMENTATION PROMPT
+
+# BUILD A COMPLETE DEVELOPER DOCUMENTATION PORTAL FOR LUNAR CMS
+
+## Objective
+
+Transform the existing Documentation section into a **world-class Developer Documentation Portal** similar in quality to Stripe, Supabase, Vercel, Clerk, and OpenAI.
+
+This is **not** a simple documentation page.
+
+It is a complete documentation application with its own navigation, layout, search, examples, AI integration, interactive API explorer, implementation guides, code generators, and developer resources.
+
+The purpose is to enable a developer to integrate Lunar CMS into any website or application without requiring external assistance.
+
+---
+
+# IMPORTANT
+
+Before implementing anything, inspect the existing project.
+
+The following systems already exist and **must be reused** where appropriate.
+
+* Authentication
+* Workspaces
+* API Keys
+* REST API
+* API Explorer
+* AI Documentation Assistant
+* Code Example Generator
+* Developer Dashboard
+* Existing Documentation
+* Existing UI Components
+* Existing Design System
+* Existing Theme
+* Existing Routing
+* Existing Database
+* Existing Search
+
+Do **not** duplicate functionality.
+
+Extend the existing architecture.
+
+---
+
+# OVERALL USER EXPERIENCE
+
+Inside the Main Dashboard, there should be a menu item called
+
+```text
+Developer Documentation
+```
+
+Clicking this should **not** open a single documentation page.
+
+Instead, it should open a completely separate documentation workspace.
+
+Think of it like opening the Stripe Docs.
+
+---
+
+# DOCUMENTATION LAYOUT
+
+Create a completely separate Documentation Dashboard.
+
+Layout
+
+```text
+---------------------------------------------------------
+
+Top Navigation
+
+---------------------------------------------------------
+
+Documentation Sidebar
+
+|
+
+|
+
+|
+
+Content Area
+
+|
+
+|
+
+|
+
+Right Sidebar (Table of Contents)
+
+---------------------------------------------------------
+```
+
+This documentation dashboard should have its own routing.
+
+Example
+
+```text
+/dashboard/docs
+```
+
+Every section should have its own URL.
+
+Example
+
+```text
+/dashboard/docs/introduction
+
+/dashboard/docs/authentication
+
+/dashboard/docs/rest-api
+
+/dashboard/docs/blogs
+
+/dashboard/docs/articles
+
+/dashboard/docs/products
+
+/dashboard/docs/faqs
+```
+
+Do not load everything on one page.
+
+---
+
+# SIDEBAR STRUCTURE
+
+The documentation sidebar should be collapsible.
+
+Support nested navigation.
+
+Structure similar to
+
+```text
+Getting Started
+
+Introduction
+
+Quick Start
+
+Installation
+
+Authentication
+
+API Keys
+
+Base URL
+
+Versioning
+
+REST API
+
+Content APIs
+
+Blogs
+
+Articles
+
+News
+
+Products
+
+FAQs
+
+Pages
+
+Media
+
+Search
+
+Pagination
+
+Filtering
+
+Sorting
+
+Publishing
+
+Engagement APIs
+
+Likes
+
+Comments
+
+Views
+
+Related Content
+
+Feature Flags
+
+Branding
+
+Developer SDK
+
+JavaScript
+
+TypeScript
+
+React
+
+Next.js
+
+Vue
+
+Nuxt
+
+Laravel
+
+PHP
+
+Python
+
+Flutter
+
+React Native
+
+Node.js
+
+Webhooks (Future)
+
+AI Integration
+
+Cursor
+
+Loveable
+
+Bolt
+
+Replit
+
+Windsurf
+
+Copilot
+
+Claude Code
+
+OpenAI
+
+Troubleshooting
+
+FAQ
+
+Changelog
+```
+
+Support unlimited nesting.
+
+---
+
+# DOCUMENTATION SEARCH
+
+Implement a full documentation search.
+
+Search should index
+
+* Titles
+* Headings
+* Content
+* API Endpoints
+* Code Samples
+* FAQs
+
+Search results should navigate directly to the correct document.
+
+---
+
+# RIGHT SIDEBAR
+
+Every documentation page should generate
+
+```text
+On This Page
+
+Introduction
+
+Authentication
+
+Request
+
+Response
+
+Example
+
+Errors
+
+Best Practices
+
+Next Steps
+```
+
+Automatically from headings.
+
+---
+
+# EVERY PAGE SHOULD INCLUDE
+
+Every documentation page should follow the same structure.
+
+Example
+
+Introduction
+
+Overview
+
+Prerequisites
+
+Request Format
+
+Response Format
+
+Authentication
+
+Permissions
+
+Example Request
+
+Example Response
+
+Supported Parameters
+
+Possible Errors
+
+Code Examples
+
+Best Practices
+
+Related APIs
+
+AI Prompt
+
+Next Steps
+
+---
+
+# GETTING STARTED SECTION
+
+Create a complete onboarding guide.
+
+Topics include
+
+* What is Lunar CMS
+* Headless CMS Architecture
+* How Lunar Works
+* Creating a Workspace
+* Publishing your First Content
+* Getting an API Key
+* Making your First API Request
+* Rendering Data on Your Website
+
+---
+
+# AUTHENTICATION SECTION
+
+Create complete documentation.
+
+Include
+
+API Keys
+
+Bearer Tokens
+
+Workspace Resolution
+
+Permissions
+
+Authentication Flow
+
+Security Best Practices
+
+Examples
+
+Response Examples
+
+Failure Examples
+
+Error Codes
+
+---
+
+# BASE URL
+
+Document
+
+Production URL
+
+Development URL
+
+Versioning
+
+Examples
+
+```http
+https://api.lunarcms.com/v1/
+```
+
+Explain versioning strategy.
+
+---
+
+# REST API DOCUMENTATION
+
+Every endpoint should have its own page.
+
+Example
+
+Blogs
+
+List Blogs
+
+Retrieve Blog
+
+Create Blog
+
+Update Blog
+
+Delete Blog
+
+Likes
+
+Comments
+
+Views
+
+Related Posts
+
+Repeat for
+
+Articles
+
+News
+
+Products
+
+FAQs
+
+Pages
+
+Media
+
+---
+
+# EVERY ENDPOINT PAGE
+
+Automatically display
+
+Endpoint
+
+Method
+
+Authentication
+
+Headers
+
+Body
+
+Response
+
+Errors
+
+Pagination
+
+Filtering
+
+Sorting
+
+Code Examples
+
+Try It
+
+Related Endpoints
+
+AI Prompt
+
+---
+
+# INTERACTIVE API EXPLORER
+
+Reuse the existing API Explorer.
+
+Embed it inside documentation.
+
+Developers should be able to
+
+Select Endpoint
+
+Enter API Key
+
+Enter Parameters
+
+Execute Request
+
+View Response
+
+Copy Response
+
+---
+
+# CODE EXAMPLES
+
+Every endpoint should automatically generate examples for
+
+JavaScript
+
+TypeScript
+
+React
+
+Next.js
+
+Vue
+
+Nuxt
+
+Node.js
+
+PHP
+
+Laravel
+
+Python
+
+Flutter
+
+React Native
+
+cURL
+
+Every example should be copyable.
+
+---
+
+# IMPLEMENTATION GUIDES
+
+Create detailed implementation guides.
+
+Examples
+
+Adding Blogs to a Next.js Website
+
+Adding Blogs to React
+
+Building a Blog Listing
+
+Building a Blog Detail Page
+
+Implementing Search
+
+Implementing Pagination
+
+Implementing Categories
+
+Implementing Comments
+
+Implementing Likes
+
+Implementing Products
+
+Implementing FAQs
+
+Implementing News
+
+Implementing Articles
+
+Each guide should include
+
+Architecture
+
+Folder Structure
+
+API Calls
+
+Components
+
+Caching
+
+SEO
+
+Deployment
+
+---
+
+# AI PROMPT LIBRARY
+
+Create a complete AI Prompt Library.
+
+This should become one of Lunar CMS's flagship features.
+
+Generate implementation prompts for
+
+Cursor
+
+Loveable
+
+Bolt
+
+Replit
+
+Windsurf
+
+VS Code Copilot
+
+Claude Code
+
+OpenAI Codex
+
+Gemini CLI
+
+Each prompt should explain how to integrate Lunar CMS into that environment.
+
+Allow prompts to be copied with one click.
+
+---
+
+# FRAMEWORK HUB
+
+Create dedicated documentation for
+
+React
+
+Next.js
+
+Vue
+
+Nuxt
+
+Angular
+
+Laravel
+
+PHP
+
+Node.js
+
+Express
+
+Python
+
+Django
+
+Flutter
+
+React Native
+
+Each section should include
+
+Installation
+
+Authentication
+
+Fetching Data
+
+Rendering
+
+Caching
+
+Error Handling
+
+Deployment
+
+---
+
+# API REFERENCE
+
+Create a complete API Reference.
+
+Document
+
+Every endpoint
+
+Every parameter
+
+Every response
+
+Every error
+
+Every permission
+
+Every header
+
+Every query parameter
+
+Every response object
+
+This should be automatically generated where possible.
+
+---
+
+# ERROR REFERENCE
+
+Create a complete Error Reference.
+
+Examples
+
+400
+
+401
+
+403
+
+404
+
+409
+
+422
+
+429
+
+500
+
+Explain
+
+Cause
+
+Example
+
+Resolution
+
+---
+
+# WEBHOOKS
+
+Create placeholder documentation for future Webhooks.
+
+Clearly mark them as
+
+Coming Soon
+
+---
+
+# SDK SECTION
+
+Create placeholders for future SDKs.
+
+Examples
+
+JavaScript SDK
+
+PHP SDK
+
+Python SDK
+
+Flutter SDK
+
+Node SDK
+
+Mark clearly as
+
+Coming Soon
+
+---
+
+# FAQ SECTION
+
+Create a searchable Developer FAQ.
+
+Examples
+
+How do I authenticate?
+
+How do I fetch blogs?
+
+How do I display products?
+
+How do I paginate?
+
+How do I cache?
+
+How do I implement comments?
+
+How do I troubleshoot authentication errors?
+
+---
+
+# CHANGELOG
+
+Create a changelog page.
+
+Support
+
+Versions
+
+Release Dates
+
+Features
+
+Breaking Changes
+
+Migration Guides
+
+---
+
+# DESIGN
+
+The documentation portal should feel premium.
+
+Inspired by
+
+* Stripe
+* Supabase
+* Vercel
+* OpenAI
+* Clerk
+* Tailwind CSS
+
+Requirements
+
+* Fast
+* Clean
+* Responsive
+* Beautiful typography
+* Excellent spacing
+* Syntax highlighting
+* Copy buttons
+* Sticky sidebar
+* Sticky table of contents
+* Keyboard navigation
+* Dark mode support (if already implemented)
+* Mobile responsive
+
+---
+
+# DATABASE
+
+Store documentation in the database instead of hardcoding markdown files.
+
+Create a documentation content model that supports:
+
+* Categories
+* Sections
+* Subsections
+* Nested pages
+* Rich text
+* Code blocks
+* Images
+* Videos (future)
+* Versioning
+* Search indexing
+* Ordering
+* Status (Draft/Published)
+* SEO metadata
+
+Build an admin interface so documentation can be created, edited, reordered, versioned, and published without changing code.
+
+---
+
+# ADMIN MANAGEMENT
+
+Inside the Admin Dashboard create a Documentation Management module.
+
+Allow administrators to
+
+* Create documentation
+* Edit documentation
+* Organize sections
+* Create nested pages
+* Upload code snippets
+* Add AI prompts
+* Publish
+* Draft
+* Search
+* Reorder navigation
+
+No documentation should require manual code editing.
+
+---
+
+# FINAL VERIFICATION
+
+Do not mark the task complete until the following are verified.
+
+✓ Documentation opens in its own dedicated dashboard.
+
+✓ The documentation dashboard has its own sidebar.
+
+✓ Every documentation page has its own route.
+
+✓ Nested navigation works correctly.
+
+✓ Search indexes all documentation.
+
+✓ API Explorer is embedded.
+
+✓ Code examples are available for supported languages.
+
+✓ AI implementation prompts are available for supported AI coding tools.
+
+✓ Framework-specific guides are available.
+
+✓ API Reference is comprehensive.
+
+✓ Error Reference is complete.
+
+✓ FAQ is searchable.
+
+✓ Changelog is implemented.
+
+✓ Documentation is stored and managed through the database.
+
+✓ An admin interface exists to manage all documentation.
+
+✓ Existing documentation systems have been reused where possible.
+
+✓ No duplicate architecture has been introduced.
+
+---
+
+# DELIVERABLES
+
+Provide an implementation report including:
+
+1. Architecture of the Documentation Portal.
+2. Database schema for documentation management.
+3. Routes created.
+4. Sidebar navigation structure.
+5. Admin management features implemented.
+6. Search implementation.
+7. API Explorer integration.
+8. AI Prompt Library implementation.
+9. Framework documentation coverage.
+10. Confirmation that Lunar CMS now includes a fully database-driven, enterprise-grade Developer Documentation Portal comparable to leading developer platforms.

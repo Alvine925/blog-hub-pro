@@ -68,8 +68,9 @@ function AdminLayoutGuard() {
     );
   }
 
-  // Workspace pages render their own layout
+  // Workspace pages and docs portal render their own layout
   if (/^\/admin\/workspaces\/[^/]+/.test(pathname)) return <Outlet />;
+  if (pathname.startsWith("/admin/docs")) return <Outlet />;
 
   return <GlobalLayout />;
 }
@@ -110,11 +111,12 @@ const globalNav: Array<{ group: string; items: NavItem[] }> = [
   {
     group: "Developers",
     items: [
-      { label: "API Keys",          to: "/admin/api-keys",           icon: Key        },
-      { label: "Request Logs",      to: "/admin/api-logs",           icon: ScrollText },
-      { label: "API Explorer",      to: "/admin/api-explorer",       icon: BookOpen   },
-      { label: "Analytics",         to: "/admin/analytics",          icon: Map        },
-      { label: "Integration Center", to: "/admin/integration-center", icon: Plug       },
+      { label: "API Keys",              to: "/admin/api-keys",           icon: Key        },
+      { label: "Request Logs",          to: "/admin/api-logs",           icon: ScrollText },
+      { label: "API Explorer",          to: "/admin/api-explorer",       icon: BookOpen   },
+      { label: "Analytics",             to: "/admin/analytics",          icon: Map        },
+      { label: "Integration Center",    to: "/admin/integration-center", icon: Plug       },
+      { label: "Developer Docs",        to: "/admin/docs",               icon: BookOpen   },
     ],
   },
   {

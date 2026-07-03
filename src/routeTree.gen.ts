@@ -32,6 +32,7 @@ import { Route as AdminSearchRouteImport } from './routes/admin.search'
 import { Route as AdminNotificationsRouteImport } from './routes/admin.notifications'
 import { Route as AdminMediaRouteImport } from './routes/admin.media'
 import { Route as AdminIntegrationCenterRouteImport } from './routes/admin.integration-center'
+import { Route as AdminDocsRouteImport } from './routes/admin.docs'
 import { Route as AdminDashboardRouteImport } from './routes/admin.dashboard'
 import { Route as AdminCommentsRouteImport } from './routes/admin.comments'
 import { Route as AdminCollectionsRouteImport } from './routes/admin.collections'
@@ -205,6 +206,11 @@ const AdminMediaRoute = AdminMediaRouteImport.update({
 const AdminIntegrationCenterRoute = AdminIntegrationCenterRouteImport.update({
   id: '/integration-center',
   path: '/integration-center',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminDocsRoute = AdminDocsRouteImport.update({
+  id: '/docs',
+  path: '/docs',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminDashboardRoute = AdminDashboardRouteImport.update({
@@ -557,6 +563,7 @@ export interface FileRoutesByFullPath {
   '/admin/collections': typeof AdminCollectionsRouteWithChildren
   '/admin/comments': typeof AdminCommentsRoute
   '/admin/dashboard': typeof AdminDashboardRoute
+  '/admin/docs': typeof AdminDocsRoute
   '/admin/integration-center': typeof AdminIntegrationCenterRoute
   '/admin/media': typeof AdminMediaRoute
   '/admin/notifications': typeof AdminNotificationsRoute
@@ -639,6 +646,7 @@ export interface FileRoutesByTo {
   '/admin/collections': typeof AdminCollectionsRouteWithChildren
   '/admin/comments': typeof AdminCommentsRoute
   '/admin/dashboard': typeof AdminDashboardRoute
+  '/admin/docs': typeof AdminDocsRoute
   '/admin/integration-center': typeof AdminIntegrationCenterRoute
   '/admin/media': typeof AdminMediaRoute
   '/admin/notifications': typeof AdminNotificationsRoute
@@ -715,6 +723,7 @@ export interface FileRoutesById {
   '/admin/collections': typeof AdminCollectionsRouteWithChildren
   '/admin/comments': typeof AdminCommentsRoute
   '/admin/dashboard': typeof AdminDashboardRoute
+  '/admin/docs': typeof AdminDocsRoute
   '/admin/integration-center': typeof AdminIntegrationCenterRoute
   '/admin/media': typeof AdminMediaRoute
   '/admin/notifications': typeof AdminNotificationsRoute
@@ -801,6 +810,7 @@ export interface FileRouteTypes {
     | '/admin/collections'
     | '/admin/comments'
     | '/admin/dashboard'
+    | '/admin/docs'
     | '/admin/integration-center'
     | '/admin/media'
     | '/admin/notifications'
@@ -883,6 +893,7 @@ export interface FileRouteTypes {
     | '/admin/collections'
     | '/admin/comments'
     | '/admin/dashboard'
+    | '/admin/docs'
     | '/admin/integration-center'
     | '/admin/media'
     | '/admin/notifications'
@@ -958,6 +969,7 @@ export interface FileRouteTypes {
     | '/admin/collections'
     | '/admin/comments'
     | '/admin/dashboard'
+    | '/admin/docs'
     | '/admin/integration-center'
     | '/admin/media'
     | '/admin/notifications'
@@ -1199,6 +1211,13 @@ declare module '@tanstack/react-router' {
       path: '/integration-center'
       fullPath: '/admin/integration-center'
       preLoaderRoute: typeof AdminIntegrationCenterRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/docs': {
+      id: '/admin/docs'
+      path: '/docs'
+      fullPath: '/admin/docs'
+      preLoaderRoute: typeof AdminDocsRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/dashboard': {
@@ -1856,6 +1875,7 @@ interface AdminRouteChildren {
   AdminCollectionsRoute: typeof AdminCollectionsRouteWithChildren
   AdminCommentsRoute: typeof AdminCommentsRoute
   AdminDashboardRoute: typeof AdminDashboardRoute
+  AdminDocsRoute: typeof AdminDocsRoute
   AdminIntegrationCenterRoute: typeof AdminIntegrationCenterRoute
   AdminMediaRoute: typeof AdminMediaRoute
   AdminNotificationsRoute: typeof AdminNotificationsRoute
@@ -1881,6 +1901,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminCollectionsRoute: AdminCollectionsRouteWithChildren,
   AdminCommentsRoute: AdminCommentsRoute,
   AdminDashboardRoute: AdminDashboardRoute,
+  AdminDocsRoute: AdminDocsRoute,
   AdminIntegrationCenterRoute: AdminIntegrationCenterRoute,
   AdminMediaRoute: AdminMediaRoute,
   AdminNotificationsRoute: AdminNotificationsRoute,
