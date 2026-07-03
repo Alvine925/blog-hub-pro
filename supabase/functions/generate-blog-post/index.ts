@@ -8,6 +8,7 @@
 // Stores the result in blog_posts and returns the new post id.
 
 import { createClient } from "jsr:@supabase/supabase-js@2";
+import { isTrustedCaller } from "../_shared/trusted-caller.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -459,7 +460,7 @@ Deno.serve(async (req: Request) => {
   const authHeader = req.headers.get("authorization") ?? "";
   if (!authHeader.startsWith("Bearer ")) return json({ error: "Unauthorized" }, 401);
 
-  const isServiceRole = authHeader === `Bearer ${supabaseServiceKey}`;
+  const isServiceRole = isTrustedCaller(authHeader);
   let actorEmail = "server";
 
   // ── Parse body ────────────────────────────────────────────────────────────

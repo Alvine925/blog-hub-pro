@@ -7,6 +7,7 @@
 // Returns a long-lived signed URL and writes cover_image to blog_posts when post_id is supplied.
 
 import { createClient } from "jsr:@supabase/supabase-js@2";
+import { isTrustedCaller } from "../_shared/trusted-caller.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -325,7 +326,7 @@ Deno.serve(async (req: Request) => {
   const authHeader = req.headers.get("authorization") ?? "";
   if (!authHeader.startsWith("Bearer ")) return json({ error: "Unauthorized" }, 401);
 
-  const isServiceRole = authHeader === `Bearer ${supabaseServiceKey}`;
+  const isServiceRole = isTrustedCaller(authHeader);
 
   if (!isServiceRole) {
     const callerClient = createClient(supabaseUrl, supabaseAnonKey, {

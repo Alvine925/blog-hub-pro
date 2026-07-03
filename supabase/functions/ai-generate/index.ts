@@ -3,6 +3,7 @@
 // Fallback: Mistral AI           (MISTRAL_API_KEY)  → mistral-large-latest
 
 import { createClient } from "jsr:@supabase/supabase-js@2";
+import { isTrustedCaller } from "../_shared/trusted-caller.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -135,7 +136,7 @@ Deno.serve(async (req: Request) => {
     return json({ error: "Unauthorized" }, 401);
   }
 
-  const isServiceRole = authHeader === `Bearer ${supabaseServiceKey}`;
+  const isServiceRole = isTrustedCaller(authHeader);
   let actorEmail = "server";
   if (!isServiceRole) {
     const callerClient = createClient(supabaseUrl, supabaseAnonKey, {
