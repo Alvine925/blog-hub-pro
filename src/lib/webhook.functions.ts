@@ -1,4 +1,4 @@
-import { createServerFn } from "@tanstack/react-start";
+import { createServerFn, createServerOnlyFn } from "@tanstack/react-start";
 import { z } from "zod";
 
 export const WEBHOOK_EVENTS = [
@@ -446,10 +446,10 @@ function shouldRetry(status: number | null, error: string | null): boolean {
   return false;
 }
 
-export async function dispatchWebhooks(
+export const dispatchWebhooks = createServerOnlyFn(async (
   event: WebhookEvent,
   payload: Record<string, unknown>,
-): Promise<void> {
+): Promise<void> => {
   try {
     const { getAdminClient } = await import("./supabase.server");
     const supabase = await getAdminClient();
@@ -510,4 +510,4 @@ export async function dispatchWebhooks(
   } catch {
     // Never crash the caller
   }
-}
+});

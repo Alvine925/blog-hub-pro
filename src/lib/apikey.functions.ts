@@ -1,4 +1,4 @@
-import { createServerFn } from "@tanstack/react-start";
+import { createServerFn, createServerOnlyFn } from "@tanstack/react-start";
 import { z } from "zod";
 
 export interface ApiKey {
@@ -102,7 +102,7 @@ export const deleteApiKey = createServerFn({ method: "POST" })
   });
 
 /** Node.js server-side API key validation (used by internal REST handlers). */
-export async function validateApiKey(raw: string): Promise<boolean> {
+export const validateApiKey = createServerOnlyFn(async (raw: string): Promise<boolean> => {
   const { createHash } = await import("node:crypto");
   const { getAdminClient } = await import("./supabase.server");
   const supabase = await getAdminClient();
@@ -122,7 +122,7 @@ export async function validateApiKey(raw: string): Promise<boolean> {
     .update({ last_used_at: new Date().toISOString() })
     .eq("id", data.id);
   return true;
-}
+});
 
 // ── API request log viewer ───────────────────────────────────────────────────
 
