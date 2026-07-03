@@ -3,7 +3,9 @@ import {
   LayoutDashboard, Moon, FolderOpen, CreditCard, Settings, ChevronRight,
   LogOut, Bell, BookOpen, HelpCircle, Map, FileText, Users,
   ChevronDown, User, Key, ScrollText, Plug, MessageSquare,
+  Sparkles, X,
 } from "lucide-react";
+import { AiAssistant } from "@/components/dashboard/AiAssistant";
 import { cn } from "@/lib/utils";
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -196,7 +198,8 @@ function ProfileMenu({ email }: { email: string }) {
 function GlobalLayout() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const navigate  = useNavigate();
-  const [email, setEmail] = useState("");
+  const [email,   setEmail]   = useState("");
+  const [aiOpen,  setAiOpen]  = useState(false);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -289,6 +292,26 @@ function GlobalLayout() {
             </span>
           </div>
           <div className="flex items-center gap-2">
+            {/* AI Assistant button */}
+            <button
+              type="button"
+              onClick={() => setAiOpen((v) => !v)}
+              className={cn(
+                "relative flex items-center gap-1.5 rounded-lg px-2.5 h-8 text-sm font-medium transition-all",
+                aiOpen
+                  ? "bg-violet-100 text-violet-700 shadow-sm"
+                  : "text-muted-foreground hover:bg-muted hover:text-foreground",
+              )}
+              title="Open AI Assistant"
+            >
+              <Sparkles className="h-3.5 w-3.5" />
+              <span className="hidden sm:block text-xs">AI Assistant</span>
+              {/* pulse dot */}
+              <span className="absolute -right-0.5 -top-0.5 flex h-2 w-2">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-violet-400 opacity-60" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-violet-500" />
+              </span>
+            </button>
             {/* Notifications */}
             <Link
               to="/admin/notifications"
@@ -305,6 +328,55 @@ function GlobalLayout() {
         <main className="flex-1 overflow-auto">
           <Outlet />
         </main>
+      </div>
+
+      {/* ── AI Assistant Drawer ── */}
+      {/* Backdrop */}
+      {aiOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/20 backdrop-blur-[1px]"
+          onClick={() => setAiOpen(false)}
+        />
+      )}
+
+      {/* Panel */}
+      <div
+        className={cn(
+          "fixed right-0 top-0 z-50 flex h-full w-[420px] max-w-[95vw] flex-col border-l border-border bg-background shadow-2xl transition-transform duration-300 ease-in-out",
+          aiOpen ? "translate-x-0" : "translate-x-full",
+        )}
+      >
+        {/* Drawer header */}
+        <div className="flex h-14 shrink-0 items-center justify-between border-b border-border px-5">
+          <div className="flex items-center gap-2.5">
+            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-violet-100">
+              <Sparkles className="h-4 w-4 text-violet-600" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold">AI Assistant</p>
+              <p className="text-[10px] text-muted-foreground">Lunar CMS · Beta</p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => setAiOpen(false)}
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        {/* Chat area */}
+        <div className="flex flex-1 min-h-0 flex-col p-5">
+          <AiAssistant
+            compact
+            onClose={() => setAiOpen(false)}
+            onNavigate={(path) => {
+              navigate({ to: path as "/" });
+              setAiOpen(false);
+            }}
+          />
+        </div>
       </div>
     </div>
   );
