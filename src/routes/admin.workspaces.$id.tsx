@@ -89,7 +89,6 @@ function buildNav(id: string): NavGroup[] {
         { label: "API Keys",           to: `${base}/api-keys`,             icon: Key     },
         { label: "Webhooks",           to: `${base}/webhooks`,             icon: Webhook },
         { label: "Cache Invalidation", to: `${base}/cache-invalidation`,   icon: Zap     },
-        { label: "API Explorer",       to: `${base}/api-explorer`,         icon: Code2   },
         { label: "Integration Center", to: `${base}/integration-center`,   icon: Plug    },
       ],
     },

@@ -7,7 +7,7 @@ import {
   Copy, Check, Search, BookOpen, Key, Zap, Code2, AlertTriangle,
   Clock, Layers, Star, StarOff, Eye, ChevronRight, ExternalLink,
   Activity, Globe, Shield, Sparkles, FileText, Database, Hash,
-  ChevronDown, ChevronUp,
+  ChevronDown, ChevronUp, Play, Loader2, ArrowLeft, X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -261,6 +261,16 @@ function DocSidebar({
 
   return (
     <aside className="w-60 shrink-0 border-r border-zinc-200 bg-white overflow-y-auto flex flex-col">
+      {/* Back to dashboard */}
+      <div className="shrink-0 border-b border-zinc-100 px-3 py-3">
+        <a
+          href="/admin/dashboard"
+          className="flex items-center gap-2 rounded-md px-2 py-1.5 text-xs font-medium text-zinc-500 hover:bg-zinc-50 hover:text-zinc-900 transition-colors"
+        >
+          <ArrowLeft className="h-3.5 w-3.5" />
+          Back to Dashboard
+        </a>
+      </div>
       <div className="py-5 px-3 flex-1">
         {Object.entries(grouped).map(([group, items]) => (
           <div key={group} className="mb-5">
@@ -1309,18 +1319,22 @@ function EndpointDetailSection({
   apiKey,
   isFav,
   onToggleFav,
-  
 }: {
   endpointId: string;
   baseUrl: string;
   apiKey: string;
   isFav: boolean;
   onToggleFav: (id: string) => void;
-  
 }) {
   const ep = ENDPOINT_REGISTRY.find((e) => e.id === endpointId);
   const [lang, setLang] = useState<CodeLanguage>("curl");
   const [activeTab, setActiveTab] = useState<"params" | "response" | "errors">("params");
+
+  // ── Try It state ──────────────────────────────────────────────────────────
+  const [tryOpen, setTryOpen] = useState(false);
+  const [tryValues, setTryValues] = useState<Record<string, string>>({});
+  const [tryLoading, setTryLoading] = useState(false);
+  const [tryResult, setTryResult] = useState<{ status: number; body: string; ms: number } | null>(null);
 
   if (!ep) return <div className="p-8 text-zinc-400">Endpoint not found.</div>;
 
@@ -1333,6 +1347,43 @@ function EndpointDetailSection({
   const edgeFnNote = isEdgeFn
     ? `This endpoint is served by the \`${ep.functionName}\` Supabase Edge Function.\nProduction URL: ${PROD_API_URL}${ep.path}`
     : null;
+
+  function buildTryUrl() {
+    let path = ep!.path;
+    const qs: string[] = [];
+    for (const p of params) {
+      const val = tryValues[p.name] ?? p.default ?? "";
+      if (!val) continue;
+      if (p.source === "path") {
+        path = path.replace(`:${p.name}`, encodeURIComponent(val));
+      } else {
+        qs.push(`${p.name}=${encodeURIComponent(val)}`);
+      }
+    }
+    return `${baseUrl}/api/v1${path}${qs.length ? "?" + qs.join("&") : ""}`;
+  }
+
+  async function handleTrySend() {
+    setTryLoading(true);
+    setTryResult(null);
+    const t0 = Date.now();
+    try {
+      const res = await fetch(buildTryUrl(), {
+        method: ep!.method,
+        headers: {
+          ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {}),
+          "Content-Type": "application/json",
+        },
+      });
+      const raw = await res.text();
+      let body = raw;
+      try { body = JSON.stringify(JSON.parse(raw), null, 2); } catch { /* leave as-is */ }
+      setTryResult({ status: res.status, body, ms: Date.now() - t0 });
+    } catch (err) {
+      setTryResult({ status: 0, body: String(err), ms: Date.now() - t0 });
+    }
+    setTryLoading(false);
+  }
 
   return (
     <div className="space-y-8">
@@ -1397,7 +1448,109 @@ function EndpointDetailSection({
         <CodeBlock code={snippet} language={lang === "curl" ? "bash" : lang} />
       </div>
 
-      {/* Tabs */}
+      {/* ── Try It Panel ──────────────────────────────────────────────────── */}
+      <div className="rounded-lg border border-zinc-200 overflow-hidden">
+        <button
+          type="button"
+          onClick={() => { setTryOpen((o) => !o); setTryResult(null); }}
+          className="flex w-full items-center justify-between px-4 py-3 bg-zinc-50 hover:bg-zinc-100 transition-colors"
+        >
+          <div className="flex items-center gap-2">
+            <Play className="h-4 w-4 text-red-600" />
+            <span className="text-sm font-semibold text-zinc-800">Try It</span>
+            <span className="text-xs text-zinc-400">— send a live request</span>
+          </div>
+          {tryOpen
+            ? <ChevronUp className="h-4 w-4 text-zinc-400" />
+            : <ChevronDown className="h-4 w-4 text-zinc-400" />}
+        </button>
+
+        {tryOpen && (
+          <div className="px-4 py-4 space-y-4 border-t border-zinc-200 bg-white">
+            {/* URL preview */}
+            <div className="flex items-center gap-2 rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2">
+              <span className={cn("rounded px-1.5 py-0.5 text-[10px] font-bold font-mono shrink-0", METHOD_COLOR[ep.method])}>{ep.method}</span>
+              <code className="font-mono text-xs text-zinc-600 truncate flex-1">{buildTryUrl()}</code>
+            </div>
+
+            {/* Auth status */}
+            {!apiKey && (
+              <div className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
+                <Key className="h-3.5 w-3.5 shrink-0" />
+                No API key set — paste one in the top bar to authenticate requests.
+              </div>
+            )}
+
+            {/* Params */}
+            {params.length > 0 && (
+              <div className="space-y-2">
+                <p className="text-xs font-semibold text-zinc-500">Parameters</p>
+                <div className="grid gap-2">
+                  {params.map((p) => (
+                    <div key={p.name} className="flex items-center gap-3">
+                      <div className="w-32 shrink-0">
+                        <code className="text-xs font-mono text-zinc-700">{p.name}</code>
+                        {p.required && <span className="ml-1 text-[9px] text-red-500 font-bold">*</span>}
+                        <p className="text-[10px] text-zinc-400">{p.source === "path" ? "path" : "query"}</p>
+                      </div>
+                      <input
+                        type="text"
+                        value={tryValues[p.name] ?? p.default ?? ""}
+                        onChange={(e) => setTryValues((v) => ({ ...v, [p.name]: e.target.value }))}
+                        placeholder={p.default ?? p.description ?? p.name}
+                        className="flex-1 rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-1.5 font-mono text-xs focus:outline-none focus:ring-1 focus:ring-red-500"
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Send button */}
+            <button
+              type="button"
+              onClick={handleTrySend}
+              disabled={tryLoading}
+              className="flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-60 transition-colors"
+            >
+              {tryLoading
+                ? <Loader2 className="h-4 w-4 animate-spin" />
+                : <Play className="h-4 w-4" />}
+              {tryLoading ? "Sending…" : "Send Request"}
+            </button>
+
+            {/* Response */}
+            {tryResult && (
+              <div className="space-y-2">
+                <div className="flex items-center gap-3">
+                  <span className={cn(
+                    "rounded-full px-2.5 py-0.5 text-xs font-bold",
+                    tryResult.status === 0 ? "bg-red-100 text-red-700" :
+                    tryResult.status < 300 ? "bg-emerald-100 text-emerald-700" :
+                    tryResult.status < 400 ? "bg-blue-100 text-blue-700" :
+                    "bg-red-100 text-red-700",
+                  )}>
+                    {tryResult.status === 0 ? "Network Error" : tryResult.status}
+                  </span>
+                  <span className="text-xs text-zinc-400">{tryResult.ms} ms</span>
+                  <button
+                    type="button"
+                    onClick={() => setTryResult(null)}
+                    className="ml-auto text-zinc-400 hover:text-zinc-600"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+                <pre className="max-h-64 overflow-y-auto rounded-lg border border-zinc-200 bg-zinc-950 p-3 text-xs font-mono text-zinc-100 leading-relaxed whitespace-pre-wrap">
+                  {tryResult.body}
+                </pre>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* ── Tabs ──────────────────────────────────────────────────────────── */}
       <div>
         <div className="flex gap-1 border-b border-zinc-200 mb-4">
           {([

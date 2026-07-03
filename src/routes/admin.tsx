@@ -71,6 +71,7 @@ function AdminLayoutGuard() {
   // Workspace pages and docs portal render their own layout
   if (/^\/admin\/workspaces\/[^/]+/.test(pathname)) return <Outlet />;
   if (pathname.startsWith("/admin/docs")) return <Outlet />;
+  if (pathname.startsWith("/admin/api-explorer")) return <Outlet />;
 
   return <GlobalLayout />;
 }
