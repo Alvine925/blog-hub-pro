@@ -1,13 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { queryOptions, useSuspenseQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import {
   Plus, Trash2, Copy, Key, AlertTriangle, Loader2,
   Eye, EyeOff, Shield, Globe, ChevronDown, ChevronUp,
   Terminal, Lock, Link2, Check, BarChart3, Clock, Activity,
-  TrendingUp,
+  TrendingUp, FolderOpen,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,6 +27,7 @@ import {
 import {
   listApiKeys, createApiKey, revokeApiKey, deleteApiKey, type ApiKey,
 } from "@/lib/apikey.functions";
+import { listWorkspaces, type Workspace } from "@/lib/workspace.functions";
 import { formatBlogDate } from "@/lib/blog-types";
 import { cn } from "@/lib/utils";
 
@@ -275,18 +276,41 @@ function CreateKeyDialog({
   onOpenChange: (v: boolean) => void;
   onCreated: (key: string) => void;
 }) {
-  const [name, setName] = useState("");
+  const [name,        setName]        = useState("");
   const [description, setDescription] = useState("");
-  const [keyType, setKeyType] = useState<"publishable" | "secret">("publishable");
-  const [creating, setCreating] = useState(false);
-  const doCreate = useServerFn(createApiKey);
+  const [keyType,     setKeyType]     = useState<"publishable" | "secret">("publishable");
+  const [creating,    setCreating]    = useState(false);
+  const [workspaces,  setWorkspaces]  = useState<Workspace[]>([]);
+  const [wsId,        setWsId]        = useState<string>("");
+  const [wsLoading,   setWsLoading]   = useState(false);
+  const doCreate      = useServerFn(createApiKey);
+  const doListWs      = useServerFn(listWorkspaces);
+
+  useEffect(() => {
+    if (!open) return;
+    setWsLoading(true);
+    doListWs({})
+      .then((ws) => {
+        setWorkspaces(ws);
+        if (ws.length > 0 && !wsId) setWsId(ws[0].id);
+      })
+      .catch(() => {})
+      .finally(() => setWsLoading(false));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
   async function handleCreate() {
     if (!name.trim()) { toast.error("Enter a name for the key"); return; }
+    if (!wsId)        { toast.error("Select a workspace for this key"); return; }
     setCreating(true);
     try {
       const result = await doCreate({
-        data: { name: name.trim(), description: description.trim() || undefined, key_type: keyType },
+        data: {
+          name:        name.trim(),
+          description: description.trim() || undefined,
+          key_type:    keyType,
+          workspaceId: wsId,
+        },
       });
       setName(""); setDescription(""); setKeyType("publishable");
       onOpenChange(false);
@@ -309,41 +333,96 @@ function CreateKeyDialog({
 
         <div className="space-y-4 py-2">
           <p className="text-xs text-muted-foreground">
-            Keys are generated server-side using CSPRNG. Only a SHA-256 hash is stored — the raw key is shown once.
+            Keys are scoped to a workspace and stored as SHA-256 hashes — the raw key is shown once.
           </p>
 
-          {/* Key type */}
-          <div className="grid grid-cols-2 gap-3">
-            {(["publishable", "secret"] as const).map((type) => (
-              <button
-                key={type}
-                type="button"
-                onClick={() => setKeyType(type)}
-                className={cn(
-                  "flex items-start gap-3 rounded-lg border p-3 text-left transition-colors",
-                  keyType === type
-                    ? "border-primary bg-primary/5"
-                    : "border-border hover:border-muted-foreground/30 hover:bg-muted/30",
-                )}
-              >
-                {type === "publishable"
-                  ? <Globe className={cn("h-4 w-4 mt-0.5 shrink-0", keyType === type ? "text-primary" : "text-muted-foreground")} />
-                  : <Shield className={cn("h-4 w-4 mt-0.5 shrink-0", keyType === type ? "text-primary" : "text-muted-foreground")} />
-                }
-                <div>
-                  <p className="text-xs font-semibold capitalize">{type}</p>
-                  <p className="text-[10px] text-muted-foreground leading-tight mt-0.5">
-                    {type === "publishable" ? "Read-only · client-safe · pk_live_" : "Full access · server only · sk_live_"}
-                  </p>
-                </div>
-                {keyType === type && <span className="ml-auto h-2 w-2 mt-1 rounded-full bg-primary shrink-0" />}
-              </button>
-            ))}
+          {/* Workspace selector */}
+          <div>
+            <Label className="text-xs">
+              Workspace <span className="text-destructive">*</span>
+            </Label>
+            {wsLoading ? (
+              <div className="mt-1 flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-xs text-muted-foreground">
+                <Loader2 className="h-3.5 w-3.5 animate-spin" /> Loading workspaces…
+              </div>
+            ) : workspaces.length === 0 ? (
+              <div className="mt-1 flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
+                <AlertTriangle className="h-3.5 w-3.5 shrink-0" /> No workspaces found. Create a workspace first.
+              </div>
+            ) : (
+              <div className="mt-1 grid gap-2">
+                {workspaces.map((ws) => (
+                  <button
+                    key={ws.id}
+                    type="button"
+                    onClick={() => setWsId(ws.id)}
+                    className={cn(
+                      "flex items-center gap-3 rounded-lg border px-3 py-2.5 text-left transition-colors",
+                      wsId === ws.id
+                        ? "border-primary bg-primary/5"
+                        : "border-border hover:border-muted-foreground/30 hover:bg-muted/30",
+                    )}
+                  >
+                    <div className={cn(
+                      "flex h-7 w-7 shrink-0 items-center justify-center rounded-md",
+                      wsId === ws.id ? "bg-primary/10" : "bg-muted",
+                    )}>
+                      <FolderOpen className={cn(
+                        "h-3.5 w-3.5",
+                        wsId === ws.id ? "text-primary" : "text-muted-foreground",
+                      )} />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-semibold truncate">{ws.name}</p>
+                      <p className="text-[10px] text-muted-foreground truncate">/{ws.slug}</p>
+                    </div>
+                    {wsId === ws.id && (
+                      <span className="h-2 w-2 rounded-full bg-primary shrink-0" />
+                    )}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
+          {/* Key type */}
+          <div>
+            <Label className="text-xs">Key type</Label>
+            <div className="mt-1 grid grid-cols-2 gap-2">
+              {(["publishable", "secret"] as const).map((type) => (
+                <button
+                  key={type}
+                  type="button"
+                  onClick={() => setKeyType(type)}
+                  className={cn(
+                    "flex items-start gap-2.5 rounded-lg border p-3 text-left transition-colors",
+                    keyType === type
+                      ? "border-primary bg-primary/5"
+                      : "border-border hover:border-muted-foreground/30 hover:bg-muted/30",
+                  )}
+                >
+                  {type === "publishable"
+                    ? <Globe className={cn("h-4 w-4 mt-0.5 shrink-0", keyType === type ? "text-primary" : "text-muted-foreground")} />
+                    : <Shield className={cn("h-4 w-4 mt-0.5 shrink-0", keyType === type ? "text-primary" : "text-muted-foreground")} />
+                  }
+                  <div>
+                    <p className="text-xs font-semibold capitalize">{type}</p>
+                    <p className="text-[10px] text-muted-foreground leading-tight mt-0.5">
+                      {type === "publishable" ? "Read-only · client-safe · pk_live_" : "Full access · server only · sk_live_"}
+                    </p>
+                  </div>
+                  {keyType === type && <span className="ml-auto h-2 w-2 mt-1 rounded-full bg-primary shrink-0" />}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Name + description */}
           <div className="space-y-3">
             <div>
-              <Label htmlFor="key-name" className="text-xs">Name <span className="text-destructive">*</span></Label>
+              <Label htmlFor="key-name" className="text-xs">
+                Name <span className="text-destructive">*</span>
+              </Label>
               <Input
                 id="key-name"
                 value={name}
@@ -355,7 +434,9 @@ function CreateKeyDialog({
               />
             </div>
             <div>
-              <Label htmlFor="key-desc" className="text-xs text-muted-foreground">Description (optional)</Label>
+              <Label htmlFor="key-desc" className="text-xs text-muted-foreground">
+                Description (optional)
+              </Label>
               <Textarea
                 id="key-desc"
                 value={description}
@@ -370,7 +451,7 @@ function CreateKeyDialog({
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button onClick={handleCreate} disabled={creating}>
+          <Button onClick={handleCreate} disabled={creating || wsLoading || !wsId}>
             {creating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />}
             Generate Key
           </Button>
