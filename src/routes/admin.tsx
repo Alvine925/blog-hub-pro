@@ -351,19 +351,51 @@ function AdminLayoutGuard() {
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (!session) { navigate({ to: "/login" }); return; }
 
-      // Check onboarding
+      // Determine platform role so workspace-only members skip onboarding
+      let platformRole: string | null = null;
       try {
-        const { data } = await supabase
-          .from("user_onboarding" as never)
-          .select("step, completed_at")
-          .eq("user_id", session.user.id)
-          .maybeSingle() as { data: { step: string; completed_at: string | null } | null };
-        if (!data || data.step !== "complete" || !data.completed_at) {
-          navigate({ to: (STEP_ROUTES[data?.step ?? "welcome"] ?? "/onboarding/welcome") as "/" });
-          return;
+        const { data: cu } = await supabase
+          .from("cms_users" as never)
+          .select("platform_role")
+          .eq("auth_user_id", session.user.id)
+          .maybeSingle();
+        platformRole = (cu as { platform_role: string } | null)?.platform_role ?? null;
+      } catch { /* cms_users may not exist yet */ }
+
+      // Workspace-only members: skip onboarding, redirect to their workspace if they somehow
+      // land on a non-workspace admin page (e.g. /admin/dashboard)
+      if (platformRole === "member") {
+        if (!/^\/admin\/workspaces\/[^/]+/.test(pathname)) {
+          try {
+            const { data: memberships } = await supabase
+              .from("workspace_members" as never)
+              .select("workspace_id")
+              .eq("user_id", session.user.id)
+              .eq("status", "active")
+              .order("created_at", { ascending: true })
+              .limit(1);
+            const first = (memberships as { workspace_id: string }[] | null)?.[0];
+            if (first) {
+              navigate({ to: `/admin/workspaces/${first.workspace_id}` as "/" });
+              return;
+            }
+          } catch { /* fall through */ }
         }
-      } catch {
-        // table doesn't exist yet — let them through
+      } else {
+        // Platform admins: check onboarding
+        try {
+          const { data } = await supabase
+            .from("user_onboarding" as never)
+            .select("step, completed_at")
+            .eq("user_id", session.user.id)
+            .maybeSingle() as { data: { step: string; completed_at: string | null } | null };
+          if (!data || data.step !== "complete" || !data.completed_at) {
+            navigate({ to: (STEP_ROUTES[data?.step ?? "welcome"] ?? "/onboarding/welcome") as "/" });
+            return;
+          }
+        } catch {
+          // table doesn't exist yet — let them through
+        }
       }
 
       // Check if password change is required

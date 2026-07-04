@@ -21,9 +21,9 @@ serve(async (req) => {
     const payload: Payload = await req.json();
     const { email, name, tempPassword, loginUrl, workspaceName, inviterName } = payload;
 
-    const BREVO_API_KEY   = Deno.env.get("BREVO_API_KEY");
-    const SENDER_EMAIL    = Deno.env.get("BREVO_SENDER_EMAIL") ?? "noreply@lunarcms.io";
-    const SENDER_NAME     = "Lunar CMS";
+    const BREVO_API_KEY = Deno.env.get("BREVO_API_KEY");
+    const SENDER_EMAIL  = Deno.env.get("BREVO_SENDER_EMAIL") ?? "noreply@lunarcms.io";
+    const SENDER_NAME   = "Lunar CMS";
 
     if (!BREVO_API_KEY) throw new Error("BREVO_API_KEY secret not set in Supabase project");
 
@@ -70,8 +70,8 @@ function buildEmail(opts: {
   const { displayName, email, tempPassword, loginUrl, workspaceName, inviterName } = opts;
 
   const contextLine = inviterName
-    ? `${inviterName} has invited you to join${workspaceName ? ` <strong style="color:#111;">${workspaceName}</strong> on` : ""} Lunar CMS.`
-    : `You've been invited to join${workspaceName ? ` <strong style="color:#111;">${workspaceName}</strong> on` : ""} Lunar CMS.`;
+    ? `${inviterName} has invited you to join${workspaceName ? ` <strong style="color:#0a0a0a;">${workspaceName}</strong> on` : ""} Lunar CMS.`
+    : `You've been invited to join${workspaceName ? ` <strong style="color:#0a0a0a;">${workspaceName}</strong> on` : ""} Lunar CMS.`;
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -80,79 +80,131 @@ function buildEmail(opts: {
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>${workspaceName ? `Invited to ${workspaceName}` : "Invited to Lunar CMS"}</title>
 </head>
-<body style="margin:0;padding:0;background:#f5f5f3;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,sans-serif;-webkit-font-smoothing:antialiased;">
-<table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="background:#f5f5f3;padding:48px 16px;">
-  <tr><td align="center">
+<body style="margin:0;padding:0;background:#ffffff;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased;">
 
-    <!-- Card -->
-    <table width="100%" cellpadding="0" cellspacing="0" role="presentation"
-           style="max-width:560px;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.06);">
-      <tr>
-        <td style="padding:44px 48px 0;">
+<table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="background:#ffffff;">
+  <tr>
+    <td align="center" style="padding:56px 24px 64px;">
 
-          <!-- Wordmark -->
-          <p style="margin:0 0 36px;font-size:15px;font-weight:700;letter-spacing:-.3px;color:#111;">
-            ☽&nbsp;&nbsp;Lunar CMS
-          </p>
+      <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="max-width:520px;">
 
-          <!-- Headline -->
-          <h1 style="margin:0 0 10px;font-size:28px;font-weight:800;line-height:1.25;letter-spacing:-.5px;color:#111;">
-            Hi, ${displayName}.
-          </h1>
-          <p style="margin:0 0 36px;font-size:16px;line-height:1.65;color:#555;">
-            ${contextLine}
-          </p>
+        <!-- Wordmark -->
+        <tr>
+          <td style="padding-bottom:48px;">
+            <span style="font-size:14px;font-weight:700;letter-spacing:-.2px;color:#0a0a0a;">
+              &#9789;&nbsp;&nbsp;Lunar CMS
+            </span>
+          </td>
+        </tr>
 
-          <!-- Divider -->
-          <hr style="border:none;border-top:1px solid #ebebeb;margin:0 0 36px;" />
+        <!-- Headline -->
+        <tr>
+          <td style="padding-bottom:16px;">
+            <h1 style="margin:0;font-size:32px;font-weight:800;line-height:1.2;letter-spacing:-.6px;color:#0a0a0a;">
+              Hi, ${displayName}.
+            </h1>
+          </td>
+        </tr>
 
-          <!-- Credentials block -->
-          <p style="margin:0 0 14px;font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#aaa;">
-            Your login credentials
-          </p>
+        <!-- Context -->
+        <tr>
+          <td style="padding-bottom:48px;">
+            <p style="margin:0;font-size:17px;line-height:1.65;color:#555555;">
+              ${contextLine}<br />
+              Your account is ready. Use the credentials below to sign in.
+            </p>
+          </td>
+        </tr>
 
-          <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="margin-bottom:36px;">
-            <tr>
-              <td style="padding:10px 0;border-bottom:1px solid #f0f0f0;">
-                <span style="font-size:13px;color:#aaa;display:inline-block;width:90px;">Email</span>
-                <span style="font-size:14px;color:#111;font-weight:500;">${email}</span>
-              </td>
-            </tr>
-            <tr>
-              <td style="padding:10px 0;">
-                <span style="font-size:13px;color:#aaa;display:inline-block;width:90px;">Password</span>
-                <code style="font-size:14px;color:#111;font-weight:600;background:#f5f5f3;padding:3px 10px;border-radius:6px;letter-spacing:.05em;">${tempPassword}</code>
-              </td>
-            </tr>
-          </table>
+        <!-- Divider -->
+        <tr>
+          <td style="padding-bottom:32px;">
+            <div style="height:1px;background:#ebebeb;"></div>
+          </td>
+        </tr>
 
-          <!-- CTA -->
-          <a href="${loginUrl}"
-             style="display:inline-block;background:#111;color:#fff;font-size:14px;font-weight:600;text-decoration:none;padding:15px 30px;border-radius:10px;letter-spacing:-.1px;margin-bottom:44px;">
-            Sign in to Lunar CMS &rarr;
-          </a>
+        <!-- Credentials label -->
+        <tr>
+          <td style="padding-bottom:20px;">
+            <span style="font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#aaaaaa;">
+              Your login credentials
+            </span>
+          </td>
+        </tr>
 
-        </td>
-      </tr>
+        <!-- Email row -->
+        <tr>
+          <td style="padding-bottom:0;">
+            <table width="100%" cellpadding="0" cellspacing="0" role="presentation"
+                   style="border-top:1px solid #f0f0f0;">
+              <tr>
+                <td style="padding:14px 0;border-bottom:1px solid #f0f0f0;">
+                  <span style="font-size:12px;color:#aaaaaa;display:inline-block;width:80px;vertical-align:middle;">
+                    Email
+                  </span>
+                  <span style="font-size:14px;color:#0a0a0a;font-weight:500;vertical-align:middle;">
+                    ${email}
+                  </span>
+                </td>
+              </tr>
+              <tr>
+                <td style="padding:14px 0;border-bottom:1px solid #f0f0f0;">
+                  <span style="font-size:12px;color:#aaaaaa;display:inline-block;width:80px;vertical-align:middle;">
+                    Password
+                  </span>
+                  <code style="font-size:14px;color:#0a0a0a;font-weight:600;font-family:'SF Mono',Menlo,Monaco,Consolas,monospace;letter-spacing:.04em;vertical-align:middle;">
+                    ${tempPassword}
+                  </code>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
 
-      <!-- Bottom note -->
-      <tr>
-        <td style="padding:24px 48px;background:#fafaf9;border-top:1px solid #ebebeb;">
-          <p style="margin:0;font-size:13px;line-height:1.6;color:#aaa;">
-            You'll be prompted to set a new password on your first sign-in.
-            If you weren't expecting this, you can safely ignore this email.
-          </p>
-        </td>
-      </tr>
-    </table>
+        <!-- Spacer -->
+        <tr><td style="height:40px;"></td></tr>
 
-    <!-- Footer -->
-    <p style="margin:24px 0 0;font-size:12px;color:#ccc;text-align:center;">
-      Lunar CMS &middot; Sent by invite only
-    </p>
+        <!-- CTA -->
+        <tr>
+          <td style="padding-bottom:48px;">
+            <a href="${loginUrl}"
+               style="display:inline-block;background:#0a0a0a;color:#ffffff;font-size:14px;font-weight:600;text-decoration:none;padding:14px 28px;border-radius:8px;letter-spacing:-.1px;">
+              Sign in to Lunar CMS &rarr;
+            </a>
+          </td>
+        </tr>
 
-  </td></tr>
+        <!-- Divider -->
+        <tr>
+          <td style="padding-bottom:32px;">
+            <div style="height:1px;background:#ebebeb;"></div>
+          </td>
+        </tr>
+
+        <!-- Footer note -->
+        <tr>
+          <td>
+            <p style="margin:0;font-size:13px;line-height:1.65;color:#aaaaaa;">
+              You'll be asked to set a new password on your first sign-in.
+              If you weren't expecting this invitation, you can safely ignore this email.
+            </p>
+          </td>
+        </tr>
+
+        <!-- Footer brand -->
+        <tr>
+          <td style="padding-top:40px;">
+            <p style="margin:0;font-size:12px;color:#cccccc;">
+              Lunar CMS &middot; Sent by invite only
+            </p>
+          </td>
+        </tr>
+
+      </table>
+    </td>
+  </tr>
 </table>
+
 </body>
 </html>`;
 }
