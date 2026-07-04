@@ -105,6 +105,84 @@ function getPreviewImage(ws: Workspace):
   return null;
 }
 
+// ── Workspace Row (mobile compact list item) ──────────────────────────────────
+function WorkspaceRow({
+  ws,
+  onDelete,
+}: {
+  ws: Workspace;
+  onDelete: (ws: Workspace) => void;
+}) {
+  const preview = getPreviewImage(ws);
+  const gradient = wsGradient(ws.name);
+  const initials = wsInitials(ws.name);
+  const [imgError, setImgError] = useState(false);
+
+  return (
+    <div className="flex items-center gap-3 px-4 py-3 bg-background hover:bg-muted/30 transition-colors">
+      {/* Thumbnail */}
+      <a href={`/admin/workspaces/${ws.id}`} className="relative shrink-0 h-10 w-10 rounded-lg overflow-hidden" tabIndex={-1} aria-hidden>
+        <div className={`absolute inset-0 bg-gradient-to-br ${gradient}`} />
+        {preview && !imgError && (
+          <img
+            src={preview.type === "cover" ? preview.url : preview.url}
+            alt={ws.name}
+            onError={() => setImgError(true)}
+            className={preview.type === "cover"
+              ? "absolute inset-0 h-full w-full object-cover"
+              : "absolute inset-0 h-full w-full object-contain p-1.5"}
+          />
+        )}
+        {(!preview || imgError) && (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <span className="text-sm font-bold text-white/80 select-none">{initials}</span>
+          </div>
+        )}
+      </a>
+
+      {/* Info */}
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-1.5 min-w-0">
+          <a
+            href={`/admin/workspaces/${ws.id}`}
+            className="truncate text-sm font-semibold text-foreground hover:text-primary transition-colors"
+          >
+            {ws.name}
+          </a>
+          {ws.slug === "default" && (
+            <span className="shrink-0 rounded-full bg-muted px-1.5 py-px text-[9px] font-semibold uppercase tracking-wider text-muted-foreground">
+              default
+            </span>
+          )}
+        </div>
+        <p className="truncate text-[11px] text-muted-foreground/60">
+          {ws.website_url?.replace(/^https?:\/\//, "").replace(/\/$/, "") ?? ws.industry ?? ws.slug}
+        </p>
+      </div>
+
+      {/* Actions */}
+      <div className="flex shrink-0 items-center gap-1">
+        <a
+          href={`/admin/workspaces/${ws.id}`}
+          className="flex items-center gap-1 rounded-md bg-primary px-2.5 py-1 text-[11px] font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+        >
+          Open <ArrowRight className="h-3 w-3" />
+        </a>
+        {ws.slug !== "default" && (
+          <button
+            type="button"
+            onClick={() => onDelete(ws)}
+            title="Delete workspace"
+            className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground/50 hover:bg-red-50 hover:text-red-500 transition-colors"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ── Workspace Card ────────────────────────────────────────────────────────────
 function WorkspaceCard({
   ws,
@@ -323,7 +401,7 @@ function WorkspacesPage() {
         </button>
       </div>
 
-      {/* Grid or empty state */}
+      {/* Grid / list or empty state */}
       {workspaces.length === 0 ? (
         <div className="flex flex-col items-center gap-3 border-y border-border py-24 text-center">
           <FolderOpen className="h-8 w-8 text-muted-foreground/30" />
@@ -338,27 +416,47 @@ function WorkspacesPage() {
           </button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {workspaces.map((ws) => (
-            <WorkspaceCard
-              key={ws.id}
-              ws={ws}
-              onDelete={setPendingDelete}
-            />
-          ))}
+        <>
+          {/* ── Mobile: compact list rows ── */}
+          <div className="sm:hidden divide-y divide-border rounded-lg border border-border overflow-hidden">
+            {workspaces.map((ws) => (
+              <WorkspaceRow key={ws.id} ws={ws} onDelete={setPendingDelete} />
+            ))}
+            <button
+              type="button"
+              onClick={() => setWizardOpen(true)}
+              className="flex w-full items-center gap-3 px-4 py-3 text-muted-foreground/50 hover:bg-muted/40 transition-colors"
+            >
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border-2 border-dashed border-current">
+                <Plus className="h-4 w-4" />
+              </div>
+              <span className="text-sm font-medium">New Workspace</span>
+            </button>
+          </div>
 
-          {/* "Add workspace" ghost card */}
-          <button
-            type="button"
-            onClick={() => setWizardOpen(true)}
-            className="group flex flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed border-border/60 py-16 text-muted-foreground/40 transition-all duration-200 hover:border-primary/40 hover:text-primary/60 hover:bg-primary/[0.02]"
-          >
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl border-2 border-dashed border-current transition-all group-hover:scale-110">
-              <Plus className="h-5 w-5" />
-            </div>
-            <span className="text-xs font-medium">New Workspace</span>
-          </button>
-        </div>
+          {/* ── sm+: card grid ── */}
+          <div className="hidden sm:grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+            {workspaces.map((ws) => (
+              <WorkspaceCard
+                key={ws.id}
+                ws={ws}
+                onDelete={setPendingDelete}
+              />
+            ))}
+
+            {/* "Add workspace" ghost card */}
+            <button
+              type="button"
+              onClick={() => setWizardOpen(true)}
+              className="group flex flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed border-border/60 py-16 text-muted-foreground/40 transition-all duration-200 hover:border-primary/40 hover:text-primary/60 hover:bg-primary/[0.02]"
+            >
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl border-2 border-dashed border-current transition-all group-hover:scale-110">
+                <Plus className="h-5 w-5" />
+              </div>
+              <span className="text-xs font-medium">New Workspace</span>
+            </button>
+          </div>
+        </>
       )}
 
       {/* Workspace creation wizard */}

@@ -68,37 +68,37 @@ function AdminBlogList() {
           </Button>
         </div>
       ) : (
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto sm:overflow-x-visible">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-[70px]">Cover</TableHead>
+                <TableHead className="hidden sm:table-cell w-[70px]">Cover</TableHead>
                 <TableHead>Title</TableHead>
-                <TableHead>Workspace</TableHead>
-                <TableHead>Category</TableHead>
+                <TableHead className="hidden md:table-cell">Workspace</TableHead>
+                <TableHead className="hidden lg:table-cell">Category</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead>Date</TableHead>
-                <TableHead className="text-right">Views</TableHead>
+                <TableHead className="hidden sm:table-cell">Date</TableHead>
+                <TableHead className="hidden lg:table-cell text-right">Views</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {posts.map((post) => (
                 <TableRow key={post.id}>
-                  <TableCell>
+                  <TableCell className="hidden sm:table-cell">
                     {post.cover_image ? (
                       <img src={post.cover_image} alt="" className="h-10 w-14 rounded object-cover" />
                     ) : (
                       <div className="h-10 w-14 rounded bg-muted" />
                     )}
                   </TableCell>
-                  <TableCell className="max-w-[280px]">
-                    <span className="font-medium">{post.title || "Untitled"}</span>
+                  <TableCell className="max-w-[180px] sm:max-w-[280px]">
+                    <span className="font-medium line-clamp-2 sm:line-clamp-1">{post.title || "Untitled"}</span>
                     {post.featured && (
-                      <Badge variant="outline" className="ml-2">Featured</Badge>
+                      <Badge variant="outline" className="ml-2 hidden sm:inline-flex">Featured</Badge>
                     )}
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="hidden md:table-cell">
                     {post.workspace_id ? (
                       <Link
                         to="/admin/workspaces/$id/blogs"
@@ -112,33 +112,28 @@ function AdminBlogList() {
                       <span className="text-sm text-muted-foreground">{post.workspace?.name ?? "—"}</span>
                     )}
                   </TableCell>
-                  <TableCell className="text-sm">{post.category}</TableCell>
+                  <TableCell className="hidden lg:table-cell text-sm">{post.category}</TableCell>
                   <TableCell><StatusBadge post={post} /></TableCell>
-                  <TableCell className="text-muted-foreground text-sm">
+                  <TableCell className="hidden sm:table-cell text-muted-foreground text-sm">
                     {post.status === "scheduled" && post.scheduled_at
                       ? `📅 ${formatBlogDate(post.scheduled_at)}`
                       : formatBlogDate(post.published_at) || "—"}
                   </TableCell>
-                  <TableCell className="text-right tabular-nums">{post.views}</TableCell>
+                  <TableCell className="hidden lg:table-cell text-right tabular-nums">{post.views}</TableCell>
                   <TableCell>
                     <div className="flex items-center justify-end gap-1">
-                      {/* Stats — always available */}
-                      <Button size="icon" variant="ghost" asChild title="View stats">
+                      <Button size="icon" variant="ghost" asChild title="View stats" className="hidden sm:flex">
                         <Link to="/admin/blog-stats/$postId" params={{ postId: post.id }}>
                           <BarChart2 className="h-4 w-4" />
                         </Link>
                       </Button>
-
-                      {/* Public preview — published only */}
                       {post.status === "published" && (
-                        <Button size="icon" variant="ghost" asChild title="Preview post">
+                        <Button size="icon" variant="ghost" asChild title="Preview post" className="hidden sm:flex">
                           <Link to="/blogs/$slug" params={{ slug: post.slug }} target="_blank">
                             <Eye className="h-4 w-4" />
                           </Link>
                         </Button>
                       )}
-
-                      {/* Edit — opens inside the post's workspace */}
                       {post.workspace_id && (
                         <Button size="sm" variant="ghost" asChild title="Edit in workspace" className="gap-1.5 text-xs">
                           <Link
@@ -146,7 +141,7 @@ function AdminBlogList() {
                             params={{ id: post.workspace_id, postId: post.id }}
                           >
                             <FolderOpen className="h-3.5 w-3.5" />
-                            Edit
+                            <span className="hidden sm:inline">Edit</span>
                           </Link>
                         </Button>
                       )}
@@ -159,7 +154,6 @@ function AdminBlogList() {
         </div>
       )}
 
-      {/* Info callout */}
       <div className="rounded-xl border border-border/60 bg-muted/20 px-4 py-3">
         <p className="text-xs text-muted-foreground">
           <span className="font-semibold text-foreground">This is a read-only view.</span>{" "}

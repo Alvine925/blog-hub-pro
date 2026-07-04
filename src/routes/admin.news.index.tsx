@@ -89,28 +89,28 @@ function AdminNewsList() {
           </Button>
         </div>
       ) : (
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto sm:overflow-x-visible">
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Title</TableHead>
-                <TableHead>Workspace</TableHead>
-                <TableHead>Category</TableHead>
+                <TableHead className="hidden md:table-cell">Workspace</TableHead>
+                <TableHead className="hidden lg:table-cell">Category</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead>Updated</TableHead>
+                <TableHead className="hidden sm:table-cell">Updated</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {items.map((item) => (
                 <TableRow key={item.id}>
-                  <TableCell className="max-w-[280px]">
-                    <span className="font-medium">{item.title || "Untitled"}</span>
+                  <TableCell className="max-w-[180px] sm:max-w-[280px]">
+                    <span className="font-medium line-clamp-2 sm:line-clamp-1">{item.title || "Untitled"}</span>
                     {item.breaking && (
-                      <Badge variant="destructive" className="ml-2 text-[10px]">Breaking</Badge>
+                      <Badge variant="destructive" className="ml-2 text-[10px] hidden sm:inline-flex">Breaking</Badge>
                     )}
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="hidden md:table-cell">
                     {item.workspace_id ? (
                       <Link
                         to="/admin/workspaces/$id/news"
@@ -124,14 +124,14 @@ function AdminNewsList() {
                       <span className="text-sm text-muted-foreground">—</span>
                     )}
                   </TableCell>
-                  <TableCell className="text-sm">{item.category}</TableCell>
+                  <TableCell className="hidden lg:table-cell text-sm">{item.category}</TableCell>
                   <TableCell><StatusBadge status={item.status} /></TableCell>
-                  <TableCell className="text-sm text-muted-foreground">{fmtDate(item.updated_at)}</TableCell>
+                  <TableCell className="hidden sm:table-cell text-sm text-muted-foreground">{fmtDate(item.updated_at)}</TableCell>
                   <TableCell>
                     <div className="flex items-center justify-end gap-1">
                       {item.workspace_id && (
                         <>
-                          <Button size="sm" variant="ghost" asChild title="View details" className="gap-1.5 text-xs">
+                          <Button size="sm" variant="ghost" asChild title="View details" className="gap-1.5 text-xs hidden sm:inline-flex">
                             <Link
                               to="/admin/workspaces/$id/news/$newsId"
                               params={{ id: item.workspace_id, newsId: item.id }}
@@ -144,7 +144,8 @@ function AdminNewsList() {
                               to="/admin/workspaces/$id/news/$newsId/edit"
                               params={{ id: item.workspace_id, newsId: item.id }}
                             >
-                              <Pencil className="h-3.5 w-3.5" /> Edit
+                              <Pencil className="h-3.5 w-3.5" />
+                              <span className="hidden sm:inline">Edit</span>
                             </Link>
                           </Button>
                         </>

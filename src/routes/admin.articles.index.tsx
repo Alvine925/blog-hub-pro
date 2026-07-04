@@ -92,27 +92,27 @@ function AdminArticlesList() {
           </Button>
         </div>
       ) : (
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto sm:overflow-x-visible">
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Title</TableHead>
-                <TableHead>Workspace</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>Category</TableHead>
+                <TableHead className="hidden md:table-cell">Workspace</TableHead>
+                <TableHead className="hidden lg:table-cell">Type</TableHead>
+                <TableHead className="hidden lg:table-cell">Category</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead>Updated</TableHead>
-                <TableHead className="text-right">Views</TableHead>
+                <TableHead className="hidden sm:table-cell">Updated</TableHead>
+                <TableHead className="hidden lg:table-cell text-right">Views</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {items.map((item) => (
                 <TableRow key={item.id}>
-                  <TableCell className="max-w-[260px]">
-                    <span className="font-medium">{item.title || "Untitled"}</span>
+                  <TableCell className="max-w-[180px] sm:max-w-[260px]">
+                    <span className="font-medium line-clamp-2 sm:line-clamp-1">{item.title || "Untitled"}</span>
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="hidden md:table-cell">
                     {item.workspace_id ? (
                       <Link
                         to="/admin/workspaces/$id/articles"
@@ -126,23 +126,24 @@ function AdminArticlesList() {
                       <span className="text-sm text-muted-foreground">—</span>
                     )}
                   </TableCell>
-                  <TableCell className="text-sm">{TYPE_LABEL[item.article_type] ?? item.article_type}</TableCell>
-                  <TableCell className="text-sm">{item.category}</TableCell>
+                  <TableCell className="hidden lg:table-cell text-sm">{TYPE_LABEL[item.article_type] ?? item.article_type}</TableCell>
+                  <TableCell className="hidden lg:table-cell text-sm">{item.category}</TableCell>
                   <TableCell><StatusBadge status={item.status} /></TableCell>
-                  <TableCell className="text-sm text-muted-foreground">{fmtDate(item.updated_at)}</TableCell>
-                  <TableCell className="text-right tabular-nums text-sm">{item.views.toLocaleString()}</TableCell>
+                  <TableCell className="hidden sm:table-cell text-sm text-muted-foreground">{fmtDate(item.updated_at)}</TableCell>
+                  <TableCell className="hidden lg:table-cell text-right tabular-nums text-sm">{item.views.toLocaleString()}</TableCell>
                   <TableCell>
                     <div className="flex items-center justify-end gap-1">
                       {item.workspace_id && (
                         <>
-                          <Button size="sm" variant="ghost" asChild className="gap-1.5 text-xs">
+                          <Button size="sm" variant="ghost" asChild className="gap-1.5 text-xs hidden sm:inline-flex">
                             <Link to="/admin/workspaces/$id/articles/$articleId" params={{ id: item.workspace_id, articleId: item.id }}>
                               View
                             </Link>
                           </Button>
                           <Button size="sm" variant="ghost" asChild className="gap-1.5 text-xs">
                             <Link to="/admin/workspaces/$id/articles/$articleId/edit" params={{ id: item.workspace_id, articleId: item.id }}>
-                              <Pencil className="h-3.5 w-3.5" /> Edit
+                              <Pencil className="h-3.5 w-3.5" />
+                              <span className="hidden sm:inline">Edit</span>
                             </Link>
                           </Button>
                         </>
