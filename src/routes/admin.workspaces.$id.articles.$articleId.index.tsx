@@ -19,9 +19,45 @@ const detailQuery = (id: string, workspaceId: string) =>
     queryFn: () => adminGetArticle({ data: { id, workspaceId } }),
   });
 
+function ArticleDetailSkeleton() {
+  return (
+    <div className="min-h-full px-8 py-8 max-w-4xl space-y-6">
+      <Skeleton className="h-4 w-20" />
+      <div className="flex items-start justify-between gap-4">
+        <div className="space-y-2 min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            <Skeleton className="h-5 w-16 rounded-full" />
+            <Skeleton className="h-5 w-20 rounded-full" />
+          </div>
+          <Skeleton className="h-7 w-3/4" />
+          <Skeleton className="h-4 w-48" />
+        </div>
+        <div className="flex shrink-0 items-center gap-2">
+          <Skeleton className="h-8 w-24 rounded-md" />
+          <Skeleton className="h-8 w-16 rounded-md" />
+          <Skeleton className="h-8 w-8 rounded-md" />
+        </div>
+      </div>
+      <Skeleton className="h-48 w-full rounded-lg" />
+      <div className="grid grid-cols-4 gap-2">
+        {[...Array(4)].map((_, i) => (
+          <Skeleton key={i} className="h-14 rounded-lg" />
+        ))}
+      </div>
+      <div className="space-y-3">
+        {[...Array(10)].map((_, i) => (
+          <Skeleton key={i} className={`h-4 ${i % 4 === 3 ? "w-1/2" : "w-full"}`} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export const Route = createFileRoute("/admin/workspaces/$id/articles/$articleId/")({
   loader: ({ context, params }) =>
     context.queryClient.ensureQueryData(detailQuery(params.articleId, params.id)),
+  pendingComponent: ArticleDetailSkeleton,
+  pendingMs: 0,
   component: ArticleDetail,
   errorComponent: ({ error }) => (
     <p className="p-8 text-sm text-red-600">{error.message}</p>

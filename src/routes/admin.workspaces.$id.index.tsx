@@ -269,6 +269,7 @@ const overviewQuery = (id: string) =>
 export const Route = createFileRoute("/admin/workspaces/$id/")({
   loader:           ({ context, params }) => context.queryClient.ensureQueryData(overviewQuery(params.id)),
   pendingComponent: WorkspaceOverviewSkeleton,
+  pendingMs:        0,
   component:        WorkspaceOverview,
   errorComponent:   ({ error }) => <p className="p-8 text-sm text-red-600">{error.message}</p>,
 });

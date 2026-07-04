@@ -19,9 +19,54 @@ const detailQuery = (id: string, workspaceId: string) =>
     queryFn: () => adminGetProduct({ data: { id, workspaceId } }),
   });
 
+function ProductDetailSkeleton() {
+  return (
+    <div className="min-h-full px-8 py-8 max-w-4xl space-y-6">
+      <Skeleton className="h-4 w-20" />
+      <div className="flex items-start justify-between gap-4">
+        <div className="space-y-2 min-w-0 flex-1">
+          <Skeleton className="h-7 w-1/2" />
+          <Skeleton className="h-4 w-48" />
+        </div>
+        <div className="flex shrink-0 items-center gap-2">
+          <Skeleton className="h-8 w-24 rounded-md" />
+          <Skeleton className="h-8 w-16 rounded-md" />
+          <Skeleton className="h-8 w-8 rounded-md" />
+        </div>
+      </div>
+      <div className="grid grid-cols-4 gap-2">
+        {[...Array(4)].map((_, i) => (
+          <Skeleton key={i} className="h-14 rounded-lg" />
+        ))}
+      </div>
+      <Skeleton className="h-48 w-full rounded-lg" />
+      <div className="grid gap-6 lg:grid-cols-2">
+        {[...Array(2)].map((_, col) => (
+          <div key={col} className="space-y-3">
+            <Skeleton className="h-3 w-24" />
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="flex items-center gap-3 border-b border-border py-2.5 last:border-0">
+                <Skeleton className="h-3 w-24 shrink-0" />
+                <Skeleton className="h-3 flex-1" />
+              </div>
+            ))}
+          </div>
+        ))}
+      </div>
+      <div className="space-y-3">
+        {[...Array(6)].map((_, i) => (
+          <Skeleton key={i} className={`h-4 ${i % 3 === 2 ? "w-1/2" : "w-full"}`} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export const Route = createFileRoute("/admin/workspaces/$id/products/$productId/")({
   loader: ({ context, params }) =>
     context.queryClient.ensureQueryData(detailQuery(params.productId, params.id)),
+  pendingComponent: ProductDetailSkeleton,
+  pendingMs: 0,
   component: ProductDetail,
   errorComponent: ({ error }) => (
     <p className="p-8 text-sm text-red-600">{error.message}</p>

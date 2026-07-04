@@ -113,6 +113,7 @@ export const Route = createFileRoute("/admin/workspaces/$id/blogs/")({
     context.queryClient.prefetchQuery(engagementQuery(params.id)).catch(() => {});
   },
   pendingComponent: BlogsListSkeleton,
+  pendingMs: 0,
   component: WorkspaceBlogs,
   errorComponent: ({ error }) => <p className="p-8 text-sm text-red-600">{error.message}</p>,
 });

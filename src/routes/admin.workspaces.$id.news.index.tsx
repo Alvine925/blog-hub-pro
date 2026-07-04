@@ -66,6 +66,7 @@ const listQuery = (workspaceId: string) =>
 export const Route = createFileRoute("/admin/workspaces/$id/news/")({
   loader: ({ context, params }) => context.queryClient.ensureQueryData(listQuery(params.id)),
   pendingComponent: NewsListSkeleton,
+  pendingMs: 0,
   component: WorkspaceNews,
   errorComponent: ({ error }) => <p className="p-8 text-sm text-red-600">{error.message}</p>,
 });

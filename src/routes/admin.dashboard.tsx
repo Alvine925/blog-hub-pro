@@ -193,6 +193,7 @@ export const Route = createFileRoute("/admin/dashboard")({
     return context.queryClient.ensureQueryData(statsQuery);
   },
   pendingComponent: DashboardSkeleton,
+  pendingMs: 0,
   component: Dashboard,
   errorComponent: ({ error }) => (
     <p className="text-sm text-destructive">Failed to load stats: {error.message}</p>

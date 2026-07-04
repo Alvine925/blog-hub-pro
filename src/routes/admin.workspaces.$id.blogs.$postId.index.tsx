@@ -193,10 +193,62 @@ const detailQuery = (postId: string) =>
     staleTime: 30_000,
   });
 
+function BlogDetailSkeleton() {
+  return (
+    <div className="min-h-full px-8 py-8 space-y-8 max-w-4xl">
+      <div className="flex items-center justify-between">
+        <Skeleton className="h-4 w-20" />
+        <div className="flex items-center gap-2">
+          <Skeleton className="h-8 w-24 rounded-md" />
+          <Skeleton className="h-8 w-24 rounded-md" />
+        </div>
+      </div>
+      <Skeleton className="h-48 w-full rounded-xl" />
+      <div className="space-y-3">
+        <div className="flex items-center gap-2">
+          <Skeleton className="h-5 w-20 rounded-full" />
+          <Skeleton className="h-5 w-16 rounded-full" />
+        </div>
+        <Skeleton className="h-8 w-2/3" />
+        <Skeleton className="h-4 w-40" />
+      </div>
+      <div className="flex divide-x divide-border border-y border-border">
+        {[...Array(4)].map((_, i) => (
+          <div key={i} className="flex-1 px-5 py-4 space-y-1.5">
+            <Skeleton className="h-3 w-16" />
+            <Skeleton className="h-7 w-10" />
+          </div>
+        ))}
+      </div>
+      <div className="space-y-3">
+        <Skeleton className="h-3 w-28 border-b border-border pb-3" />
+        {[...Array(6)].map((_, i) => (
+          <Skeleton key={i} className={`h-4 ${i % 3 === 2 ? "w-1/2" : "w-full"}`} />
+        ))}
+      </div>
+      <div className="grid gap-4 lg:grid-cols-2">
+        {[...Array(2)].map((_, col) => (
+          <div key={col} className="space-y-3">
+            <Skeleton className="h-3 w-24" />
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="flex items-center gap-3 border-b border-border py-2.5 last:border-0">
+                <Skeleton className="h-3 flex-1" />
+                <Skeleton className="h-4 w-12 rounded-full" />
+              </div>
+            ))}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export const Route = createFileRoute("/admin/workspaces/$id/blogs/$postId/")({
   head: () => ({ meta: [{ title: "Post Details" }] }),
   loader: ({ context, params }) =>
     context.queryClient.ensureQueryData(detailQuery(params.postId)),
+  pendingComponent: BlogDetailSkeleton,
+  pendingMs: 0,
   component: WorkspaceBlogDetail,
   notFoundComponent: () => (
     <div className="px-8 py-8">
