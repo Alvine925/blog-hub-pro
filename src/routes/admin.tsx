@@ -519,7 +519,7 @@ function GlobalLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
-    <div className="flex h-screen overflow-hidden bg-background">
+    <div className="flex h-screen bg-background overflow-x-clip">
 
       {/* ── Mobile backdrop ── */}
       {sidebarOpen && (
