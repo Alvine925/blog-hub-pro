@@ -822,7 +822,8 @@ function ApiKeysPage() {
       </div>
 
       {/* Stats strip */}
-      <div className="flex divide-x divide-border border border-border rounded-lg overflow-hidden">
+      <div className="overflow-x-auto">
+      <div className="flex divide-x divide-border border border-border rounded-lg overflow-hidden min-w-max">
         {[
           { label: "Active Keys",     value: active.length,   green: active.length > 0   },
           { label: "Total Generated", value: keys.length,                                 },
@@ -841,6 +842,7 @@ function ApiKeysPage() {
             <p className="text-[10px] uppercase tracking-wide text-muted-foreground mt-0.5">{label}</p>
           </div>
         ))}
+      </div>
       </div>
 
       {/* Base API URL */}

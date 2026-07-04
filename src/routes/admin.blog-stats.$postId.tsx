@@ -334,7 +334,8 @@ function BlogStatsPage() {
       </div>
 
       {/* Stats bar — row 1: views & performance */}
-      <div className="mb-4 flex divide-x divide-border border border-border rounded-lg overflow-hidden">
+      <div className="overflow-x-auto">
+      <div className="mb-4 flex divide-x divide-border border border-border rounded-lg overflow-hidden min-w-max">
         {[
           { label: "Total Views", value: post.views.toLocaleString(), icon: Eye },
           { label: "Tracked Page Views", value: totalPageViews.toLocaleString(), icon: TrendingUp },
@@ -355,9 +356,11 @@ function BlogStatsPage() {
           </div>
         ))}
       </div>
+      </div>
 
       {/* Stats bar — row 2: engagement */}
-      <div className="mb-10 flex divide-x divide-border border border-border rounded-lg overflow-hidden">
+      <div className="overflow-x-auto">
+      <div className="mb-10 flex divide-x divide-border border border-border rounded-lg overflow-hidden min-w-max">
         <div className="flex-1 px-5 py-4 min-w-0">
           <div className="flex items-center gap-1.5 mb-1">
             <Heart className="h-3.5 w-3.5 text-rose-400 shrink-0" />
@@ -390,6 +393,7 @@ function BlogStatsPage() {
               : "—"}
           </p>
         </div>
+      </div>
       </div>
 
       <div className="grid gap-10 lg:grid-cols-2">
