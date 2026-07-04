@@ -457,31 +457,46 @@ function WorkspaceUsersPage() {
                     <p className="text-sm font-medium">{member.name || member.email}</p>
                     <RoleBadge role={member.workspace_role} />
                     {member.status === "pending" && (
-                      <span className="text-xs text-amber-600 font-medium">Pending</span>
+                      <span className="inline-flex items-center gap-1 rounded border border-amber-200 bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700">
+                        Invite sent — awaiting first login
+                      </span>
+                    )}
+                    {member.status === "suspended" && (
+                      <span className="inline-flex items-center gap-1 rounded border border-red-200 bg-red-50 px-2 py-0.5 text-xs font-medium text-red-700">
+                        Suspended
+                      </span>
                     )}
                   </div>
                   <p className="text-xs text-muted-foreground">{member.email}</p>
-                  {(member.workspace_role === "editor" || member.workspace_role === "viewer") && (
-                    <div className="mt-0.5">
+                  <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5">
+                    {(member.workspace_role === "editor" || member.workspace_role === "viewer") && (
                       <PermissionTags perms={member.content_permissions} />
-                    </div>
-                  )}
+                    )}
+                    {member.status === "active" && member.accepted_at && (
+                      <span className="text-xs text-muted-foreground">
+                        Joined {new Date(member.accepted_at).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}
+                      </span>
+                    )}
+                  </div>
                 </div>
 
                 {/* Actions */}
                 <div className="flex items-center gap-1 shrink-0">
-                  {/* Resend invite */}
-                  <button
-                    type="button"
-                    title="Resend invite email with a new temporary password"
-                    onClick={() => handleResend(member)}
-                    disabled={busyId === `resend-${member.id}`}
-                    className="flex h-7 w-7 items-center justify-center rounded text-muted-foreground hover:text-primary hover:bg-primary/5 transition-colors disabled:opacity-50"
-                  >
-                    {busyId === `resend-${member.id}`
-                      ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                      : <RefreshCw className="h-3.5 w-3.5" />}
-                  </button>
+                  {/* Resend invite — only for members who haven't logged in yet */}
+                  {member.status === "pending" && (
+                    <button
+                      type="button"
+                      title="Resend invite with a new temporary password"
+                      onClick={() => handleResend(member)}
+                      disabled={busyId === `resend-${member.id}`}
+                      className="flex h-7 items-center gap-1.5 rounded px-2 text-xs font-medium text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 transition-colors disabled:opacity-50"
+                    >
+                      {busyId === `resend-${member.id}`
+                        ? <Loader2 className="h-3 w-3 animate-spin" />
+                        : <RefreshCw className="h-3 w-3" />}
+                      Resend invite
+                    </button>
+                  )}
 
                   {/* Edit */}
                   <button

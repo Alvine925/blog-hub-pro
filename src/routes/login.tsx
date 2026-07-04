@@ -3,6 +3,8 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Moon, Eye, EyeOff, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
+import { useServerFn } from "@tanstack/react-start";
+import { trackUserLogin } from "@/lib/workspace-members.functions";
 
 export const Route = createFileRoute("/login")({
   head: () => ({ meta: [{ title: "Sign In — Lunar CMS" }] }),
@@ -44,6 +46,7 @@ const SLIDES = [
 
 function LoginPage() {
   const navigate = useNavigate();
+  const doTrackLogin = useServerFn(trackUserLogin);
   const [email, setEmail]           = useState("");
   const [password, setPassword]     = useState("");
   const [showPw, setShowPw]         = useState(false);
@@ -74,9 +77,24 @@ function LoginPage() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const { data: authData, error } = await supabase.auth.signInWithPassword({ email, password });
     setLoading(false);
     if (error) { toast.error(error.message); return; }
+
+    const needsPasswordChange = authData?.user?.user_metadata?.password_change_required === true;
+
+    if (needsPasswordChange) {
+      // Invited users must set a permanent password before entering the app
+      navigate({ to: "/set-password" });
+      return;
+    }
+
+    // Regular login: activate any pending memberships, then go to dashboard
+    if (authData?.session?.access_token) {
+      try {
+        await doTrackLogin({ data: { accessToken: authData.session.access_token } });
+      } catch { /* non-fatal — user still gets in */ }
+    }
     navigate({ to: "/" });
   };
 

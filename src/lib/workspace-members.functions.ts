@@ -121,8 +121,9 @@ export const inviteWorkspaceMember = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const { getAdminClient } = await import("./supabase.server");
     const supabase = getAdminClient() as any;
-    const tempPassword = genTempPassword();
 
+    // Try to create a brand-new auth user with a temporary password
+    const tempPassword = genTempPassword();
     const { data: authData, error: authErr } = await supabase.auth.admin.createUser({
       email: data.email,
       password: tempPassword,
@@ -131,35 +132,55 @@ export const inviteWorkspaceMember = createServerFn({ method: "POST" })
     });
 
     let userId: string;
+    let isExistingUser = false;
+
     if (authErr) {
+      // Only swallow "already registered" — anything else is a real error
       if (!authErr.message.includes("already been registered")) throw new Error(authErr.message);
+
+      // Existing user: locate their id but NEVER reset their password
       const { data: existing } = await supabase.auth.admin.listUsers();
       const found = existing?.users?.find((u: any) => u.email === data.email);
       if (!found) throw new Error("User already exists but could not be located.");
       userId = found.id;
+      isExistingUser = true;
     } else {
       userId = authData.user.id;
     }
 
-    await supabase.from("cms_users").upsert({
-      id: userId, email: data.email, name: data.name,
-      role: data.workspaceRole === "workspace_admin" ? "admin" : data.workspaceRole,
-      platform_role: "member", password_change_required: true,
-    }, { onConflict: "id" });
+    // Upsert cms_users — for existing users, only set what's safe to overwrite
+    const cmsPayload = isExistingUser
+      ? { id: userId, email: data.email, name: data.name }
+      : { id: userId, email: data.email, name: data.name,
+          role: data.workspaceRole === "workspace_admin" ? "admin" : data.workspaceRole,
+          platform_role: "member", password_change_required: true };
 
+    const { error: cmsErr } = await supabase
+      .from("cms_users")
+      .upsert(cmsPayload, { onConflict: "id" });
+    if (cmsErr) throw new Error(`Failed to create user profile: ${cmsErr.message}`);
+
+    // Add to workspace — existing users are activated immediately (they already have a password)
     const { error: memberErr } = await supabase.from("workspace_members").upsert({
       workspace_id: data.workspaceId,
       email: data.email, name: data.name, user_id: userId,
       workspace_role: data.workspaceRole,
       content_permissions: data.contentPermissions,
-      status: "active", accepted_at: new Date().toISOString(),
+      status: isExistingUser ? "active" : "pending",
+      accepted_at: isExistingUser ? new Date().toISOString() : null,
     }, { onConflict: "workspace_id,email" });
     if (memberErr) throw new Error(memberErr.message);
 
+    // Send the invite email — new users get their temp password, existing users get a notification
     try {
       await supabase.functions.invoke("send-invite-email", {
-        body: { email: data.email, name: data.name, tempPassword, loginUrl: data.loginUrl,
-                workspaceName: data.workspaceName, inviterName: data.inviterName },
+        body: {
+          email: data.email, name: data.name,
+          // Omit tempPassword for existing users so the email doesn't include credentials
+          ...(isExistingUser ? {} : { tempPassword }),
+          loginUrl: data.loginUrl,
+          workspaceName: data.workspaceName, inviterName: data.inviterName,
+        },
       });
     } catch (e) { console.warn("Email non-fatal:", e); }
 
@@ -186,8 +207,8 @@ export const invitePlatformUser = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const { getAdminClient } = await import("./supabase.server");
     const supabase = getAdminClient() as any;
-    const tempPassword = genTempPassword();
 
+    const tempPassword = genTempPassword();
     const { data: authData, error: authErr } = await supabase.auth.admin.createUser({
       email: data.email,
       password: tempPassword,
@@ -196,20 +217,30 @@ export const invitePlatformUser = createServerFn({ method: "POST" })
     });
 
     let userId: string;
+    let isExistingUser = false;
+
     if (authErr) {
       if (!authErr.message.includes("already been registered")) throw new Error(authErr.message);
+      // Existing user: locate but NEVER reset their password
       const { data: existing } = await supabase.auth.admin.listUsers();
       const found = existing?.users?.find((u: any) => u.email === data.email);
       if (!found) throw new Error("User already exists but could not be located.");
       userId = found.id;
+      isExistingUser = true;
     } else {
       userId = authData.user.id;
     }
 
-    await supabase.from("cms_users").upsert({
-      id: userId, email: data.email, name: data.name,
-      role: "admin", platform_role: data.platformRole, password_change_required: true,
-    }, { onConflict: "id" });
+    // Only update role/password_change fields for brand-new users
+    const cmsPayload = isExistingUser
+      ? { id: userId, email: data.email, name: data.name }
+      : { id: userId, email: data.email, name: data.name,
+          role: "admin", platform_role: data.platformRole, password_change_required: true };
+
+    const { error: cmsErr } = await supabase
+      .from("cms_users")
+      .upsert(cmsPayload, { onConflict: "id" });
+    if (cmsErr) throw new Error(`Failed to create user profile: ${cmsErr.message}`);
 
     for (const ws of data.workspaceAssignments) {
       await supabase.from("workspace_members").upsert({
@@ -221,8 +252,11 @@ export const invitePlatformUser = createServerFn({ method: "POST" })
 
     try {
       await supabase.functions.invoke("send-invite-email", {
-        body: { email: data.email, name: data.name, tempPassword, loginUrl: data.loginUrl,
-                inviterName: data.inviterName },
+        body: {
+          email: data.email, name: data.name,
+          ...(isExistingUser ? {} : { tempPassword }),
+          loginUrl: data.loginUrl, inviterName: data.inviterName,
+        },
       });
     } catch (e) { console.warn("Email non-fatal:", e); }
 
@@ -298,10 +332,15 @@ export const resendWorkspaceInvite = createServerFn({ method: "POST" })
 
     const { data: member, error: memberErr } = await supabase
       .from("workspace_members")
-      .select("email, name, user_id")
+      .select("email, name, user_id, status")
       .eq("id", data.memberId)
       .single();
     if (memberErr || !member) throw new Error("Member not found");
+
+    // Only resend to users who haven't logged in yet — never reset an active user's password
+    if (member.status !== "pending") {
+      throw new Error("Cannot resend invite: this member has already accepted their invite.");
+    }
 
     const tempPassword = genTempPassword();
 
@@ -331,11 +370,52 @@ export const resendWorkspaceInvite = createServerFn({ method: "POST" })
   });
 
 // ── Mark password changed ──────────────────────────────────────────────────────
+// Clears password_change_required in cms_users after the user sets their own password.
+// Accepts the caller's access token to verify identity server-side.
 export const markPasswordChanged = createServerFn({ method: "POST" })
-  .validator((input: { userId: string }) => input)
+  .validator((input: { accessToken: string }) => input)
   .handler(async ({ data }) => {
     const { getAdminClient } = await import("./supabase.server");
     const supabase = getAdminClient() as any;
-    await supabase.from("cms_users").update({ password_change_required: false }).eq("id", data.userId);
+
+    const { data: { user }, error: authErr } = await supabase.auth.getUser(data.accessToken);
+    if (authErr || !user) throw new Error("Unauthorized");
+
+    await supabase
+      .from("cms_users")
+      .update({ password_change_required: false })
+      .eq("id", user.id);
+
+    return { ok: true };
+  });
+
+// ── Track user login ───────────────────────────────────────────────────────────
+// Accepts the caller's access token so identity is verified server-side;
+// never trusts a client-supplied userId.
+export const trackUserLogin = createServerFn({ method: "POST" })
+  .validator((input: { accessToken: string }) => input)
+  .handler(async ({ data }) => {
+    const { getAdminClient } = await import("./supabase.server");
+    const supabase = getAdminClient() as any;
+
+    // Verify the JWT and extract the real user id
+    const { data: { user }, error: authErr } = await supabase.auth.getUser(data.accessToken);
+    if (authErr || !user) throw new Error("Unauthorized");
+
+    const now = new Date().toISOString();
+
+    // Activate any pending workspace memberships (first login only)
+    await supabase
+      .from("workspace_members")
+      .update({ status: "active", accepted_at: now })
+      .eq("user_id", user.id)
+      .eq("status", "pending");
+
+    // Update last_login_at in cms_users
+    await supabase
+      .from("cms_users")
+      .update({ last_login_at: now })
+      .eq("id", user.id);
+
     return { ok: true };
   });

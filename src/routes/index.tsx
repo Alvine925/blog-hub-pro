@@ -17,6 +17,12 @@ function IndexPage() {
         return;
       }
 
+      // Invited users must set a permanent password before entering the app
+      if (session.user.user_metadata?.password_change_required === true) {
+        navigate({ to: "/set-password" });
+        return;
+      }
+
       // Check if user is a workspace-only member — skip onboarding, go to their workspace
       try {
         const { data: cmsUser } = await supabase

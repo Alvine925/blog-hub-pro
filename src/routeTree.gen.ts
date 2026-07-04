@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as TermsRouteImport } from './routes/terms'
 import { Route as SignupRouteImport } from './routes/signup'
+import { Route as SetPasswordRouteImport } from './routes/set-password'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as LoginRouteImport } from './routes/login'
@@ -107,6 +108,11 @@ const TermsRoute = TermsRouteImport.update({
 const SignupRoute = SignupRouteImport.update({
   id: '/signup',
   path: '/signup',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SetPasswordRoute = SetPasswordRouteImport.update({
+  id: '/set-password',
+  path: '/set-password',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PrivacyRoute = PrivacyRouteImport.update({
@@ -590,6 +596,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRouteWithChildren
   '/privacy': typeof PrivacyRoute
+  '/set-password': typeof SetPasswordRoute
   '/signup': typeof SignupRoute
   '/terms': typeof TermsRoute
   '/admin/ai-assistant': typeof AdminAiAssistantRoute
@@ -679,6 +686,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/privacy': typeof PrivacyRoute
+  '/set-password': typeof SetPasswordRoute
   '/signup': typeof SignupRoute
   '/terms': typeof TermsRoute
   '/admin/ai-assistant': typeof AdminAiAssistantRoute
@@ -762,6 +770,7 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRouteWithChildren
   '/privacy': typeof PrivacyRoute
+  '/set-password': typeof SetPasswordRoute
   '/signup': typeof SignupRoute
   '/terms': typeof TermsRoute
   '/admin/ai-assistant': typeof AdminAiAssistantRoute
@@ -855,6 +864,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/onboarding'
     | '/privacy'
+    | '/set-password'
     | '/signup'
     | '/terms'
     | '/admin/ai-assistant'
@@ -944,6 +954,7 @@ export interface FileRouteTypes {
     | '/'
     | '/login'
     | '/privacy'
+    | '/set-password'
     | '/signup'
     | '/terms'
     | '/admin/ai-assistant'
@@ -1026,6 +1037,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/onboarding'
     | '/privacy'
+    | '/set-password'
     | '/signup'
     | '/terms'
     | '/admin/ai-assistant'
@@ -1118,6 +1130,7 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   OnboardingRoute: typeof OnboardingRouteWithChildren
   PrivacyRoute: typeof PrivacyRoute
+  SetPasswordRoute: typeof SetPasswordRoute
   SignupRoute: typeof SignupRoute
   TermsRoute: typeof TermsRoute
   BlogsSlugRoute: typeof BlogsSlugRoute
@@ -1138,6 +1151,13 @@ declare module '@tanstack/react-router' {
       path: '/signup'
       fullPath: '/signup'
       preLoaderRoute: typeof SignupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/set-password': {
+      id: '/set-password'
+      path: '/set-password'
+      fullPath: '/set-password'
+      preLoaderRoute: typeof SetPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/privacy': {
@@ -2073,6 +2093,7 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   OnboardingRoute: OnboardingRouteWithChildren,
   PrivacyRoute: PrivacyRoute,
+  SetPasswordRoute: SetPasswordRoute,
   SignupRoute: SignupRoute,
   TermsRoute: TermsRoute,
   BlogsSlugRoute: BlogsSlugRoute,
