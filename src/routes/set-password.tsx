@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Loader2, KeyRound, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
-import { trackUserLogin, markPasswordChanged } from "@/lib/workspace-members.functions";
+import { trackUserLogin, markPasswordChanged, sendWelcomeEmail } from "@/lib/workspace-members.functions";
 
 export const Route = createFileRoute("/set-password")({
   head: () => ({ meta: [{ title: "Set Your Password — Lunar CMS" }] }),
@@ -15,6 +15,7 @@ function SetPasswordPage() {
   const navigate = useNavigate();
   const doTrackLogin = useServerFn(trackUserLogin);
   const doMarkPasswordChanged = useServerFn(markPasswordChanged);
+  const doSendWelcome = useServerFn(sendWelcomeEmail);
 
   const [password, setPassword]     = useState("");
   const [confirm, setConfirm]       = useState("");
@@ -87,10 +88,7 @@ function SetPasswordPage() {
       }
     }
 
-    toast.success("Password set! Welcome to Lunar CMS.");
-    setLoading(false);
-
-    // 5. Go straight to their workspace — skip onboarding entirely
+    // 5. Find workspace to redirect to (must come BEFORE welcome email so we have `first`)
     const { data: memberships } = await supabase
       .from("workspace_members" as never)
       .select("workspace_id")
@@ -100,6 +98,24 @@ function SetPasswordPage() {
       .limit(1);
 
     const first = (memberships as { workspace_id: string }[] | null)?.[0];
+
+    // 6. Send welcome email for invited user — non-blocking, never blocks navigation
+    if (session?.access_token) {
+      doSendWelcome({
+        data: {
+          accessToken: session.access_token,
+          type: "welcome_invited",
+          dashboardUrl: first
+            ? `${window.location.origin}/admin/workspaces/${first.workspace_id}`
+            : `${window.location.origin}/`,
+        },
+      }).catch(() => {/* non-fatal */});
+    }
+
+    toast.success("Password set! Welcome to Lunar CMS.");
+    setLoading(false);
+
+    // 7. Go straight to their workspace — skip onboarding entirely
     if (first) {
       navigate({ to: `/admin/workspaces/${first.workspace_id}` as "/" });
     } else {

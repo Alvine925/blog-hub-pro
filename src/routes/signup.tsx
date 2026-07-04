@@ -3,6 +3,8 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Moon, Eye, EyeOff, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
+import { useServerFn } from "@tanstack/react-start";
+import { sendWelcomeEmail } from "@/lib/workspace-members.functions";
 
 export const Route = createFileRoute("/signup")({
   head: () => ({ meta: [{ title: "Create Account — Lunar CMS" }] }),
@@ -44,6 +46,7 @@ const SLIDES = [
 
 function SignupPage() {
   const navigate = useNavigate();
+  const doSendWelcome = useServerFn(sendWelcomeEmail);
   const [fullName, setFullName]           = useState("");
   const [email, setEmail]                 = useState("");
   const [password, setPassword]           = useState("");
@@ -78,13 +81,18 @@ function SignupPage() {
     if (!agreed) { toast.error("Please agree to the Terms and Privacy Policy to continue."); return; }
     if (password.length < 6) { toast.error("Password must be at least 6 characters"); return; }
     setLoading(true);
-    const { error } = await supabase.auth.signUp({
+    const { data: authData, error } = await supabase.auth.signUp({
       email,
       password,
       options: { data: { full_name: fullName } },
     });
     setLoading(false);
     if (error) { toast.error(error.message); return; }
+    // Send welcome email (non-blocking) — pass access token so server verifies identity
+    if (authData?.session?.access_token) {
+      doSendWelcome({ data: { accessToken: authData.session.access_token, type: "welcome" } })
+        .catch(() => {/* non-fatal */});
+    }
     navigate({ to: "/onboarding/welcome" });
   };
 

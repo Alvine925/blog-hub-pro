@@ -404,6 +404,13 @@ export const trackUserLogin = createServerFn({ method: "POST" })
 
     const now = new Date().toISOString();
 
+    // Find which pending memberships we're about to activate (to notify admins)
+    const { data: pendingRows } = await supabase
+      .from("workspace_members")
+      .select("workspace_id, name, email")
+      .eq("user_id", user.id)
+      .eq("status", "pending");
+
     // Activate any pending workspace memberships (first login only)
     await supabase
       .from("workspace_members")
@@ -416,6 +423,98 @@ export const trackUserLogin = createServerFn({ method: "POST" })
       .from("cms_users")
       .update({ last_login_at: now })
       .eq("id", user.id);
+
+    // Notify workspace admins for each workspace that was just joined
+    const activated = (pendingRows ?? []) as { workspace_id: string; name: string | null; email: string }[];
+    if (activated.length > 0) {
+      const memberName  = activated[0].name  || activated[0].email || "A team member";
+      const memberEmail = activated[0].email || "";
+
+      for (const row of activated) {
+        const wsId = row.workspace_id;
+
+        // In-app notification for the workspace
+        await supabase.from("notifications").insert({
+          workspace_id: wsId,
+          type: "member_invited",
+          title: `${memberName} accepted their invitation`,
+          body: `${memberName} has logged in for the first time and joined the workspace.`,
+          action_url: `/admin/workspaces/${wsId}/users`,
+          action_label: "View members",
+          metadata: { user_id: user.id, member_email: memberEmail },
+        });
+
+        // Email: find workspace admins (excluding the member themselves)
+        const { data: admins } = await supabase
+          .from("workspace_members")
+          .select("email, name")
+          .eq("workspace_id", wsId)
+          .eq("workspace_role", "workspace_admin")
+          .eq("status", "active")
+          .neq("user_id", user.id);
+
+        const adminRecipients = ((admins ?? []) as { email: string; name: string | null }[])
+          .filter((a) => a.email);
+
+        if (adminRecipients.length > 0) {
+          try {
+            await supabase.functions.invoke("send-transactional-email", {
+              body: {
+                type: "member_login",
+                to: adminRecipients.map((a) => ({ email: a.email, name: a.name ?? undefined })),
+                data: {
+                  memberName,
+                  memberEmail,
+                  workspaceName: wsId, // workspace name not in query; admins see the id in the link
+                  dashboardUrl: `${process.env.VITE_APP_URL ?? ""}/admin/workspaces/${wsId}/users`,
+                },
+              },
+            });
+          } catch (e) {
+            console.warn("[trackUserLogin] member_login email non-fatal:", e);
+          }
+        }
+      }
+    }
+
+    return { ok: true };
+  });
+
+// ── Send welcome email ─────────────────────────────────────────────────────────
+// Called after a new user signs up (organic) or an invited user sets their password.
+// Accepts accessToken to verify identity server-side — never trusts client-supplied email.
+export const sendWelcomeEmail = createServerFn({ method: "POST" })
+  .validator((input: {
+    accessToken: string;
+    type: "welcome" | "welcome_invited";
+    workspaceName?: string;
+    dashboardUrl?: string;
+  }) => input)
+  .handler(async ({ data }) => {
+    const { getAdminClient } = await import("./supabase.server");
+    const supabase = getAdminClient() as any;
+
+    // Verify caller and derive email server-side (never trust client-supplied address)
+    const { data: { user }, error: authErr } = await supabase.auth.getUser(data.accessToken);
+    if (authErr || !user?.email) return { ok: false }; // non-fatal: skip email if not authed
+
+    const name = user.user_metadata?.name ?? user.user_metadata?.full_name ?? undefined;
+
+    try {
+      await supabase.functions.invoke("send-transactional-email", {
+        body: {
+          type: data.type,
+          to: [{ email: user.email, name }],
+          data: {
+            loginUrl:      `${process.env.VITE_APP_URL ?? ""}/login`,
+            workspaceName: data.workspaceName,
+            dashboardUrl:  data.dashboardUrl ?? `${process.env.VITE_APP_URL ?? ""}/`,
+          },
+        },
+      });
+    } catch (e) {
+      console.warn("[sendWelcomeEmail] non-fatal:", e);
+    }
 
     return { ok: true };
   });

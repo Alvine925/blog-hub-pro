@@ -169,7 +169,89 @@ export async function submitComment(params: SubmitCommentParams): Promise<Submit
     bumpDaily(params.postId, params.workspaceId, "comments");
   }
 
-  return { ok: true, comment: data as { id: string; status: string; created_at: string } };
+  const result = { ok: true, comment: data as { id: string; status: string; created_at: string } };
+
+  // Fire-and-forget: notify workspace admins/editors of the new comment
+  notifyOnComment({
+    workspaceId: params.workspaceId,
+    postId: params.postId,
+    commentId: (data as { id: string }).id,
+    authorName: name,
+    authorEmail: email,
+    content,
+  }).catch(() => {/* non-fatal — never block the response */});
+
+  return result;
+}
+
+/** Insert an in-app notification and send emails to workspace admins/editors. */
+async function notifyOnComment(opts: {
+  workspaceId: string | null;
+  postId: string;
+  commentId: string;
+  authorName: string;
+  authorEmail: string;
+  content: string;
+}): Promise<void> {
+  if (!opts.workspaceId) return; // can't target workspace
+
+  const db = getDb();
+
+  // 1. Get the post title for context
+  const { data: post } = await db
+    .from("blog_posts")
+    .select("title, slug")
+    .eq("id", opts.postId)
+    .maybeSingle();
+  const postTitle = (post as Record<string, string> | null)?.title ?? "a post";
+
+  // 2. Insert one in-app notification scoped to this workspace
+  await db.from("notifications").insert({
+    workspace_id: opts.workspaceId,
+    type: "comment",
+    title: `New comment on "${postTitle}"`,
+    body: `${opts.authorName} wrote: "${opts.content.slice(0, 120)}${opts.content.length > 120 ? "…" : ""}"`,
+    action_url: "/admin/comments",
+    action_label: "Review comment",
+    metadata: { comment_id: opts.commentId, post_id: opts.postId, author_email: opts.authorEmail },
+  });
+
+  // 3. Fetch workspace admin/editor emails for the email blast
+  const { data: members } = await db
+    .from("workspace_members")
+    .select("email, name")
+    .eq("workspace_id", opts.workspaceId)
+    .in("workspace_role", ["workspace_admin", "editor"])
+    .eq("status", "active");
+
+  const recipients = ((members ?? []) as { email: string; name: string | null }[])
+    .filter((m) => m.email);
+
+  if (!recipients.length) return;
+
+  // 4. Send email notification via the transactional email function
+  const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
+  const serviceKey  = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+  const siteUrl     = Deno.env.get("SITE_URL") ?? supabaseUrl;
+
+  await fetch(`${supabaseUrl}/functions/v1/send-transactional-email`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${serviceKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      type: "comment",
+      to: recipients.map((r) => ({ email: r.email, name: r.name ?? undefined })),
+      data: {
+        postTitle,
+        authorName: opts.authorName,
+        commentContent: opts.content,
+        commentId: opts.commentId,
+        moderateUrl: `${siteUrl}/admin/comments`,
+      },
+    }),
+  });
 }
 
 export async function countApprovedComments(postId: string): Promise<number> {
