@@ -9,7 +9,9 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as TermsRouteImport } from './routes/terms'
 import { Route as SignupRouteImport } from './routes/signup'
+import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as AdminRouteImport } from './routes/admin'
@@ -97,9 +99,19 @@ import { Route as AdminWorkspacesIdFaqsFaqIdEditRouteImport } from './routes/adm
 import { Route as AdminWorkspacesIdBlogsPostIdEditRouteImport } from './routes/admin.workspaces.$id.blogs.$postId.edit'
 import { Route as AdminWorkspacesIdArticlesArticleIdEditRouteImport } from './routes/admin.workspaces.$id.articles.$articleId.edit'
 
+const TermsRoute = TermsRouteImport.update({
+  id: '/terms',
+  path: '/terms',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SignupRoute = SignupRouteImport.update({
   id: '/signup',
   path: '/signup',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PrivacyRoute = PrivacyRouteImport.update({
+  id: '/privacy',
+  path: '/privacy',
   getParentRoute: () => rootRouteImport,
 } as any)
 const OnboardingRoute = OnboardingRouteImport.update({
@@ -577,7 +589,9 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AdminRouteWithChildren
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRouteWithChildren
+  '/privacy': typeof PrivacyRoute
   '/signup': typeof SignupRoute
+  '/terms': typeof TermsRoute
   '/admin/ai-assistant': typeof AdminAiAssistantRoute
   '/admin/analytics': typeof AdminAnalyticsRoute
   '/admin/api-explorer': typeof AdminApiExplorerRoute
@@ -664,7 +678,9 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/privacy': typeof PrivacyRoute
   '/signup': typeof SignupRoute
+  '/terms': typeof TermsRoute
   '/admin/ai-assistant': typeof AdminAiAssistantRoute
   '/admin/analytics': typeof AdminAnalyticsRoute
   '/admin/api-explorer': typeof AdminApiExplorerRoute
@@ -745,7 +761,9 @@ export interface FileRoutesById {
   '/admin': typeof AdminRouteWithChildren
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRouteWithChildren
+  '/privacy': typeof PrivacyRoute
   '/signup': typeof SignupRoute
+  '/terms': typeof TermsRoute
   '/admin/ai-assistant': typeof AdminAiAssistantRoute
   '/admin/analytics': typeof AdminAnalyticsRoute
   '/admin/api-explorer': typeof AdminApiExplorerRoute
@@ -836,7 +854,9 @@ export interface FileRouteTypes {
     | '/admin'
     | '/login'
     | '/onboarding'
+    | '/privacy'
     | '/signup'
+    | '/terms'
     | '/admin/ai-assistant'
     | '/admin/analytics'
     | '/admin/api-explorer'
@@ -923,7 +943,9 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/login'
+    | '/privacy'
     | '/signup'
+    | '/terms'
     | '/admin/ai-assistant'
     | '/admin/analytics'
     | '/admin/api-explorer'
@@ -1003,7 +1025,9 @@ export interface FileRouteTypes {
     | '/admin'
     | '/login'
     | '/onboarding'
+    | '/privacy'
     | '/signup'
+    | '/terms'
     | '/admin/ai-assistant'
     | '/admin/analytics'
     | '/admin/api-explorer'
@@ -1093,18 +1117,34 @@ export interface RootRouteChildren {
   AdminRoute: typeof AdminRouteWithChildren
   LoginRoute: typeof LoginRoute
   OnboardingRoute: typeof OnboardingRouteWithChildren
+  PrivacyRoute: typeof PrivacyRoute
   SignupRoute: typeof SignupRoute
+  TermsRoute: typeof TermsRoute
   BlogsSlugRoute: typeof BlogsSlugRoute
   BlogsIndexRoute: typeof BlogsIndexRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/terms': {
+      id: '/terms'
+      path: '/terms'
+      fullPath: '/terms'
+      preLoaderRoute: typeof TermsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/signup': {
       id: '/signup'
       path: '/signup'
       fullPath: '/signup'
       preLoaderRoute: typeof SignupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/privacy': {
+      id: '/privacy'
+      path: '/privacy'
+      fullPath: '/privacy'
+      preLoaderRoute: typeof PrivacyRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/onboarding': {
@@ -2032,7 +2072,9 @@ const rootRouteChildren: RootRouteChildren = {
   AdminRoute: AdminRouteWithChildren,
   LoginRoute: LoginRoute,
   OnboardingRoute: OnboardingRouteWithChildren,
+  PrivacyRoute: PrivacyRoute,
   SignupRoute: SignupRoute,
+  TermsRoute: TermsRoute,
   BlogsSlugRoute: BlogsSlugRoute,
   BlogsIndexRoute: BlogsIndexRoute,
 }

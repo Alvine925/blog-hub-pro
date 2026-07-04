@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Moon, Eye, EyeOff, Loader2 } from "lucide-react";
+import { Moon, Eye, EyeOff, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/signup")({
@@ -9,15 +9,51 @@ export const Route = createFileRoute("/signup")({
   component: SignupPage,
 });
 
+const SLIDES = [
+  {
+    image: "https://images.unsplash.com/photo-1542744094-24638eff58bb?auto=format&fit=crop&w=900&q=80",
+    quote: "From idea to published in minutes. Lunar CMS changed how we think about content.",
+    author: "Amara O.",
+    role: "Lead Developer, Solstice Agency",
+  },
+  {
+    image: "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=900&q=80",
+    quote: "Our whole team — writers, editors, devs — finally works in one place. No more handoffs.",
+    author: "Tom R.",
+    role: "CTO, Fieldnotes",
+  },
+  {
+    image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=900&q=80",
+    quote: "Setting up the API took twenty minutes. Our blog was live the same afternoon.",
+    author: "Marcus L.",
+    role: "Founder, Brightpath",
+  },
+  {
+    image: "https://images.unsplash.com/photo-1531746790731-6c087fecd65a?auto=format&fit=crop&w=900&q=80",
+    quote: "The multi-workspace model is exactly what agencies need. We manage twelve clients from one dashboard.",
+    author: "Priya S.",
+    role: "Growth Lead, Arclight",
+  },
+  {
+    image: "https://images.unsplash.com/photo-1600880292203-757bb62b4baf?auto=format&fit=crop&w=900&q=80",
+    quote: "Engagement analytics out of the box. We finally know what content actually performs.",
+    author: "Daniel M.",
+    role: "Head of Content, Prismatic",
+  },
+];
+
 function SignupPage() {
   const navigate = useNavigate();
-  const [fullName, setFullName]     = useState("");
-  const [email, setEmail]           = useState("");
-  const [password, setPassword]     = useState("");
-  const [showPw, setShowPw]         = useState(false);
-  const [loading, setLoading]       = useState(false);
+  const [fullName, setFullName]           = useState("");
+  const [email, setEmail]                 = useState("");
+  const [password, setPassword]           = useState("");
+  const [showPw, setShowPw]               = useState(false);
+  const [agreed, setAgreed]               = useState(false);
+  const [loading, setLoading]             = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [githubLoading, setGithubLoading] = useState(false);
+  const [current, setCurrent]             = useState(0);
+  const [animating, setAnimating]         = useState(false);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -25,8 +61,21 @@ function SignupPage() {
     });
   }, [navigate]);
 
+  useEffect(() => {
+    const timer = setInterval(() => goTo((prev) => (prev + 1) % SLIDES.length), 5000);
+    return () => clearInterval(timer);
+  }, []);
+
+  function goTo(indexOrUpdater: number | ((prev: number) => number)) {
+    if (animating) return;
+    setAnimating(true);
+    setCurrent(typeof indexOrUpdater === "function" ? indexOrUpdater : () => indexOrUpdater);
+    setTimeout(() => setAnimating(false), 600);
+  }
+
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!agreed) { toast.error("Please agree to the Terms and Privacy Policy to continue."); return; }
     if (password.length < 6) { toast.error("Password must be at least 6 characters"); return; }
     setLoading(true);
     const { error } = await supabase.auth.signUp({
@@ -40,6 +89,7 @@ function SignupPage() {
   };
 
   const handleGoogle = async () => {
+    if (!agreed) { toast.error("Please agree to the Terms and Privacy Policy to continue."); return; }
     setGoogleLoading(true);
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
@@ -49,6 +99,7 @@ function SignupPage() {
   };
 
   const handleGitHub = async () => {
+    if (!agreed) { toast.error("Please agree to the Terms and Privacy Policy to continue."); return; }
     setGithubLoading(true);
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "github",
@@ -67,10 +118,12 @@ function SignupPage() {
     return s;
   })();
 
+  const slide = SLIDES[current];
+
   return (
     <div className="flex min-h-screen bg-white">
       {/* Left — form column */}
-      <div className="flex flex-1 flex-col items-center justify-center px-8 py-16">
+      <div className="flex flex-1 flex-col items-center justify-center px-8 py-16 overflow-y-auto">
         <div className="w-full max-w-sm">
           {/* Mobile logo */}
           <div className="mb-10 flex items-center gap-2 lg:hidden">
@@ -186,7 +239,36 @@ function SignupPage() {
               )}
             </div>
 
-            <div className="pt-2">
+            {/* Terms checkbox */}
+            <div className="flex items-start gap-3 pt-1">
+              <button
+                type="button"
+                role="checkbox"
+                aria-checked={agreed}
+                onClick={() => setAgreed(!agreed)}
+                className={`mt-0.5 flex h-4 w-4 flex-shrink-0 items-center justify-center rounded border-2 transition-colors ${
+                  agreed ? "border-zinc-900 bg-zinc-900" : "border-zinc-300 bg-white"
+                }`}
+              >
+                {agreed && (
+                  <svg className="h-2.5 w-2.5 text-white" viewBox="0 0 12 12" fill="none">
+                    <path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                )}
+              </button>
+              <p className="text-xs leading-relaxed text-zinc-500">
+                I agree to the{" "}
+                <Link to="/terms" className="font-medium text-zinc-900 underline underline-offset-2 hover:text-zinc-700">
+                  Terms of Service
+                </Link>{" "}
+                and{" "}
+                <Link to="/privacy" className="font-medium text-zinc-900 underline underline-offset-2 hover:text-zinc-700">
+                  Privacy Policy
+                </Link>
+              </p>
+            </div>
+
+            <div className="pt-1">
               <button
                 type="submit"
                 disabled={loading}
@@ -198,12 +280,6 @@ function SignupPage() {
             </div>
           </form>
 
-          <p className="mt-5 text-center text-xs text-zinc-400">
-            By signing up, you agree to our{" "}
-            <a href="#" className="underline">Terms</a> and{" "}
-            <a href="#" className="underline">Privacy Policy</a>.
-          </p>
-
           <p className="mt-6 text-center text-sm text-zinc-500">
             Already have an account?{" "}
             <Link to="/login" className="font-medium text-zinc-900 hover:underline">
@@ -213,34 +289,77 @@ function SignupPage() {
         </div>
       </div>
 
-      {/* Right — brand column */}
-      <div className="hidden w-[42%] flex-col justify-between bg-zinc-950 px-12 py-10 lg:flex">
-        <div className="flex items-center gap-2">
+      {/* Right — carousel */}
+      <div className="relative hidden w-[42%] overflow-hidden lg:block">
+        {SLIDES.map((s, i) => (
+          <div
+            key={i}
+            className="absolute inset-0 transition-opacity duration-700"
+            style={{ opacity: i === current ? 1 : 0 }}
+          >
+            <img src={s.image} alt="" className="h-full w-full object-cover" />
+          </div>
+        ))}
+
+        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-black/30" />
+
+        <div className="absolute left-10 top-10 flex items-center gap-2">
           <Moon className="h-4 w-4 text-white" />
           <span className="text-sm font-semibold tracking-tight text-white">Lunar CMS</span>
         </div>
 
-        <div>
-          <h2 className="text-3xl font-bold leading-snug text-white">
-            From idea to<br />published — in minutes.
-          </h2>
+        <div className="absolute bottom-10 left-0 right-0 px-10">
+          <div
+            key={current}
+            style={{ animation: "fadeSlideUp 0.5s ease forwards" }}
+          >
+            <blockquote className="text-xl font-medium leading-snug text-white">
+              &ldquo;{slide.quote}&rdquo;
+            </blockquote>
+            <div className="mt-4">
+              <p className="text-sm font-semibold text-white">{slide.author}</p>
+              <p className="text-xs text-white/60">{slide.role}</p>
+            </div>
+          </div>
 
-          <div className="mt-10 space-y-4">
-            {[
-              ["Website analysis", "We scan your site and build your context automatically."],
-              ["Competitor intelligence", "Understand your landscape before you write a word."],
-              ["Content suggestions", "Topic ideas, categories, and pillars — ready on day one."],
-            ].map(([title, desc]) => (
-              <div key={title}>
-                <p className="text-sm font-semibold text-white">{title}</p>
-                <p className="mt-0.5 text-sm text-zinc-500">{desc}</p>
-              </div>
-            ))}
+          <div className="mt-6 flex items-center gap-4">
+            <div className="flex gap-1.5">
+              {SLIDES.map((_, i) => (
+                <button
+                  key={i}
+                  onClick={() => goTo(i)}
+                  className={`h-1 rounded-full transition-all duration-300 ${
+                    i === current ? "w-6 bg-white" : "w-1.5 bg-white/40"
+                  }`}
+                />
+              ))}
+            </div>
+            <div className="ml-auto flex gap-2">
+              <button
+                onClick={() => goTo((current - 1 + SLIDES.length) % SLIDES.length)}
+                className="flex h-8 w-8 items-center justify-center rounded-full border border-white/30 text-white/70 transition hover:border-white hover:text-white"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+              <button
+                onClick={() => goTo((current + 1) % SLIDES.length)}
+                className="flex h-8 w-8 items-center justify-center rounded-full border border-white/30 text-white/70 transition hover:border-white hover:text-white"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </button>
+            </div>
           </div>
         </div>
 
-        <p className="text-xs text-zinc-700">© 2025 Lunar CMS</p>
+        <p className="absolute bottom-3 left-10 text-xs text-white/30">© 2025 Lunar CMS</p>
       </div>
+
+      <style>{`
+        @keyframes fadeSlideUp {
+          from { opacity: 0; transform: translateY(12px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+      `}</style>
     </div>
   );
 }
