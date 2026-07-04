@@ -6,6 +6,7 @@ import {
   ChevronDown, User, Key, ScrollText, Plug, MessageSquare,
   Sparkles, X,
 } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 import { AiAssistant } from "@/components/dashboard/AiAssistant";
 import { cn } from "@/lib/utils";
 import { useState, useEffect, useRef } from "react";
@@ -21,6 +22,260 @@ export const Route = createFileRoute("/admin")({
   }),
   component: AdminLayoutGuard,
 });
+
+// ── Full-page skeletons (shown during auth check on first load) ────────────────
+
+function GlobalSidebarSkeleton() {
+  return (
+    <aside className="flex w-56 shrink-0 flex-col border-r border-border bg-background">
+      <div className="flex h-14 items-center gap-2.5 border-b border-border px-4 shrink-0">
+        <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary shadow-sm">
+          <Moon className="h-4 w-4 text-white" />
+        </div>
+        <span className="text-sm font-semibold tracking-tight">Lunar CMS</span>
+      </div>
+      <nav className="flex-1 overflow-hidden py-3 px-3 space-y-1">
+        {["w-full","w-4/5","w-3/4","w-full","w-4/5","w-3/4","w-full","w-4/5","w-3/4","w-full","w-4/5","w-3/4"].map((w, i) => (
+          <Skeleton key={i} className={`h-7 ${w} rounded-md`} />
+        ))}
+      </nav>
+      <div className="shrink-0 border-t border-border p-3 space-y-2">
+        <Skeleton className="h-8 w-full rounded-lg" />
+        <Skeleton className="h-7 w-3/4 rounded-md" />
+      </div>
+    </aside>
+  );
+}
+
+function GlobalHeaderSkeleton() {
+  return (
+    <header className="flex h-14 shrink-0 items-center justify-between border-b border-border bg-background px-6">
+      <Skeleton className="h-4 w-24 rounded-md" />
+      <div className="flex items-center gap-2">
+        <Skeleton className="h-8 w-24 rounded-lg" />
+        <Skeleton className="h-8 w-8 rounded-lg" />
+        <Skeleton className="h-8 w-8 rounded-full" />
+      </div>
+    </header>
+  );
+}
+
+function DashboardContentSkeleton() {
+  return (
+    <div className="space-y-10 p-8">
+      <div className="flex items-start justify-between gap-4">
+        <div className="space-y-2">
+          <Skeleton className="h-6 w-32" />
+          <Skeleton className="h-4 w-64" />
+        </div>
+        <Skeleton className="h-8 w-28 rounded-md" />
+      </div>
+      <div className="flex divide-x divide-border border-y border-border">
+        {[...Array(5)].map((_, i) => (
+          <div key={i} className="flex-1 px-5 py-5 space-y-2">
+            <Skeleton className="h-7 w-10" />
+            <Skeleton className="h-3 w-16" />
+          </div>
+        ))}
+      </div>
+      <Skeleton className="h-20 w-full rounded-lg" />
+      <div className="grid gap-10 lg:grid-cols-[1fr_280px]">
+        <div className="space-y-10">
+          {[...Array(3)].map((_, s) => (
+            <div key={s} className="space-y-3">
+              <div className="flex items-center justify-between border-b border-border pb-3">
+                <Skeleton className="h-3 w-28" />
+                <Skeleton className="h-3 w-14" />
+              </div>
+              {[...Array(5)].map((_, i) => (
+                <div key={i} className="flex items-center gap-3 border-b border-border py-3 last:border-0">
+                  <Skeleton className="h-2 w-2 rounded-full shrink-0" />
+                  <Skeleton className="h-3 flex-1" />
+                  <Skeleton className="h-3 w-16" />
+                  <Skeleton className="h-3 w-10" />
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
+        <div className="rounded-xl border border-border p-4 space-y-4" style={{ minHeight: "520px" }}>
+          <Skeleton className="h-5 w-32" />
+          <Skeleton className="h-4 w-full" />
+          <Skeleton className="h-4 w-5/6" />
+          {[...Array(4)].map((_, i) => (
+            <Skeleton key={i} className="h-9 w-full rounded-lg" />
+          ))}
+          <Skeleton className="h-32 w-full rounded-lg" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function WorkspaceSidebarSkeleton() {
+  return (
+    <aside className="flex w-52 shrink-0 flex-col border-r border-border bg-background">
+      <div className="flex h-14 items-center gap-2.5 border-b border-border px-4 shrink-0">
+        <Skeleton className="h-8 w-8 rounded-lg shrink-0" />
+        <Skeleton className="h-4 w-24" />
+      </div>
+      <nav className="flex-1 overflow-hidden py-3 px-3 space-y-1">
+        {[...Array(14)].map((_, i) => (
+          <Skeleton key={i} className={`h-7 rounded-md ${i % 3 === 0 ? "w-full" : i % 3 === 1 ? "w-4/5" : "w-3/4"}`} />
+        ))}
+      </nav>
+      <div className="shrink-0 border-t border-border p-3">
+        <Skeleton className="h-8 w-full rounded-lg" />
+      </div>
+    </aside>
+  );
+}
+
+function WorkspaceOverviewContentSkeleton() {
+  return (
+    <div className="space-y-12 px-8 py-8">
+      <div className="flex items-start justify-between gap-4">
+        <div className="space-y-2">
+          <Skeleton className="h-6 w-28" />
+          <Skeleton className="h-4 w-72" />
+        </div>
+        <Skeleton className="h-9 w-28 rounded-lg" />
+      </div>
+      <div className="grid grid-cols-4 gap-x-8 gap-y-6 sm:grid-cols-7">
+        {[...Array(7)].map((_, i) => (
+          <div key={i} className="space-y-1.5">
+            <Skeleton className="h-7 w-12" />
+            <Skeleton className="h-3 w-16" />
+          </div>
+        ))}
+      </div>
+      <div className="space-y-2">
+        <Skeleton className="h-1.5 w-full rounded-full" />
+        <div className="flex items-center gap-5">
+          <Skeleton className="h-3 w-24" />
+          <Skeleton className="h-3 w-24" />
+          <Skeleton className="h-3 w-16" />
+        </div>
+      </div>
+      <div className="grid gap-10 lg:grid-cols-3">
+        {[...Array(3)].map((_, col) => (
+          <div key={col} className="space-y-4">
+            <div className="border-b border-border pb-3">
+              <Skeleton className="h-3 w-24" />
+            </div>
+            <div className="space-y-5">
+              {[...Array(4)].map((_, i) => (
+                <div key={i} className="space-y-1.5">
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-3 w-3/4" />
+                  <div className="flex gap-1.5 pt-1">
+                    <Skeleton className="h-5 w-16 rounded-full" />
+                    <Skeleton className="h-5 w-14 rounded-full" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+      <div className="grid gap-12 lg:grid-cols-[1fr_260px]">
+        <div className="space-y-3">
+          <div className="flex items-center justify-between border-b border-border pb-3">
+            <Skeleton className="h-3 w-28" />
+            <Skeleton className="h-3 w-14" />
+          </div>
+          {[...Array(6)].map((_, i) => (
+            <div key={i} className="flex items-center gap-3 py-2.5 border-b border-border/60 last:border-0">
+              <Skeleton className="h-3 flex-1" />
+              <Skeleton className="h-4 w-20 rounded-full" />
+              <Skeleton className="h-3 w-16" />
+            </div>
+          ))}
+        </div>
+        <div className="space-y-4">
+          <div className="border-b border-border pb-3">
+            <Skeleton className="h-3 w-16" />
+          </div>
+          {[...Array(5)].map((_, i) => (
+            <div key={i} className="flex items-start gap-3">
+              <Skeleton className="h-5 w-5 rounded-full shrink-0" />
+              <div className="space-y-1.5 flex-1">
+                <Skeleton className="h-3 w-full" />
+                <Skeleton className="h-2.5 w-16" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function GenericContentSkeleton() {
+  return (
+    <div className="space-y-6 p-8">
+      <div className="space-y-2">
+        <Skeleton className="h-6 w-40" />
+        <Skeleton className="h-4 w-64" />
+      </div>
+      <div className="flex divide-x divide-border border border-border rounded-lg overflow-hidden">
+        {[...Array(3)].map((_, i) => (
+          <div key={i} className="flex-1 px-5 py-4 space-y-2">
+            <Skeleton className="h-7 w-12" />
+            <Skeleton className="h-2.5 w-20" />
+          </div>
+        ))}
+      </div>
+      <div className="space-y-3">
+        <div className="border-b border-border pb-3">
+          <Skeleton className="h-3 w-24" />
+        </div>
+        {[...Array(6)].map((_, i) => (
+          <div key={i} className="flex items-center gap-4 border-b border-border py-3 last:border-0">
+            <Skeleton className="h-3 w-3 rounded-full shrink-0" />
+            <Skeleton className="h-3.5 flex-1" />
+            <Skeleton className="h-3 w-20" />
+            <Skeleton className="h-3 w-16" />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function FullPageSkeleton({ pathname }: { pathname: string }) {
+  const isWorkspace = /^\/admin\/workspaces\/[^/]+/.test(pathname);
+  const isDashboard  = pathname === "/admin/dashboard";
+
+  if (isWorkspace) {
+    return (
+      <div className="flex h-screen overflow-hidden bg-background">
+        <WorkspaceSidebarSkeleton />
+        <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+          <header className="flex h-14 shrink-0 items-center justify-between border-b border-border bg-background px-6">
+            <Skeleton className="h-4 w-32 rounded-md" />
+            <Skeleton className="h-8 w-24 rounded-lg" />
+          </header>
+          <main className="flex-1 overflow-y-auto">
+            <WorkspaceOverviewContentSkeleton />
+          </main>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex h-screen overflow-hidden bg-background">
+      <GlobalSidebarSkeleton />
+      <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+        <GlobalHeaderSkeleton />
+        <main className="flex-1 overflow-y-auto">
+          {isDashboard ? <DashboardContentSkeleton /> : <GenericContentSkeleton />}
+        </main>
+      </div>
+    </div>
+  );
+}
 
 const STEP_ROUTES: Record<string, string> = {
   welcome:     "/onboarding/welcome",
@@ -62,11 +317,7 @@ function AdminLayoutGuard() {
   }, [navigate]);
 
   if (checking) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-background">
-        <div className="h-4 w-4 animate-spin rounded-full border-2 border-border border-t-primary" />
-      </div>
-    );
+    return <FullPageSkeleton pathname={pathname} />;
   }
 
   // Workspace pages and docs portal render their own layout
