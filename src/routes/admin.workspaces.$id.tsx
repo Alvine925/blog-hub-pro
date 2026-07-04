@@ -133,22 +133,25 @@ const DEFAULT_ACCESS: WorkspaceAccess = {
   isFullAccess: true,
 };
 
-function useWorkspaceAccess(workspaceId: string): WorkspaceAccess {
+function useWorkspaceAccess(workspaceId: string): { access: WorkspaceAccess; loaded: boolean } {
   const [access, setAccess] = useState<WorkspaceAccess>(DEFAULT_ACCESS);
+  const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data: { user } }) => {
-      if (!user) return;
+      if (!user) { setLoaded(true); return; }
       try {
         const result = await getMyWorkspaceRole({ data: { workspaceId, userId: user.id } });
         setAccess(result);
       } catch {
         // keep default (full) access on error
+      } finally {
+        setLoaded(true);
       }
     });
   }, [workspaceId]);
 
-  return access;
+  return { access, loaded };
 }
 
 // ── Error component ───────────────────────────────────────────────────────────
@@ -396,12 +399,43 @@ function WorkspaceHeader({
   );
 }
 
+// ── Suspended screen ───────────────────────────────────────────────────────────
+function SuspendedScreen({ workspace }: { workspace: Workspace }) {
+  const navigate = useNavigate();
+  return (
+    <div className="flex h-screen flex-col items-center justify-center gap-6 bg-background px-6 text-center">
+      <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-red-100">
+        <X className="h-7 w-7 text-red-500" />
+      </div>
+      <div className="space-y-1.5">
+        <h1 className="text-xl font-bold">Access suspended</h1>
+        <p className="text-sm text-muted-foreground max-w-sm leading-relaxed">
+          Your access to <strong>{workspace.name}</strong> has been suspended by an admin.
+          Contact your workspace administrator to regain access.
+        </p>
+      </div>
+      <button
+        type="button"
+        onClick={() => navigate({ to: "/login" })}
+        className="flex items-center gap-1.5 rounded-lg border border-border px-4 py-2 text-sm font-medium text-muted-foreground hover:bg-muted transition-colors"
+      >
+        Sign out
+      </button>
+    </div>
+  );
+}
+
 // ── Shell ─────────────────────────────────────────────────────────────────────
 function WorkspaceShell() {
   const { workspace } = Route.useLoaderData();
   const { id } = Route.useParams();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const access = useWorkspaceAccess(id);
+  const { access, loaded } = useWorkspaceAccess(id);
+
+  // Suspended member: show block screen once role check resolves
+  if (loaded && access.platformRole === "member" && access.workspaceRole === null) {
+    return <SuspendedScreen workspace={workspace} />;
+  }
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">

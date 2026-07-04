@@ -254,6 +254,34 @@ export const removeWorkspaceMember = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+// ── Suspend workspace member ───────────────────────────────────────────────────
+export const suspendWorkspaceMember = createServerFn({ method: "POST" })
+  .validator((input: { memberId: string }) => input)
+  .handler(async ({ data }) => {
+    const { getAdminClient } = await import("./supabase.server");
+    const supabase = getAdminClient() as any;
+    const { error } = await supabase
+      .from("workspace_members")
+      .update({ status: "suspended", updated_at: new Date().toISOString() })
+      .eq("id", data.memberId);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+// ── Reactivate workspace member ────────────────────────────────────────────────
+export const reactivateWorkspaceMember = createServerFn({ method: "POST" })
+  .validator((input: { memberId: string }) => input)
+  .handler(async ({ data }) => {
+    const { getAdminClient } = await import("./supabase.server");
+    const supabase = getAdminClient() as any;
+    const { error } = await supabase
+      .from("workspace_members")
+      .update({ status: "active", updated_at: new Date().toISOString() })
+      .eq("id", data.memberId);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
 // ── Resend workspace invite ────────────────────────────────────────────────────
 const resendInviteSchema = z.object({
   memberId:      z.string().uuid(),

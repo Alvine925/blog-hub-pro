@@ -5,7 +5,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import {
   Users, UserPlus, Trash2, Shield, ShieldCheck, Eye, Mail, Loader2,
-  ChevronDown, ChevronUp, Check, RefreshCw,
+  ChevronDown, ChevronUp, Check, RefreshCw, Ban, RotateCcw,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,6 +20,7 @@ import {
 import {
   listWorkspaceMembers, inviteWorkspaceMember, updateWorkspaceMember,
   removeWorkspaceMember, resendWorkspaceInvite,
+  suspendWorkspaceMember, reactivateWorkspaceMember,
   CONTENT_TYPES, CONTENT_LABELS, WORKSPACE_ROLE_LABELS,
   type WorkspaceMember, type WorkspaceRole, type ContentType,
 } from "@/lib/workspace-members.functions";
@@ -193,9 +194,11 @@ function WorkspaceUsersPage() {
   const { workspace } = parentRoute.useLoaderData();
   const { data: members } = useSuspenseQuery(membersQuery(workspaceId));
   const queryClient = useQueryClient();
-  const doRemove  = useServerFn(removeWorkspaceMember);
-  const doInvite  = useServerFn(inviteWorkspaceMember);
-  const doResend  = useServerFn(resendWorkspaceInvite);
+  const doRemove     = useServerFn(removeWorkspaceMember);
+  const doInvite     = useServerFn(inviteWorkspaceMember);
+  const doResend     = useServerFn(resendWorkspaceInvite);
+  const doSuspend    = useServerFn(suspendWorkspaceMember);
+  const doReactivate = useServerFn(reactivateWorkspaceMember);
 
   const [currentUserEmail, setCurrentUserEmail] = useState<string | null>(null);
   useEffect(() => {
@@ -279,6 +282,36 @@ function WorkspaceUsersPage() {
       });
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed to resend invite");
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function handleSuspend(member: WorkspaceMember) {
+    setBusyId(`suspend-${member.id}`);
+    try {
+      await doSuspend({ data: { memberId: member.id } });
+      toast.success(`${member.name || member.email} suspended`, {
+        description: "They will see an access-suspended screen if they try to visit this workspace.",
+      });
+      await refresh();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to suspend member");
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function handleReactivate(member: WorkspaceMember) {
+    setBusyId(`reactivate-${member.id}`);
+    try {
+      await doReactivate({ data: { memberId: member.id } });
+      toast.success(`${member.name || member.email} reactivated`, {
+        description: "They can access this workspace again.",
+      });
+      await refresh();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to reactivate member");
     } finally {
       setBusyId(null);
     }
