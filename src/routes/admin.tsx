@@ -655,7 +655,7 @@ function GlobalLayout() {
         </header>
 
         {/* Content */}
-        <main className="flex-1 overflow-y-auto overflow-x-hidden pb-16 md:pb-0">
+        <main className="flex-1 overflow-y-auto overflow-x-hidden overscroll-x-none touch-pan-y pb-16 md:pb-0">
           <Suspense fallback={<ContentSkeleton />}>
             <Outlet />
           </Suspense>

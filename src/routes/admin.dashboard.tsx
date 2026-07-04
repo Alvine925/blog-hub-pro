@@ -241,23 +241,23 @@ function WorkspaceIntelligencePanel() {
           </span>
         </div>
 
-        <div className="flex flex-wrap gap-8 py-4 border-b border-border">
+        <div className="flex flex-wrap gap-8 py-4 border-b border-border min-w-0">
           {ws.industry && (
-            <div>
+            <div className="min-w-0">
               <p className="text-[10px] uppercase tracking-wide text-muted-foreground/60 mb-0.5">Industry</p>
-              <p className="text-sm font-medium">{String(ws.industry)}</p>
+              <p className="text-sm font-medium break-words">{String(ws.industry)}</p>
             </div>
           )}
           {ws.target_audience && (
-            <div>
+            <div className="min-w-0 max-w-full">
               <p className="text-[10px] uppercase tracking-wide text-muted-foreground/60 mb-0.5">Audience</p>
-              <p className="text-sm font-medium">{String(ws.target_audience)}</p>
+              <p className="text-sm font-medium break-words">{String(ws.target_audience)}</p>
             </div>
           )}
           {ws.brand_voice && (
-            <div>
+            <div className="min-w-0">
               <p className="text-[10px] uppercase tracking-wide text-muted-foreground/60 mb-0.5">Brand Voice</p>
-              <p className="text-sm font-medium">{String(ws.brand_voice)}</p>
+              <p className="text-sm font-medium break-words">{String(ws.brand_voice)}</p>
             </div>
           )}
         </div>
