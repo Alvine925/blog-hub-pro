@@ -189,7 +189,7 @@ function LoginPage() {
             <span className="text-sm font-semibold tracking-tight text-zinc-900">Lunar CMS</span>
           </div>
 
-          <h1 className="text-3xl font-bold tracking-tight text-zinc-900">Sign in</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-zinc-900 sm:text-3xl">Sign in</h1>
           <p className="mt-1.5 text-sm text-zinc-500">Welcome back.</p>
 
           {/* OAuth */}

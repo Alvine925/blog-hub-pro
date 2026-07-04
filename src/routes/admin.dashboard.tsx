@@ -29,11 +29,15 @@ function DashboardSkeleton() {
       </div>
 
       {/* Stats bar */}
-      <div className="flex divide-x divide-border border-y border-border">
-        {[120, 80, 96, 88, 110].map((w, i) => (
-          <div key={i} className="flex-1 px-5 py-5 space-y-2">
+      <div className="grid grid-cols-2 divide-border border border-border rounded-lg overflow-hidden sm:grid-cols-3 md:flex md:divide-x md:border-0 md:border-y md:rounded-none">
+        {[...Array(5)].map((_, i) => (
+          <div key={i} className={cn(
+            "flex-1 px-4 py-4 sm:px-5 sm:py-5 space-y-2",
+            i > 0 && "border-t border-border md:border-t-0",
+            i % 2 !== 0 && "border-l border-border md:border-l-0",
+          )}>
             <Skeleton className="h-7 w-10" />
-            <Skeleton className={`h-3 w-${w > 100 ? 20 : 16}`} />
+            <Skeleton className="h-3 w-16" />
           </div>
         ))}
       </div>
@@ -94,7 +98,7 @@ function DashboardSkeleton() {
         </div>
 
         {/* Right sidebar */}
-        <div className="rounded-xl border border-border p-4 space-y-4" style={{ minHeight: "520px" }}>
+        <div className="rounded-lg border border-border p-4 space-y-4" style={{ minHeight: "520px" }}>
           <Skeleton className="h-5 w-32" />
           <Skeleton className="h-4 w-full" />
           <Skeleton className="h-4 w-5/6" />
@@ -664,7 +668,7 @@ function Dashboard() {
         </div>
 
         {/* AI Assistant */}
-        <div className="flex flex-col rounded-xl border border-border bg-card p-4" style={{ minHeight: "520px" }}>
+        <div className="flex flex-col rounded-lg border border-border bg-card p-4" style={{ minHeight: "520px" }}>
           <AiAssistant />
         </div>
       </div>

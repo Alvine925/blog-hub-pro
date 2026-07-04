@@ -172,8 +172,8 @@ function WorkspaceSidebar({
 
   return (
     <aside className={cn(
-      "fixed inset-y-0 left-0 z-40 flex h-screen w-72 shrink-0 flex-col border-r border-border bg-white transition-transform duration-200 ease-in-out",
-      "md:relative md:w-60 md:translate-x-0",
+      "fixed inset-y-0 left-0 z-40 flex h-screen w-64 shrink-0 flex-col border-r border-border bg-white transition-transform duration-200 ease-in-out",
+      "md:relative md:w-56 md:translate-x-0",
       sidebarOpen ? "translate-x-0" : "-translate-x-full",
     )}>
 
@@ -216,7 +216,7 @@ function WorkspaceSidebar({
           {/* Gradient initials fallback (hidden when image loads) */}
           <div
             className={cn(
-              "h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br text-sm font-bold text-white shadow-sm",
+              "h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br text-sm font-bold text-white",
               gradient,
             )}
             style={{ display: (logoUrl || faviconUrl) ? "none" : "flex" }}
@@ -342,7 +342,7 @@ function WorkspaceHeader({
         {/* Create button */}
         <Link
           to="/admin/blogs/new"
-          className="flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-sm font-semibold text-white hover:bg-primary/90 transition-colors shadow-sm"
+          className="flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-sm font-semibold text-white hover:bg-primary/90 transition-colors"
         >
           <Plus className="h-3.5 w-3.5" />
           <span className="hidden sm:inline">Create</span>

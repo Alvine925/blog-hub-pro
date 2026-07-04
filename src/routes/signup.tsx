@@ -123,15 +123,15 @@ function SignupPage() {
   return (
     <div className="flex min-h-screen bg-white">
       {/* Left — form column */}
-      <div className="flex flex-1 flex-col items-center justify-center px-8 py-16 overflow-y-auto">
+      <div className="flex flex-1 flex-col items-center justify-center px-5 py-10 sm:px-8 sm:py-16 overflow-y-auto">
         <div className="w-full max-w-sm">
           {/* Mobile logo */}
-          <div className="mb-10 flex items-center gap-2 lg:hidden">
+          <div className="mb-8 flex items-center gap-2 lg:hidden">
             <Moon className="h-4 w-4 text-zinc-900" />
             <span className="text-sm font-semibold tracking-tight text-zinc-900">Lunar CMS</span>
           </div>
 
-          <h1 className="text-3xl font-bold tracking-tight text-zinc-900">Create account</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-zinc-900 sm:text-3xl">Create account</h1>
           <p className="mt-1.5 text-sm text-zinc-500">Free to get started. No credit card required.</p>
 
           {/* OAuth */}

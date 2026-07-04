@@ -29,7 +29,7 @@ function GlobalSidebarSkeleton() {
   return (
     <aside className="flex w-56 shrink-0 flex-col border-r border-border bg-background">
       <div className="flex h-14 items-center gap-2.5 border-b border-border px-4 shrink-0">
-        <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary shadow-sm">
+        <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary">
           <Moon className="h-4 w-4 text-white" />
         </div>
         <span className="text-sm font-semibold tracking-tight">Lunar CMS</span>
@@ -62,25 +62,29 @@ function GlobalHeaderSkeleton() {
 
 function DashboardContentSkeleton() {
   return (
-    <div className="space-y-10 p-8">
+    <div className="space-y-6 p-4 sm:space-y-10 sm:p-8">
       <div className="flex items-start justify-between gap-4">
         <div className="space-y-2">
           <Skeleton className="h-6 w-32" />
-          <Skeleton className="h-4 w-64" />
+          <Skeleton className="h-4 w-48 sm:w-64" />
         </div>
-        <Skeleton className="h-8 w-28 rounded-md" />
+        <Skeleton className="h-8 w-24 sm:w-28 rounded-md" />
       </div>
-      <div className="flex divide-x divide-border border-y border-border">
+      <div className="grid grid-cols-2 divide-border border border-border rounded-lg overflow-hidden sm:grid-cols-3 md:flex md:divide-x md:border-0 md:border-y md:rounded-none">
         {[...Array(5)].map((_, i) => (
-          <div key={i} className="flex-1 px-5 py-5 space-y-2">
+          <div key={i} className={cn(
+            "flex-1 px-4 py-4 sm:px-5 sm:py-5 space-y-2",
+            i > 0 && "border-t border-border md:border-t-0",
+            i % 2 !== 0 && "border-l border-border md:border-l-0",
+          )}>
             <Skeleton className="h-7 w-10" />
             <Skeleton className="h-3 w-16" />
           </div>
         ))}
       </div>
       <Skeleton className="h-20 w-full rounded-lg" />
-      <div className="grid gap-10 lg:grid-cols-[1fr_280px]">
-        <div className="space-y-10">
+      <div className="grid gap-6 sm:gap-10 lg:grid-cols-[1fr_280px]">
+        <div className="space-y-6 sm:space-y-10">
           {[...Array(3)].map((_, s) => (
             <div key={s} className="space-y-3">
               <div className="flex items-center justify-between border-b border-border pb-3">
@@ -91,21 +95,21 @@ function DashboardContentSkeleton() {
                 <div key={i} className="flex items-center gap-3 border-b border-border py-3 last:border-0">
                   <Skeleton className="h-2 w-2 rounded-full shrink-0" />
                   <Skeleton className="h-3 flex-1" />
-                  <Skeleton className="h-3 w-16" />
+                  <Skeleton className="h-3 w-16 hidden sm:block" />
                   <Skeleton className="h-3 w-10" />
                 </div>
               ))}
             </div>
           ))}
         </div>
-        <div className="rounded-xl border border-border p-4 space-y-4" style={{ minHeight: "520px" }}>
+        <div className="rounded-lg border border-border p-4 space-y-4">
           <Skeleton className="h-5 w-32" />
           <Skeleton className="h-4 w-full" />
           <Skeleton className="h-4 w-5/6" />
           {[...Array(4)].map((_, i) => (
             <Skeleton key={i} className="h-9 w-full rounded-lg" />
           ))}
-          <Skeleton className="h-32 w-full rounded-lg" />
+          <Skeleton className="h-24 w-full rounded-lg" />
         </div>
       </div>
     </div>
@@ -133,7 +137,7 @@ function WorkspaceSidebarSkeleton() {
 
 function WorkspaceOverviewContentSkeleton() {
   return (
-    <div className="space-y-12 px-8 py-8">
+    <div className="space-y-8 p-4 sm:space-y-12 sm:p-8">
       <div className="flex items-start justify-between gap-4">
         <div className="space-y-2">
           <Skeleton className="h-6 w-28" />
@@ -213,7 +217,7 @@ function WorkspaceOverviewContentSkeleton() {
 
 function GenericContentSkeleton() {
   return (
-    <div className="space-y-6 p-8">
+    <div className="space-y-6 p-4 sm:p-8">
       <div className="space-y-2">
         <Skeleton className="h-6 w-40" />
         <Skeleton className="h-4 w-64" />
@@ -420,7 +424,7 @@ function ProfileMenu({ email }: { email: string }) {
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full z-50 mt-1.5 w-48 rounded-xl border border-border bg-white py-1 shadow-lg">
+        <div className="absolute right-0 top-full z-50 mt-1.5 w-48 rounded-lg border border-border bg-white py-1">
           <div className="border-b border-border px-3 py-2">
             <p className="text-xs font-semibold truncate">{email}</p>
           </div>
@@ -533,7 +537,7 @@ function GlobalLayout() {
       )}>
         {/* Logo + mobile close */}
         <div className="flex h-14 items-center gap-2.5 border-b border-border px-4 shrink-0">
-          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary shadow-sm">
+          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary">
             <Moon className="h-4 w-4 text-white" />
           </div>
           <span className="text-sm font-semibold tracking-tight">Lunar CMS</span>
@@ -670,7 +674,7 @@ function GlobalLayout() {
       {/* Panel */}
       <div
         className={cn(
-          "fixed right-0 top-0 z-50 flex h-full w-[420px] max-w-[95vw] flex-col border-l border-border bg-background shadow-2xl transition-transform duration-300 ease-in-out",
+          "fixed right-0 top-0 z-50 flex h-full w-full sm:w-[420px] flex-col border-l border-border bg-background transition-transform duration-300 ease-in-out",
           aiOpen ? "translate-x-0" : "translate-x-full",
         )}
       >

@@ -1855,7 +1855,7 @@ function DevDocsPortal() {
               className="w-full rounded-lg border border-zinc-200 bg-zinc-50 py-1.5 pl-8 pr-3 text-sm focus:outline-none focus:ring-1 focus:ring-red-500"
             />
             {showSearch && searchResults.length > 0 && (
-              <div className="absolute top-full left-0 z-50 mt-1 w-80 rounded-lg border border-zinc-200 bg-white shadow-lg">
+              <div className="absolute top-full left-0 z-50 mt-1 w-80 rounded-lg border border-zinc-200 bg-white">
                 {searchResults.map((r) => (
                   <button
                     key={r.id}
@@ -1895,7 +1895,7 @@ function DevDocsPortal() {
         <div className="flex flex-1 overflow-hidden">
           {/* Scrollable content */}
           <div className="flex-1 overflow-y-auto">
-            <div className="mx-auto max-w-3xl px-8 py-10">
+            <div className="mx-auto max-w-3xl px-4 py-6 sm:px-8 sm:py-10">
               {/* Recently viewed / favorites on overview */}
               {section === "overview" && !endpointId && (recentEps.length > 0 || favEps.length > 0) && (
                 <div className="mb-10 space-y-4">

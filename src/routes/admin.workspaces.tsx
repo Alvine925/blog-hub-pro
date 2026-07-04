@@ -119,7 +119,7 @@ function WorkspaceCard({
   const [imgError, setImgError] = useState(false);
 
   return (
-    <div className="group relative flex flex-col overflow-hidden rounded-2xl transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl hover:shadow-black/10">
+    <div className="group relative flex flex-col overflow-hidden rounded-lg border border-border transition-all duration-200 hover:-translate-y-0.5">
 
       {/* ── Cover area ──────────────────────────────────────────────────────── */}
       <a
