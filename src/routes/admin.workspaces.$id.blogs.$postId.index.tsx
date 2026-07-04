@@ -452,7 +452,7 @@ function WorkspaceBlogDetail() {
       </div>
 
       {/* ── Engagement stats — no card, horizontal divider strip ── */}
-      <div className="border-y border-border divide-x divide-border flex">
+      <div className="border-y border-border divide-x divide-border flex overflow-x-auto">
         <StatTile label="Total Views"       value={totalViews.toLocaleString()}           icon={Eye}           />
         <StatTile label="Likes"             value={engagement.likes.toLocaleString()}      icon={Heart}         color="text-rose-400" />
         <StatTile label="Comments"          value={engagement.comments.toLocaleString()}   icon={MessageSquare} color="text-blue-400" />
@@ -461,7 +461,7 @@ function WorkspaceBlogDetail() {
       </div>
 
       {/* ── Performance strip ── */}
-      <div className="border-b border-border divide-x divide-border flex">
+      <div className="border-b border-border divide-x divide-border flex overflow-x-auto">
         <StatTile label="Tracked Views"   value={blogViews.total.toLocaleString()} icon={TrendingUp} />
         <StatTile label="API Requests"    value={apiRequests.total.toLocaleString()} icon={Activity} />
         <div className="flex-1 min-w-0 px-5 py-4">

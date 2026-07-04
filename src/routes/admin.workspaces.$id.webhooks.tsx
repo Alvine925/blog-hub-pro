@@ -399,9 +399,9 @@ function WorkspaceWebhooks() {
   }
 
   return (
-    <div className="min-h-full px-8 py-8">
+    <div className="min-h-full px-4 py-4 sm:px-8 sm:py-8">
       {/* Header */}
-      <div className="mb-8 flex items-center justify-between">
+      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-xl font-semibold">Webhooks</h1>
           <p className="mt-0.5 text-sm text-muted-foreground">

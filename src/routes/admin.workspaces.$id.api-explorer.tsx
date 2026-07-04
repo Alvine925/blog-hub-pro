@@ -187,7 +187,7 @@ function WorkspaceApiExplorer() {
   const ep = ENDPOINTS[activeEndpoint];
 
   return (
-    <div className="min-h-full px-8 py-8">
+    <div className="min-h-full px-4 py-4 sm:px-8 sm:py-8">
       <div className="mb-8">
         <h1 className="text-xl font-semibold">API Explorer</h1>
         <p className="mt-0.5 text-sm text-muted-foreground">Browse endpoints and generate code snippets for the Lunar Content API.</p>

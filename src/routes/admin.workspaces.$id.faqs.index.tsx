@@ -4,7 +4,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 function FaqsListSkeleton() {
   return (
     <div className="min-h-full px-4 py-4 sm:px-8 sm:py-8">
-      <div className="mb-8 flex items-center justify-between">
+      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="space-y-1.5">
           <Skeleton className="h-6 w-12" />
           <Skeleton className="h-4 w-28" />
@@ -164,7 +164,7 @@ function WorkspaceFaqs() {
 
   return (
     <div className="min-h-full px-4 py-4 sm:px-8 sm:py-8">
-      <div className="mb-8 flex items-center justify-between">
+      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-xl font-semibold">FAQs</h1>
           <p className="mt-0.5 text-sm text-muted-foreground">
@@ -226,7 +226,7 @@ function WorkspaceFaqs() {
               </div>
               <span className="w-24 shrink-0 text-xs text-muted-foreground hidden sm:block">{faq.category}</span>
               <span className={cn("w-20 shrink-0 text-xs hidden md:block", STATUS_STYLE[faq.status])}>{faq.status}</span>
-              <div className="w-20 shrink-0 flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
+              <div className="w-20 shrink-0 flex items-center justify-end gap-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
                 <button type="button" onClick={() => startEdit(faq)} className="flex h-7 w-7 items-center justify-center rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors" title="Edit"><Pencil className="h-3.5 w-3.5" /></button>
                 <button type="button" onClick={() => togglePublish(faq)} className="flex h-7 w-7 items-center justify-center rounded text-muted-foreground hover:text-emerald-600 hover:bg-emerald-50 transition-colors" title={faq.status === "published" ? "Unpublish" : "Publish"}><Send className="h-3.5 w-3.5" /></button>
                 <button type="button" onClick={() => setPendingDelete(faq)} className="flex h-7 w-7 items-center justify-center rounded text-muted-foreground hover:text-red-600 hover:bg-red-50 transition-colors" title="Delete"><Trash2 className="h-3.5 w-3.5" /></button>

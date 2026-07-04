@@ -66,7 +66,7 @@ function FaqNew() {
   }
 
   return (
-    <div className="min-h-full px-8 py-8 max-w-2xl">
+    <div className="min-h-full px-4 py-4 sm:px-8 sm:py-8 max-w-2xl">
       <Link
         to="/admin/workspaces/$id/faqs"
         params={{ id: workspaceId }}
@@ -88,7 +88,7 @@ function FaqNew() {
           <Textarea id="answer" rows={8} value={form.answer ?? ""} onChange={(e) => set("answer", e.target.value)} placeholder="The answer to the question..." />
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div className="space-y-2">
             <Label htmlFor="category">Category</Label>
             <Input id="category" value={form.category ?? ""} onChange={(e) => set("category", e.target.value)} placeholder="e.g. Billing" />

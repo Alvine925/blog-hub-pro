@@ -23,7 +23,7 @@ function ArticleDetailSkeleton() {
   return (
     <div className="min-h-full px-4 py-4 sm:px-8 sm:py-8 max-w-4xl space-y-6">
       <Skeleton className="h-4 w-20" />
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="space-y-2 min-w-0 flex-1">
           <div className="flex items-center gap-2">
             <Skeleton className="h-5 w-16 rounded-full" />
@@ -39,7 +39,7 @@ function ArticleDetailSkeleton() {
         </div>
       </div>
       <Skeleton className="h-48 w-full rounded-lg" />
-      <div className="grid grid-cols-4 gap-2">
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
         {[...Array(4)].map((_, i) => (
           <Skeleton key={i} className="h-14 rounded-lg" />
         ))}
@@ -144,7 +144,7 @@ function ArticleDetail() {
       </Link>
 
       {/* Header */}
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
           <h1 className="text-2xl font-bold tracking-tight">{article.title || "Untitled"}</h1>
           <div className="mt-1 flex items-center gap-3 text-sm text-muted-foreground flex-wrap">
@@ -189,7 +189,7 @@ function ArticleDetail() {
 
       {/* Engagement stats */}
       {stats && (
-        <div className="mt-6 grid grid-cols-4 gap-2">
+        <div className="mt-6 grid grid-cols-2 gap-2 sm:grid-cols-4">
           <StatPill icon={Eye}           label="Views"    value={article.views ?? 0} />
           <StatPill icon={Heart}         label="Likes"    value={stats.likes}    />
           <StatPill icon={MessageSquare} label="Comments" value={stats.comments} />

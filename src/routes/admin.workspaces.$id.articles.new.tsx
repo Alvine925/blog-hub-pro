@@ -71,7 +71,7 @@ function ArticleNew() {
   }
 
   return (
-    <div className="min-h-full px-8 py-8 max-w-2xl">
+    <div className="min-h-full px-4 py-4 sm:px-8 sm:py-8 max-w-2xl">
       <Link
         to="/admin/workspaces/$id/articles"
         params={{ id: workspaceId }}
@@ -88,7 +88,7 @@ function ArticleNew() {
           <Input id="title" value={form.title ?? ""} onChange={(e) => set("title", e.target.value)} placeholder="Article title" autoFocus />
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div className="space-y-2">
             <Label htmlFor="article_type">Type</Label>
             <select

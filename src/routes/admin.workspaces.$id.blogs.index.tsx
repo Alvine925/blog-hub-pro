@@ -4,7 +4,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 function BlogsListSkeleton() {
   return (
     <div className="min-h-full px-4 py-4 sm:px-8 sm:py-8">
-      <div className="mb-8 flex items-center justify-between">
+      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="space-y-1.5">
           <Skeleton className="h-6 w-16" />
           <Skeleton className="h-4 w-28" />
@@ -163,7 +163,7 @@ function WorkspaceBlogs() {
   return (
     <div className="min-h-full px-4 py-4 sm:px-8 sm:py-8">
       {/* Header */}
-      <div className="mb-8 flex items-center justify-between">
+      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-xl font-semibold">Blogs</h1>
           <p className="mt-0.5 text-sm text-muted-foreground">{posts.length} posts total</p>
@@ -276,7 +276,7 @@ function WorkspaceBlogs() {
 
                 {/* Actions — stop propagation so clicks don't bubble to row */}
                 <div
-                  className="w-20 shrink-0 flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                  className="w-20 shrink-0 flex items-center justify-end gap-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
                   onClick={(e) => e.stopPropagation()}
                 >
                   <Link

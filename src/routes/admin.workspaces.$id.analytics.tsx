@@ -99,7 +99,7 @@ function WorkspaceAnalytics() {
   const maxTopViews = Math.max(...data.topPosts.map((p) => p.views), 1);
 
   return (
-    <div className="min-h-full px-8 py-8">
+    <div className="min-h-full px-4 py-4 sm:px-8 sm:py-8">
       <div className="mb-8">
         <h1 className="text-xl font-semibold">Analytics</h1>
         <p className="mt-0.5 text-sm text-muted-foreground">Content performance and API usage overview.</p>
@@ -112,12 +112,12 @@ function WorkspaceAnalytics() {
           { label: "API Requests", value: data.apiRequests.toLocaleString(), icon: Activity },
           { label: "Storage Used", value: fmtBytes(data.storageBytes), icon: HardDrive },
         ].map(({ label, value, icon: Icon }) => (
-          <div key={label} className="flex-1 px-6 py-5">
-            <div className="flex items-center gap-2 mb-1">
-              <Icon className="h-3.5 w-3.5 text-muted-foreground" />
-              <p className="text-[11px] uppercase tracking-wide text-muted-foreground">{label}</p>
+          <div key={label} className="flex-1 px-3 py-4 sm:px-6 sm:py-5">
+            <div className="flex items-center gap-1.5 mb-1">
+              <Icon className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-muted-foreground shrink-0" />
+              <p className="text-[10px] sm:text-[11px] uppercase tracking-wide text-muted-foreground">{label}</p>
             </div>
-            <p className="text-2xl font-bold tabular-nums">{value}</p>
+            <p className="text-lg sm:text-2xl font-bold tabular-nums">{value}</p>
           </div>
         ))}
       </div>

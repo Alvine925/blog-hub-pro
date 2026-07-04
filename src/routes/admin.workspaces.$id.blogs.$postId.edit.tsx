@@ -13,14 +13,14 @@ export const Route = createFileRoute("/admin/workspaces/$id/blogs/$postId/edit")
   },
   component: WorkspaceEditPost,
   errorComponent: ({ error }) => (
-    <div className="px-8 py-8">
+    <div className="px-4 py-4 sm:px-8 sm:py-8">
       <p className="text-sm text-destructive">Failed to load post: {error.message}</p>
     </div>
   ),
   notFoundComponent: () => {
     const { id } = Route.useParams();
     return (
-      <div className="px-8 py-8 space-y-3">
+      <div className="px-4 py-4 sm:px-8 sm:py-8 space-y-3">
         <p className="text-muted-foreground">This post could not be found.</p>
         <Button asChild variant="outline">
           <Link to="/admin/workspaces/$id/blogs" params={{ id }}>
@@ -37,7 +37,7 @@ function WorkspaceEditPost() {
   const { post } = Route.useLoaderData();
 
   return (
-    <div className="space-y-6 px-8 py-8">
+    <div className="space-y-6 px-4 py-4 sm:px-8 sm:py-8">
       <div className="flex items-center gap-3">
         <Button size="icon" variant="ghost" asChild>
           <Link

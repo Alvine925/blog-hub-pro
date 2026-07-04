@@ -66,7 +66,7 @@ function ProductNew() {
   }
 
   return (
-    <div className="min-h-full px-8 py-8 max-w-2xl">
+    <div className="min-h-full px-4 py-4 sm:px-8 sm:py-8 max-w-2xl">
       <Link
         to="/admin/workspaces/$id/products"
         params={{ id: workspaceId }}
@@ -83,7 +83,7 @@ function ProductNew() {
           <Input id="name" value={form.name ?? ""} onChange={(e) => set("name", e.target.value)} placeholder="Product name" autoFocus />
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div className="space-y-2">
             <Label htmlFor="category">Category</Label>
             <Input id="category" value={form.category ?? ""} onChange={(e) => set("category", e.target.value)} placeholder="e.g. Software" />
@@ -94,7 +94,7 @@ function ProductNew() {
           </div>
         </div>
 
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           <div className="space-y-2">
             <Label htmlFor="price">Price</Label>
             <Input

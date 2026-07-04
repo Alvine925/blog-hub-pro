@@ -331,7 +331,7 @@ function CacheInvalidationPage() {
   const activeCount = endpoints.filter((h) => h.active).length;
 
   return (
-    <div className="min-h-full px-8 py-8 space-y-8">
+    <div className="min-h-full px-4 py-4 sm:px-8 sm:py-8 space-y-8">
 
       {/* ── Header ── */}
       <div className="flex items-start justify-between gap-4">

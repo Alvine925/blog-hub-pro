@@ -177,7 +177,7 @@ function CommentsPage() {
   const busy = moderateMutation.isPending || deleteMutation.isPending;
 
   return (
-    <div className="min-h-full px-8 py-8">
+    <div className="min-h-full px-4 py-4 sm:px-8 sm:py-8">
       {/* Header */}
       <div className="mb-6">
         <h1 className="text-xl font-semibold">Comments</h1>

@@ -4,7 +4,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 function NewsListSkeleton() {
   return (
     <div className="min-h-full px-4 py-4 sm:px-8 sm:py-8">
-      <div className="mb-8 flex items-center justify-between">
+      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="space-y-1.5">
           <Skeleton className="h-6 w-16" />
           <Skeleton className="h-4 w-56" />
@@ -178,7 +178,7 @@ function WorkspaceNews() {
 
   return (
     <div className="min-h-full px-4 py-4 sm:px-8 sm:py-8">
-      <div className="mb-8 flex items-center justify-between">
+      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-xl font-semibold">News</h1>
           <p className="mt-0.5 text-sm text-muted-foreground">
@@ -297,7 +297,7 @@ function WorkspaceNews() {
               </span>
               <span className="w-24 shrink-0 text-xs text-muted-foreground hidden md:block">{item.category}</span>
               <span className={cn("w-20 shrink-0 text-xs hidden lg:block", STATUS_STYLE[item.status])}>{item.status}</span>
-              <div className="w-20 shrink-0 flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
+              <div className="w-20 shrink-0 flex items-center justify-end gap-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
                 <button type="button" onClick={() => startEdit(item)} className="flex h-7 w-7 items-center justify-center rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors" title="Edit">
                   <Pencil className="h-3.5 w-3.5" />
                 </button>

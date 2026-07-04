@@ -314,7 +314,7 @@ function WorkspaceApiKeys() {
   const inactive = keys.filter((k) => k.status !== "active" || k.revoked_at);
 
   return (
-    <div className="min-h-full px-8 py-8 max-w-4xl space-y-8">
+    <div className="min-h-full px-4 py-4 sm:px-8 sm:py-8 max-w-4xl space-y-8">
       {/* Page header */}
       <div className="flex items-center justify-between">
         <div>

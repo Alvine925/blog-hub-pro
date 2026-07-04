@@ -11,7 +11,7 @@ export const Route = createFileRoute("/admin/workspaces/$id/blogs/new")({
 function WorkspaceNewPost() {
   const { id } = Route.useParams();
   return (
-    <div className="space-y-6 px-8 py-8">
+    <div className="space-y-6 px-4 py-4 sm:px-8 sm:py-8">
       <div className="flex items-center gap-3">
         <Button size="icon" variant="ghost" asChild>
           <Link to="/admin/workspaces/$id/blogs" params={{ id }}>

@@ -4,7 +4,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 function ArticlesListSkeleton() {
   return (
     <div className="min-h-full px-4 py-4 sm:px-8 sm:py-8">
-      <div className="mb-8 flex items-center justify-between">
+      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="space-y-1.5">
           <Skeleton className="h-6 w-20" />
           <Skeleton className="h-4 w-36" />
@@ -162,7 +162,7 @@ function WorkspaceArticles() {
 
   return (
     <div className="min-h-full px-4 py-4 sm:px-8 sm:py-8">
-      <div className="mb-8 flex items-center justify-between">
+      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-xl font-semibold">Articles</h1>
           <p className="mt-0.5 text-sm text-muted-foreground">{articles.length} articles total</p>
@@ -248,7 +248,7 @@ function WorkspaceArticles() {
               <span className="w-16 shrink-0 text-right text-xs tabular-nums text-muted-foreground hidden xl:flex items-center justify-end gap-1">
                 <Eye className="h-3 w-3" />{article.views.toLocaleString()}
               </span>
-              <div className="w-20 shrink-0 flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
+              <div className="w-20 shrink-0 flex items-center justify-end gap-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
                 <Link to="/admin/workspaces/$id/articles/$articleId/edit" params={{ id: workspaceId, articleId: article.id }} className="flex h-7 w-7 items-center justify-center rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors" title="Edit"><Pencil className="h-3.5 w-3.5" /></Link>
                 <button type="button" onClick={() => togglePublish(article)} className="flex h-7 w-7 items-center justify-center rounded text-muted-foreground hover:text-emerald-600 hover:bg-emerald-50 transition-colors" title={article.status === "published" ? "Unpublish" : "Publish"}><Send className="h-3.5 w-3.5" /></button>
                 <button type="button" onClick={() => setPending(article)} className="flex h-7 w-7 items-center justify-center rounded text-muted-foreground hover:text-red-600 hover:bg-red-50 transition-colors" title="Delete"><Trash2 className="h-3.5 w-3.5" /></button>

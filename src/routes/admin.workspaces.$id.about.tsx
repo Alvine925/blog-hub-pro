@@ -107,7 +107,7 @@ function WorkspaceAbout() {
   };
 
   return (
-    <div className="min-h-full px-8 py-8 space-y-12 max-w-4xl">
+    <div className="min-h-full px-4 py-4 sm:px-8 sm:py-8 space-y-12 max-w-4xl">
 
       {/* ── Identity hero ── */}
       <div className="flex items-start gap-5">

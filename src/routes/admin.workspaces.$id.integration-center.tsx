@@ -698,7 +698,7 @@ function IntegrationCenter() {
   }
 
   return (
-    <div className="min-h-full px-8 py-8 space-y-8">
+    <div className="min-h-full px-4 py-4 sm:px-8 sm:py-8 space-y-8">
 
       {/* Page header */}
       <div className="flex items-start gap-4">
