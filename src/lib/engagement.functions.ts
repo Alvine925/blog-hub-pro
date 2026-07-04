@@ -133,10 +133,13 @@ export const getAdminComments = createServerFn({ method: "GET" })
     const { workspaceId, status, page, limit } = data;
     const offset = (page - 1) * limit;
 
+    // Fetch comments without a relationship join — PostgREST relationship joins
+    // require a fresh schema cache after migrations and fail silently in the UI.
+    // We do a separate batch lookup for post titles instead.
     const { data: rows, error, count } = await db
       .from("blog_comments")
       .select(
-        "id, blog_post_id, parent_id, author_name, author_email, author_website, content, status, created_at, moderated_at, blog_posts(slug,title)",
+        "id, blog_post_id, parent_id, author_name, author_email, author_website, content, status, created_at, moderated_at",
         { count: "exact" },
       )
       .eq("workspace_id", workspaceId)
@@ -146,20 +149,35 @@ export const getAdminComments = createServerFn({ method: "GET" })
 
     if (error) throw new Error(error.message);
 
+    // Batch-fetch post slug + title for the returned comments
+    const postIds = [...new Set(
+      (rows ?? []).map((r: any) => r.blog_post_id as string).filter(Boolean),
+    )];
+    const postMap: Record<string, { slug: string; title: string }> = {};
+    if (postIds.length > 0) {
+      const { data: posts } = await db
+        .from("blog_posts")
+        .select("id, slug, title")
+        .in("id", postIds);
+      for (const p of (posts ?? []) as any[]) {
+        postMap[p.id] = { slug: p.slug, title: p.title };
+      }
+    }
+
     return {
       rows: (rows ?? []).map((r: any) => ({
-        id: r.id,
-        blog_post_id: r.blog_post_id,
-        parent_id: r.parent_id ?? null,
-        author_name: r.author_name ?? "Anonymous",
-        author_email: r.author_email ?? "",
+        id:             r.id,
+        blog_post_id:   r.blog_post_id,
+        parent_id:      r.parent_id ?? null,
+        author_name:    r.author_name ?? "Anonymous",
+        author_email:   r.author_email ?? "",
         author_website: r.author_website ?? null,
-        content: r.content ?? "",
-        status: r.status,
-        created_at: r.created_at,
-        moderated_at: r.moderated_at ?? null,
-        post_slug: r.blog_posts?.slug ?? null,
-        post_title: r.blog_posts?.title ?? null,
+        content:        r.content ?? "",
+        status:         r.status,
+        created_at:     r.created_at,
+        moderated_at:   r.moderated_at ?? null,
+        post_slug:      postMap[r.blog_post_id]?.slug ?? null,
+        post_title:     postMap[r.blog_post_id]?.title ?? null,
       })),
       total: count ?? 0,
     };
@@ -314,13 +332,15 @@ export const getAdminContentComments = createServerFn({ method: "GET" })
     const { getAdminClient } = await import("./supabase.server");
     const db  = getAdminClient() as any;
     const cfg = CONTENT_ENGAGEMENT_CONFIG[data.contentType];
+    if (!cfg) return { rows: [], total: 0 };          // guard against null/invalid contentType
     const offset = (data.page - 1) * data.limit;
 
-    const joinSelect = `id, ${cfg.idCol}, parent_id, author_name, author_email, author_website, content, status, created_at, moderated_at, ${cfg.contentTable}(${cfg.titleCol})`;
+    // Fetch comments without a relationship join — do a separate batch title lookup instead.
+    const plainSelect = `id, ${cfg.idCol}, parent_id, author_name, author_email, author_website, content, status, created_at, moderated_at`;
 
     const { data: rows, count, error } = await db
       .from(cfg.commentsTable)
-      .select(joinSelect, { count: "exact" })
+      .select(plainSelect, { count: "exact" })
       .eq("workspace_id", data.workspaceId)
       .eq("status", data.status)
       .order("created_at", { ascending: false })
@@ -328,20 +348,35 @@ export const getAdminContentComments = createServerFn({ method: "GET" })
 
     if (error) throw new Error(error.message);
 
+    // Batch-fetch content titles
+    const contentIds = [...new Set(
+      (rows ?? []).map((r: any) => r[cfg.idCol] as string).filter(Boolean),
+    )];
+    const titleMap: Record<string, string> = {};
+    if (contentIds.length > 0) {
+      const { data: items } = await db
+        .from(cfg.contentTable)
+        .select(`id, ${cfg.titleCol}`)
+        .in("id", contentIds);
+      for (const item of (items ?? []) as any[]) {
+        titleMap[item.id] = item[cfg.titleCol] ?? null;
+      }
+    }
+
     return {
-      rows: (rows ?? []).map((r: Record<string, unknown>) => ({
-        id:            r.id as string,
-        content_id:    r[cfg.idCol] as string,
-        content_type:  data.contentType,
-        parent_id:     (r.parent_id as string | null) ?? null,
-        author_name:   r.author_name as string,
-        author_email:  r.author_email as string,
+      rows: (rows ?? []).map((r: any) => ({
+        id:             r.id as string,
+        content_id:     r[cfg.idCol] as string,
+        content_type:   data.contentType,
+        parent_id:      (r.parent_id as string | null) ?? null,
+        author_name:    r.author_name as string,
+        author_email:   r.author_email as string,
         author_website: (r.author_website as string | null) ?? null,
-        content:       r.content as string,
-        status:        r.status as string,
-        created_at:    r.created_at as string,
-        moderated_at:  (r.moderated_at as string | null) ?? null,
-        post_title:    (r[cfg.contentTable] as Record<string, string> | null)?.[cfg.titleCol] ?? null,
+        content:        r.content as string,
+        status:         r.status as string,
+        created_at:     r.created_at as string,
+        moderated_at:   (r.moderated_at as string | null) ?? null,
+        post_title:     titleMap[r[cfg.idCol]] ?? null,
       })),
       total: count ?? 0,
     };

@@ -11,3 +11,4 @@
 - [Dual REST API gateways](dual-api-gateways.md) — content-router (full, prod) vs api-handler.node.ts (blog-only, dev engagement) are separate by design; don't assume they mirror each other.
 - [Social metadata architecture](social-metadata-arch.md) — social object in every content response; SocialMetadata.ts is the Node.js port; fallback permissions default must include all read:* scopes or new handlers 403.
 - [Content engagement edge function](content-engagement-edge-fn.md) — single `content-engagement` Deno fn handles news/articles/products engagement; routes by :type segment; ContentType.ts is the config map; QueryParam type only allows "string"|"boolean"|"integer"|"enum" (not "number").
+- [Stale CJS compiled files](stale-cjs-artifacts.md) — compiled .js files in src/routes or src/lib cause 'exports is not defined' in Vite SSR; delete any .js alongside .ts source files.

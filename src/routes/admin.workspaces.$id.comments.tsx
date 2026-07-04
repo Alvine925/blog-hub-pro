@@ -105,28 +105,34 @@ function CommentsPage() {
   const queryClient    = useQueryClient();
 
   // Blog query
-  const { data: blogData, isLoading: blogLoading } = useQuery({
+  const { data: blogData, isLoading: blogLoading, error: blogError } = useQuery({
     queryKey: ["admin", "comments", "blogs", workspaceId, activeTab, page],
     queryFn:  () => doGetComments({ data: { workspaceId, status: activeTab, page, limit: LIMIT } }),
     enabled:  contentType === "blogs",
+    retry: 1,
   });
 
-  // Non-blog query
+  // Non-blog query — only runs when a non-blog content type is actually selected
   const nonBlogType = contentType !== "blogs" ? (contentType as "news" | "articles" | "products") : null;
-  const { data: contentData, isLoading: contentLoading } = useQuery({
+  const { data: contentData, isLoading: contentLoading, error: contentError } = useQuery({
     queryKey: ["admin", "comments", contentType, workspaceId, activeTab, page],
-    queryFn:  () => doGetContentComments({ data: {
-      workspaceId,
-      contentType: nonBlogType!,
-      status: activeTab,
-      page,
-      limit: LIMIT,
-    }}),
-    enabled: contentType !== "blogs",
+    queryFn:  () => {
+      if (!nonBlogType) return Promise.resolve({ rows: [], total: 0 });
+      return doGetContentComments({ data: {
+        workspaceId,
+        contentType: nonBlogType,
+        status: activeTab,
+        page,
+        limit: LIMIT,
+      }});
+    },
+    enabled: nonBlogType !== null,
+    retry: 1,
   });
 
-  const isLoading  = contentType === "blogs" ? blogLoading : contentLoading;
-  const activeData = contentType === "blogs" ? blogData   : contentData;
+  const isLoading  = contentType === "blogs" ? blogLoading  : contentLoading;
+  const queryError = contentType === "blogs" ? blogError    : contentError;
+  const activeData = contentType === "blogs" ? blogData     : contentData;
   const comments   = activeData?.rows ?? [];
   const total      = activeData?.total ?? 0;
   const totalPages = Math.ceil(total / LIMIT);
@@ -226,8 +232,16 @@ function CommentsPage() {
         </div>
       )}
 
+      {/* Error */}
+      {!isLoading && queryError && (
+        <div className="rounded-lg border border-red-200 bg-red-50 px-5 py-4 text-sm text-red-700">
+          <span className="font-medium">Failed to load comments: </span>
+          {queryError instanceof Error ? queryError.message : "Unknown error"}
+        </div>
+      )}
+
       {/* Empty */}
-      {!isLoading && comments.length === 0 && (
+      {!isLoading && !queryError && comments.length === 0 && (
         <div className="flex flex-col items-center justify-center py-20 text-center">
           <MessageSquare className="mb-3 h-10 w-10 text-muted-foreground/30" />
           <p className="font-medium text-muted-foreground">No {activeTab} comments</p>
