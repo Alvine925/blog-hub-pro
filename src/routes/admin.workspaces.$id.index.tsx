@@ -7,7 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 // ── Loading skeleton ──────────────────────────────────────────────────────────
 function WorkspaceOverviewSkeleton() {
   return (
-    <div className="min-h-full space-y-12 px-8 py-8">
+    <div className="min-h-full space-y-8 px-4 py-4 sm:space-y-12 sm:px-8 sm:py-8">
       {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <div className="space-y-2">
@@ -18,7 +18,7 @@ function WorkspaceOverviewSkeleton() {
       </div>
 
       {/* Stats row — 7 columns */}
-      <div className="grid grid-cols-4 gap-x-8 gap-y-6 sm:grid-cols-7">
+      <div className="grid grid-cols-2 gap-x-4 gap-y-4 sm:grid-cols-4 sm:gap-x-8 sm:gap-y-6 lg:grid-cols-7">
         {[...Array(7)].map((_, i) => (
           <div key={i} className="space-y-1.5">
             <Skeleton className="h-7 w-12" />
@@ -375,7 +375,7 @@ function WorkspaceOverview() {
       opportunity={selectedOpportunity}
       workspaceId={id}
     />
-    <div className="min-h-full space-y-12 px-8 py-8">
+    <div className="min-h-full space-y-8 px-4 py-4 sm:space-y-12 sm:px-8 sm:py-8">
 
       {/* ── Header ── */}
       <div className="flex items-start justify-between gap-4">
@@ -393,7 +393,7 @@ function WorkspaceOverview() {
       </div>
 
       {/* ── Stats row ── */}
-      <div className="grid grid-cols-4 gap-x-8 gap-y-6 sm:grid-cols-7">
+      <div className="grid grid-cols-2 gap-x-4 gap-y-4 sm:grid-cols-4 sm:gap-x-8 sm:gap-y-6 lg:grid-cols-7">
         {[
           { label: "Total Posts",  value: stats.postsTotal,     icon: FileText  },
           { label: "Published",    value: stats.postsPublished, icon: Send,      accent: "text-emerald-600" },

@@ -7,7 +7,7 @@ import {
   Copy, Check, Search, BookOpen, Key, Zap, Code2, AlertTriangle,
   Clock, Layers, Star, StarOff, Eye, ChevronRight, ExternalLink,
   Activity, Globe, Shield, Sparkles, FileText, Database, Hash,
-  ChevronDown, ChevronUp, Play, Loader2, ArrowLeft, X,
+  ChevronDown, ChevronUp, Play, Loader2, ArrowLeft, X, Menu,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -231,10 +231,14 @@ function DocSidebar({
   section,
   endpointId,
   onNavigate,
+  open = false,
+  onClose,
 }: {
   section: string;
   endpointId?: string;
   onNavigate: (s: string, epId?: string) => void;
+  open?: boolean;
+  onClose?: () => void;
 }) {
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const grouped = useMemo(() => {
@@ -260,16 +264,29 @@ function DocSidebar({
     setCollapsed((prev) => ({ ...prev, [group]: !prev[group] }));
 
   return (
-    <aside className="w-60 shrink-0 border-r border-zinc-200 bg-white overflow-y-auto flex flex-col">
+    <aside className={cn(
+      "fixed inset-y-0 left-0 z-40 flex w-72 shrink-0 flex-col border-r border-zinc-200 bg-white overflow-y-auto transition-transform duration-200 ease-in-out",
+      "lg:relative lg:w-60 lg:translate-x-0",
+      open ? "translate-x-0" : "-translate-x-full",
+    )}>
       {/* Back to dashboard */}
       <div className="shrink-0 border-b border-zinc-100 px-3 py-3">
-        <a
-          href="/admin/dashboard"
-          className="flex items-center gap-2 rounded-md px-2 py-1.5 text-xs font-medium text-zinc-500 hover:bg-zinc-50 hover:text-zinc-900 transition-colors"
-        >
-          <ArrowLeft className="h-3.5 w-3.5" />
-          Back to Dashboard
-        </a>
+        <div className="flex items-center justify-between">
+          <a
+            href="/admin/dashboard"
+            className="flex items-center gap-2 rounded-md px-2 py-1.5 text-xs font-medium text-zinc-500 hover:bg-zinc-50 hover:text-zinc-900 transition-colors"
+          >
+            <ArrowLeft className="h-3.5 w-3.5" />
+            Back to Dashboard
+          </a>
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex h-6 w-6 items-center justify-center rounded text-zinc-400 hover:bg-zinc-100 lg:hidden"
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
+        </div>
       </div>
       <div className="py-5 px-3 flex-1">
         {Object.entries(grouped).map(([group, items]) => (
@@ -1792,17 +1809,41 @@ function DevDocsPortal() {
     }
   }
 
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
   return (
     <div className="flex h-full overflow-hidden bg-white">
+      {/* Mobile backdrop */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 z-30 bg-black/40 lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
       {/* Doc sidebar */}
-      <DocSidebar section={section ?? "overview"} endpointId={endpointId} onNavigate={goTo} />
+      <DocSidebar
+        section={section ?? "overview"}
+        endpointId={endpointId}
+        onNavigate={(s, ep) => { goTo(s, ep); setSidebarOpen(false); }}
+        open={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+      />
 
       {/* Main area */}
       <div className="flex flex-1 flex-col overflow-hidden">
         {/* Top bar */}
-        <div className="flex shrink-0 items-center gap-3 border-b border-zinc-200 bg-white px-6 py-3">
+        <div className="flex shrink-0 flex-wrap items-center gap-2 border-b border-zinc-200 bg-white px-3 py-2 sm:gap-3 sm:px-6 sm:py-3">
+          {/* Hamburger — mobile only */}
+          <button
+            type="button"
+            onClick={() => setSidebarOpen(true)}
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-zinc-500 hover:bg-zinc-100 lg:hidden"
+          >
+            <Menu className="h-4 w-4" />
+          </button>
           {/* Search */}
-          <div className="relative flex-1 max-w-sm">
+          <div className="relative flex-1 max-w-sm min-w-0">
             <Search className="absolute left-2.5 top-2 h-4 w-4 text-zinc-400" />
             <input
               type="text"
@@ -1831,14 +1872,14 @@ function DevDocsPortal() {
           </div>
 
           {/* API key input */}
-          <div className="relative">
+          <div className="relative hidden sm:block">
             <Key className="absolute left-2.5 top-2 h-3.5 w-3.5 text-zinc-400" />
             <input
               type="text"
               value={apiKey}
               onChange={(e) => setApiKey(e.target.value)}
               placeholder="Paste API key to pre-fill examples"
-              className="w-64 rounded-lg border border-zinc-200 bg-zinc-50 py-1.5 pl-8 pr-3 font-mono text-xs focus:outline-none focus:ring-1 focus:ring-red-500"
+              className="w-48 lg:w-64 rounded-lg border border-zinc-200 bg-zinc-50 py-1.5 pl-8 pr-3 font-mono text-xs focus:outline-none focus:ring-1 focus:ring-red-500"
             />
           </div>
 

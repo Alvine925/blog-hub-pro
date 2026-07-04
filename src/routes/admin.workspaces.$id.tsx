@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   createFileRoute, Link, Outlet, useRouterState, useNavigate,
 } from "@tanstack/react-router";
@@ -6,7 +7,7 @@ import {
   LayoutDashboard, FileText, Layers, ImageIcon, Key, Webhook,
   BarChart2, Bell, Settings, Code2, Sparkles,
   ChevronLeft, ExternalLink, LogOut, Plus, Search, ChevronRight, Info, Plug, Zap, BookOpen, MessageSquare,
-  HelpCircle, Newspaper, Package, GraduationCap,
+  HelpCircle, Newspaper, Package, GraduationCap, Menu, X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Workspace } from "@/lib/workspace.functions";
@@ -132,7 +133,15 @@ function WorkspaceError({ error }: { error: Error }) {
 }
 
 // ── Sidebar ───────────────────────────────────────────────────────────────────
-function WorkspaceSidebar({ workspace }: { workspace: Workspace }) {
+function WorkspaceSidebar({
+  workspace,
+  sidebarOpen,
+  onClose,
+}: {
+  workspace: Workspace;
+  sidebarOpen: boolean;
+  onClose: () => void;
+}) {
   const { id } = Route.useParams();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const navigate  = useNavigate();
@@ -162,16 +171,29 @@ function WorkspaceSidebar({ workspace }: { workspace: Workspace }) {
   }
 
   return (
-    <aside className="flex h-screen w-60 shrink-0 flex-col border-r border-border bg-white">
+    <aside className={cn(
+      "fixed inset-y-0 left-0 z-40 flex h-screen w-72 shrink-0 flex-col border-r border-border bg-white transition-transform duration-200 ease-in-out",
+      "md:relative md:w-60 md:translate-x-0",
+      sidebarOpen ? "translate-x-0" : "-translate-x-full",
+    )}>
 
       {/* ── Workspace header ── */}
       <div className="shrink-0 border-b border-border px-4 py-3">
-        <Link
-          to="/admin/workspaces"
-          className="mb-3 flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-primary transition-colors"
-        >
-          <ChevronLeft className="h-3 w-3" /> All workspaces
-        </Link>
+        <div className="flex items-center justify-between">
+          <Link
+            to="/admin/workspaces"
+            className="mb-3 flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-primary transition-colors"
+          >
+            <ChevronLeft className="h-3 w-3" /> All workspaces
+          </Link>
+          <button
+            type="button"
+            onClick={onClose}
+            className="mb-3 flex h-6 w-6 items-center justify-center rounded text-muted-foreground hover:bg-muted md:hidden"
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
+        </div>
         <div className="flex items-center gap-3">
           {/* Logo image (scraped or favicon) – falls back to gradient initials */}
           {(logoUrl || faviconUrl) ? (
@@ -221,6 +243,7 @@ function WorkspaceSidebar({ workspace }: { workspace: Workspace }) {
                 <Link
                   key={item.label}
                   to={item.to}
+                  onClick={onClose}
                   className={cn(
                     "flex items-center gap-2.5 rounded-md px-2.5 py-2 text-sm font-medium transition-colors",
                     active
@@ -261,7 +284,13 @@ function WorkspaceSidebar({ workspace }: { workspace: Workspace }) {
 }
 
 // ── Top header inside workspace ───────────────────────────────────────────────
-function WorkspaceHeader({ workspace }: { workspace: Workspace }) {
+function WorkspaceHeader({
+  workspace,
+  onOpenSidebar,
+}: {
+  workspace: Workspace;
+  onOpenSidebar: () => void;
+}) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const { id } = Route.useParams();
 
@@ -276,16 +305,25 @@ function WorkspaceHeader({ workspace }: { workspace: Workspace }) {
   const pageLabel = active?.label ?? "Overview";
 
   return (
-    <header className="flex h-14 shrink-0 items-center justify-between border-b border-border bg-white px-6">
-      {/* Breadcrumb */}
-      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-        <span className="font-medium text-foreground">{workspace.name}</span>
-        <span>/</span>
-        <span>{pageLabel}</span>
+    <header className="flex h-14 shrink-0 items-center justify-between border-b border-border bg-white px-3 sm:px-6">
+      {/* Left: hamburger + breadcrumb */}
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          onClick={onOpenSidebar}
+          className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted md:hidden"
+        >
+          <Menu className="h-4 w-4" />
+        </button>
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <span className="hidden font-medium text-foreground sm:block">{workspace.name}</span>
+          <span className="hidden sm:block">/</span>
+          <span>{pageLabel}</span>
+        </div>
       </div>
 
       {/* Actions */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-1 sm:gap-2">
         {/* Search */}
         <button className="flex items-center gap-2 rounded-lg border border-border bg-muted/50 px-3 py-1.5 text-xs text-muted-foreground hover:bg-muted transition-colors">
           <Search className="h-3.5 w-3.5" />
@@ -317,15 +355,31 @@ function WorkspaceHeader({ workspace }: { workspace: Workspace }) {
 // ── Shell ─────────────────────────────────────────────────────────────────────
 function WorkspaceShell() {
   const { workspace } = Route.useLoaderData();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">
-      {/* Left sidebar — always visible */}
-      <WorkspaceSidebar workspace={workspace} />
+      {/* Mobile backdrop */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 z-30 bg-black/40 md:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
+      {/* Left sidebar */}
+      <WorkspaceSidebar
+        workspace={workspace}
+        sidebarOpen={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+      />
 
       {/* Right: header + page content */}
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
-        <WorkspaceHeader workspace={workspace} />
+        <WorkspaceHeader
+          workspace={workspace}
+          onOpenSidebar={() => setSidebarOpen(true)}
+        />
         <main className="flex-1 overflow-y-auto flex flex-col">
           <Outlet />
         </main>

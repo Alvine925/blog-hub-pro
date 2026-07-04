@@ -401,7 +401,7 @@ function Dashboard() {
   const { data: content } = useQuery(contentQuery);
 
   return (
-    <div className="space-y-10 p-8">
+    <div className="space-y-6 p-4 sm:space-y-10 sm:p-8">
       {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <div>
@@ -417,15 +417,19 @@ function Dashboard() {
       </div>
 
       {/* Stats bar */}
-      <div className="flex divide-x divide-border border-y border-border">
+      <div className="grid grid-cols-2 divide-border border border-border rounded-lg overflow-hidden sm:grid-cols-3 md:flex md:divide-x md:border-0 md:border-y md:rounded-none">
         {[
           { label: "Total Posts",  value: stats.total },
           { label: "Published",    value: stats.published, green: true },
           { label: "Drafts",       value: stats.drafts },
           { label: "Scheduled",    value: stats.scheduled, amber: true },
           { label: "Total Views",  value: stats.totalViews.toLocaleString() },
-        ].map(({ label, value, green, amber }) => (
-          <div key={label} className="flex-1 px-5 py-5">
+        ].map(({ label, value, green, amber }, i) => (
+          <div key={label} className={cn(
+            "flex-1 px-4 py-4 sm:px-5 sm:py-5",
+            i > 0 && "border-t border-border md:border-t-0",
+            i % 2 !== 0 && "border-l border-border md:border-l-0",
+          )}>
             <p className={cn(
               "text-2xl font-bold tabular-nums",
               green && "text-emerald-600",
@@ -440,17 +444,17 @@ function Dashboard() {
 
       {/* API usage strip */}
       {"apiRequestsToday" in stats && (
-        <div className="flex items-center gap-6 rounded-lg border border-border bg-muted/20 px-5 py-4">
+        <div className="flex flex-wrap items-center gap-3 rounded-lg border border-border bg-muted/20 px-4 py-4 sm:gap-6 sm:px-5">
           <div className="flex items-center gap-2">
             <Zap className="h-3.5 w-3.5 text-primary" />
             <span className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">API Today</span>
           </div>
-          <div className="flex divide-x divide-border">
-            <div className="pr-6">
+          <div className="flex flex-wrap gap-x-4 gap-y-2 sm:divide-x sm:divide-border sm:gap-0">
+            <div className="sm:pr-6">
               <p className="text-lg font-bold tabular-nums">{(stats.apiRequestsToday as number).toLocaleString()}</p>
               <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Requests</p>
             </div>
-            <div className="px-6">
+            <div className="sm:px-6">
               <p className={cn(
                 "text-lg font-bold tabular-nums",
                 (stats.apiErrorsToday as number) > 0 && "text-destructive",
@@ -459,7 +463,7 @@ function Dashboard() {
               </p>
               <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Errors</p>
             </div>
-            <div className="pl-6">
+            <div className="sm:pl-6">
               <p className="text-lg font-bold tabular-nums text-emerald-600">{(stats.activeKeys as number)}</p>
               <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Active Keys</p>
             </div>

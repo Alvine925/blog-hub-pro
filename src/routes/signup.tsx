@@ -289,7 +289,7 @@ function SignupPage() {
         </div>
       </div>
 
-      {/* Right — carousel */}
+      {/* Right — carousel (hidden on mobile) */}
       <div className="relative hidden w-[42%] overflow-hidden lg:block">
         {SLIDES.map((s, i) => (
           <div

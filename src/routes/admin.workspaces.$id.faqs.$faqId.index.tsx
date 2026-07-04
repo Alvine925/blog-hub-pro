@@ -3,6 +3,7 @@ import { queryOptions, useSuspenseQuery, useQueryClient } from "@tanstack/react-
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 import { toast } from "sonner";
+import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowLeft, Pencil, Trash2, Send, Star } from "lucide-react";
 import { adminGetFaq, deleteFaq, setFaqStatus, type Faq } from "@/lib/faq.functions";
 import { cn } from "@/lib/utils";

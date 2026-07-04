@@ -4,7 +4,7 @@ import {
   LayoutDashboard, Moon, FolderOpen, CreditCard, Settings, ChevronRight,
   LogOut, Bell, BookOpen, HelpCircle, Map, FileText, Users,
   ChevronDown, User, Key, ScrollText, Plug, MessageSquare,
-  Sparkles, X,
+  Sparkles, X, Menu,
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AiAssistant } from "@/components/dashboard/AiAssistant";
@@ -512,16 +512,38 @@ function GlobalLayout() {
     navigate({ to: "/login" });
   }
 
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
   return (
     <div className="flex h-screen overflow-hidden bg-background">
+
+      {/* ── Mobile backdrop ── */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 z-30 bg-black/40 md:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
       {/* ── Sidebar ── */}
-      <aside className="flex w-56 shrink-0 flex-col border-r border-border bg-background">
-        {/* Logo */}
+      <aside className={cn(
+        "fixed inset-y-0 left-0 z-40 flex w-64 shrink-0 flex-col border-r border-border bg-background transition-transform duration-200 ease-in-out",
+        "md:relative md:w-56 md:translate-x-0",
+        sidebarOpen ? "translate-x-0" : "-translate-x-full",
+      )}>
+        {/* Logo + mobile close */}
         <div className="flex h-14 items-center gap-2.5 border-b border-border px-4 shrink-0">
           <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary shadow-sm">
             <Moon className="h-4 w-4 text-white" />
           </div>
           <span className="text-sm font-semibold tracking-tight">Lunar CMS</span>
+          <button
+            type="button"
+            onClick={() => setSidebarOpen(false)}
+            className="ml-auto flex h-7 w-7 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted md:hidden"
+          >
+            <X className="h-4 w-4" />
+          </button>
         </div>
 
         {/* Nav */}
@@ -539,6 +561,7 @@ function GlobalLayout() {
                   <Link
                     key={item.label}
                     to={item.to}
+                    onClick={() => setSidebarOpen(false)}
                     className={cn(
                       "flex items-center gap-2.5 border-l-2 px-4 py-[5px] text-sm transition-colors",
                       active
@@ -580,13 +603,21 @@ function GlobalLayout() {
       {/* ── Main ── */}
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
         {/* Top header */}
-        <header className="flex h-14 shrink-0 items-center justify-between border-b border-border bg-background px-6">
+        <header className="flex h-14 shrink-0 items-center justify-between border-b border-border bg-background px-3 sm:px-6">
           <div className="flex items-center gap-2 text-sm">
-            <span className="text-muted-foreground">
+            {/* Hamburger — mobile only */}
+            <button
+              type="button"
+              onClick={() => setSidebarOpen(true)}
+              className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted md:hidden"
+            >
+              <Menu className="h-4 w-4" />
+            </button>
+            <span className="text-muted-foreground hidden sm:block">
               {globalNav.flatMap(g => g.items).find(i => isActive(i.to))?.label ?? "Admin"}
             </span>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 sm:gap-2">
             {/* AI Assistant button */}
             <button
               type="button"

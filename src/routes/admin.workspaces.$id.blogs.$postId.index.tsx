@@ -196,7 +196,7 @@ const detailQuery = (postId: string) =>
 
 function BlogDetailSkeleton() {
   return (
-    <div className="min-h-full px-8 py-8 space-y-8 max-w-4xl">
+    <div className="min-h-full px-4 py-4 space-y-6 sm:px-8 sm:py-8 sm:space-y-8 max-w-4xl">
       <div className="flex items-center justify-between">
         <Skeleton className="h-4 w-20" />
         <div className="flex items-center gap-2">
@@ -252,12 +252,12 @@ export const Route = createFileRoute("/admin/workspaces/$id/blogs/$postId/")({
   pendingMs: 0,
   component: WorkspaceBlogDetail,
   notFoundComponent: () => (
-    <div className="px-8 py-8">
+    <div className="px-4 py-4 sm:px-8 sm:py-8">
       <p className="text-sm text-muted-foreground">Post not found.</p>
     </div>
   ),
   errorComponent: ({ error }) => (
-    <div className="px-8 py-8">
+    <div className="px-4 py-4 sm:px-8 sm:py-8">
       <p className="text-sm text-red-600">{error.message}</p>
     </div>
   ),
@@ -340,7 +340,7 @@ function WorkspaceBlogDetail() {
   const approvedComments = comments.filter((c) => c.status === "approved").length;
 
   return (
-    <div className="min-h-full px-8 py-8 space-y-8">
+    <div className="min-h-full px-4 py-4 space-y-6 sm:px-8 sm:py-8 sm:space-y-8">
 
       {/* Top nav */}
       <div className="flex items-center justify-between">

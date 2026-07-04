@@ -20,7 +20,7 @@ const detailQuery = (id: string, workspaceId: string) =>
 
 function NewsDetailSkeleton() {
   return (
-    <div className="min-h-full px-8 py-8 max-w-4xl space-y-6">
+    <div className="min-h-full px-4 py-4 sm:px-8 sm:py-8 max-w-4xl space-y-6">
       <Skeleton className="h-4 w-16" />
       <div className="flex items-start justify-between gap-4">
         <div className="space-y-2 min-w-0 flex-1">
@@ -129,7 +129,7 @@ function NewsDetail() {
   }
 
   return (
-    <div className="min-h-full px-8 py-8 max-w-4xl">
+    <div className="min-h-full px-4 py-4 sm:px-8 sm:py-8 max-w-4xl">
       <Link
         to="/admin/workspaces/$id/news"
         params={{ id: workspaceId }}

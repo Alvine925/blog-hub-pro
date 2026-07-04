@@ -181,10 +181,10 @@ function LoginPage() {
       </div>
 
       {/* Right — form column */}
-      <div className="flex flex-1 flex-col items-center justify-center px-8 py-16">
+      <div className="flex flex-1 flex-col items-center justify-center px-5 py-10 sm:px-8 sm:py-16">
         <div className="w-full max-w-sm">
           {/* Mobile logo */}
-          <div className="mb-10 flex items-center gap-2 lg:hidden">
+          <div className="mb-8 flex items-center gap-2 lg:hidden">
             <Moon className="h-4 w-4 text-zinc-900" />
             <span className="text-sm font-semibold tracking-tight text-zinc-900">Lunar CMS</span>
           </div>

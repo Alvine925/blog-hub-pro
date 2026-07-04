@@ -3,7 +3,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 function ArticlesListSkeleton() {
   return (
-    <div className="min-h-full px-8 py-8">
+    <div className="min-h-full px-4 py-4 sm:px-8 sm:py-8">
       <div className="mb-8 flex items-center justify-between">
         <div className="space-y-1.5">
           <Skeleton className="h-6 w-20" />
@@ -161,7 +161,7 @@ function WorkspaceArticles() {
   }
 
   return (
-    <div className="min-h-full px-8 py-8">
+    <div className="min-h-full px-4 py-4 sm:px-8 sm:py-8">
       <div className="mb-8 flex items-center justify-between">
         <div>
           <h1 className="text-xl font-semibold">Articles</h1>
