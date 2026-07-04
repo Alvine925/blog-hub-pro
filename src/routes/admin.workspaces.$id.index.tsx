@@ -669,21 +669,23 @@ function WorkspaceOverview() {
             ) : (
               <div className="divide-y divide-border/60">
                 {recentPosts.map((post: any) => (
-                  <div key={post.id} className="flex items-center gap-3 py-2.5 hover:opacity-80 transition-opacity">
+                  <div key={post.id} className="py-3 hover:opacity-80 transition-opacity">
                     <Link
                       to="/admin/workspaces/$id/blogs/$postId"
                       params={{ id, postId: post.id }}
-                      className="min-w-0 flex-1 truncate text-sm font-medium hover:text-primary transition-colors"
+                      className="block text-sm font-medium leading-snug hover:text-primary transition-colors line-clamp-2"
                     >
                       {post.title || "Untitled"}
                     </Link>
-                    <StatusBadge status={post.status} />
-                    <span className="shrink-0 text-xs text-muted-foreground hidden sm:block">
-                      {fmtDate(post.updated_at)}
-                    </span>
-                    <span className="shrink-0 text-xs tabular-nums text-muted-foreground hidden md:flex items-center gap-1">
-                      <Eye className="h-3 w-3" /> {post.views.toLocaleString()}
-                    </span>
+                    <div className="mt-1 flex items-center gap-2.5 flex-wrap">
+                      <StatusBadge status={post.status} />
+                      <span className="text-xs text-muted-foreground">{fmtDate(post.updated_at)}</span>
+                      {post.views > 0 && (
+                        <span className="text-xs tabular-nums text-muted-foreground flex items-center gap-1">
+                          <Eye className="h-3 w-3" /> {post.views.toLocaleString()}
+                        </span>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>
@@ -700,13 +702,15 @@ function WorkspaceOverview() {
               />
               <div className="divide-y divide-border/60">
                 {(recentNews as any[]).map((item) => (
-                  <div key={item.id} className="flex items-center gap-3 py-2.5 hover:opacity-80 transition-opacity">
+                  <div key={item.id} className="py-3 hover:opacity-80 transition-opacity">
                     <Link to="/admin/workspaces/$id/news/$newsId" params={{ id, newsId: item.id }}
-                      className="min-w-0 flex-1 truncate text-sm font-medium hover:text-primary transition-colors">
+                      className="block text-sm font-medium leading-snug hover:text-primary transition-colors line-clamp-2">
                       {item.title || "Untitled"}
                     </Link>
-                    <StatusBadge status={item.status} />
-                    <span className="shrink-0 text-xs text-muted-foreground hidden sm:block">{fmtDate(item.updated_at)}</span>
+                    <div className="mt-1 flex items-center gap-2.5 flex-wrap">
+                      <StatusBadge status={item.status} />
+                      <span className="text-xs text-muted-foreground">{fmtDate(item.updated_at)}</span>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -723,13 +727,15 @@ function WorkspaceOverview() {
               />
               <div className="divide-y divide-border/60">
                 {(recentArticles as any[]).map((item) => (
-                  <div key={item.id} className="flex items-center gap-3 py-2.5 hover:opacity-80 transition-opacity">
+                  <div key={item.id} className="py-3 hover:opacity-80 transition-opacity">
                     <Link to="/admin/workspaces/$id/articles/$articleId" params={{ id, articleId: item.id }}
-                      className="min-w-0 flex-1 truncate text-sm font-medium hover:text-primary transition-colors">
+                      className="block text-sm font-medium leading-snug hover:text-primary transition-colors line-clamp-2">
                       {item.title || "Untitled"}
                     </Link>
-                    <StatusBadge status={item.status} />
-                    <span className="shrink-0 text-xs text-muted-foreground hidden sm:block">{fmtDate(item.updated_at)}</span>
+                    <div className="mt-1 flex items-center gap-2.5 flex-wrap">
+                      <StatusBadge status={item.status} />
+                      <span className="text-xs text-muted-foreground">{fmtDate(item.updated_at)}</span>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -746,13 +752,15 @@ function WorkspaceOverview() {
               />
               <div className="divide-y divide-border/60">
                 {(recentFaqs as any[]).map((item) => (
-                  <div key={item.id} className="flex items-center gap-3 py-2.5 hover:opacity-80 transition-opacity">
+                  <div key={item.id} className="py-3 hover:opacity-80 transition-opacity">
                     <Link to="/admin/workspaces/$id/faqs/$faqId" params={{ id, faqId: item.id }}
-                      className="min-w-0 flex-1 truncate text-sm font-medium hover:text-primary transition-colors">
+                      className="block text-sm font-medium leading-snug hover:text-primary transition-colors line-clamp-2">
                       {item.question || "Untitled"}
                     </Link>
-                    <StatusBadge status={item.status} />
-                    <span className="shrink-0 text-xs text-muted-foreground hidden sm:block">{fmtDate(item.updated_at)}</span>
+                    <div className="mt-1 flex items-center gap-2.5 flex-wrap">
+                      <StatusBadge status={item.status} />
+                      <span className="text-xs text-muted-foreground">{fmtDate(item.updated_at)}</span>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -769,13 +777,15 @@ function WorkspaceOverview() {
               />
               <div className="divide-y divide-border/60">
                 {(recentProducts as any[]).map((item) => (
-                  <div key={item.id} className="flex items-center gap-3 py-2.5 hover:opacity-80 transition-opacity">
+                  <div key={item.id} className="py-3 hover:opacity-80 transition-opacity">
                     <Link to="/admin/workspaces/$id/products/$productId" params={{ id, productId: item.id }}
-                      className="min-w-0 flex-1 truncate text-sm font-medium hover:text-primary transition-colors">
+                      className="block text-sm font-medium leading-snug hover:text-primary transition-colors line-clamp-2">
                       {item.name || "Untitled"}
                     </Link>
-                    <StatusBadge status={item.status} />
-                    <span className="shrink-0 text-xs text-muted-foreground hidden sm:block">{fmtDate(item.updated_at)}</span>
+                    <div className="mt-1 flex items-center gap-2.5 flex-wrap">
+                      <StatusBadge status={item.status} />
+                      <span className="text-xs text-muted-foreground">{fmtDate(item.updated_at)}</span>
+                    </div>
                   </div>
                 ))}
               </div>

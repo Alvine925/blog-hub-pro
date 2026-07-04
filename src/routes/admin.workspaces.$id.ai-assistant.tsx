@@ -75,7 +75,7 @@ function WorkspaceAI() {
   }
 
   return (
-    <div className="min-h-full px-8 py-8">
+    <div className="min-h-full px-4 py-4 sm:px-8 sm:py-8">
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-xl font-semibold">AI Assistant</h1>
