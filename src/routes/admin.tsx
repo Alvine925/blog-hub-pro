@@ -357,7 +357,7 @@ function AdminLayoutGuard() {
         const { data: cu } = await supabase
           .from("cms_users" as never)
           .select("platform_role")
-          .eq("auth_user_id", session.user.id)
+          .eq("id", session.user.id)
           .maybeSingle();
         platformRole = (cu as { platform_role: string } | null)?.platform_role ?? null;
       } catch { /* cms_users may not exist yet */ }

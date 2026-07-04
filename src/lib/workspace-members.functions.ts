@@ -254,6 +254,54 @@ export const removeWorkspaceMember = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+// ── Resend workspace invite ────────────────────────────────────────────────────
+const resendInviteSchema = z.object({
+  memberId:      z.string().uuid(),
+  loginUrl:      z.string().url(),
+  workspaceName: z.string().optional(),
+  inviterName:   z.string().optional(),
+});
+
+export const resendWorkspaceInvite = createServerFn({ method: "POST" })
+  .validator((input: unknown) => resendInviteSchema.parse(input))
+  .handler(async ({ data }) => {
+    const { getAdminClient } = await import("./supabase.server");
+    const supabase = getAdminClient() as any;
+
+    const { data: member, error: memberErr } = await supabase
+      .from("workspace_members")
+      .select("email, name, user_id")
+      .eq("id", data.memberId)
+      .single();
+    if (memberErr || !member) throw new Error("Member not found");
+
+    const tempPassword = genTempPassword();
+
+    if (member.user_id) {
+      const { error: pwErr } = await supabase.auth.admin.updateUserById(member.user_id, {
+        password: tempPassword,
+        user_metadata: { password_change_required: true },
+      });
+      if (pwErr) throw new Error(pwErr.message);
+      await supabase.from("cms_users").update({ password_change_required: true }).eq("id", member.user_id);
+    }
+
+    try {
+      await supabase.functions.invoke("send-invite-email", {
+        body: {
+          email: member.email,
+          name: member.name,
+          tempPassword,
+          loginUrl: data.loginUrl,
+          workspaceName: data.workspaceName,
+          inviterName: data.inviterName,
+        },
+      });
+    } catch (e) { console.warn("Resend email non-fatal:", e); }
+
+    return { ok: true };
+  });
+
 // ── Mark password changed ──────────────────────────────────────────────────────
 export const markPasswordChanged = createServerFn({ method: "POST" })
   .validator((input: { userId: string }) => input)

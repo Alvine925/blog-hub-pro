@@ -22,7 +22,7 @@ function IndexPage() {
         const { data: cmsUser } = await supabase
           .from("cms_users" as never)
           .select("platform_role")
-          .eq("auth_user_id", session.user.id)
+          .eq("id", session.user.id)
           .maybeSingle();
 
         const cu = cmsUser as { platform_role: string } | null;

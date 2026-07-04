@@ -1,11 +1,11 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, getRouteApi } from "@tanstack/react-router";
 import { queryOptions, useSuspenseQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 import { toast } from "sonner";
 import {
   Users, UserPlus, Trash2, Shield, ShieldCheck, Eye, Mail, Loader2,
-  ChevronDown, ChevronUp, Check, X,
+  ChevronDown, ChevronUp, Check, RefreshCw,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,11 +18,16 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import {
-  listWorkspaceMembers, inviteWorkspaceMember, updateWorkspaceMember, removeWorkspaceMember,
+  listWorkspaceMembers, inviteWorkspaceMember, updateWorkspaceMember,
+  removeWorkspaceMember, resendWorkspaceInvite,
   CONTENT_TYPES, CONTENT_LABELS, WORKSPACE_ROLE_LABELS,
   type WorkspaceMember, type WorkspaceRole, type ContentType,
 } from "@/lib/workspace-members.functions";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
+import { useEffect } from "react";
+
+const parentRoute = getRouteApi("/admin/workspaces/$id");
 
 const membersQuery = (workspaceId: string) =>
   queryOptions({
@@ -82,12 +87,8 @@ function ContentPermissionPicker({
 }) {
   const allSelected = value.includes("all");
 
-  function toggleAll() {
-    onChange(allSelected ? [] : ["all"]);
-  }
-
   function toggleType(type: ContentType) {
-    if (type === "all") { toggleAll(); return; }
+    if (type === "all") { onChange(allSelected ? [] : ["all"]); return; }
     const current = value.filter((v) => v !== "all");
     if (current.includes(type)) {
       onChange(current.filter((v) => v !== type));
@@ -125,7 +126,7 @@ function ContentPermissionPicker({
   );
 }
 
-// ── Edit member sheet ──────────────────────────────────────────────────────────
+// ── Edit member inline ─────────────────────────────────────────────────────────
 function EditMemberRow({
   member,
   workspaceId,
@@ -189,10 +190,19 @@ function EditMemberRow({
 // ── Main page ─────────────────────────────────────────────────────────────────
 function WorkspaceUsersPage() {
   const { id: workspaceId } = Route.useParams();
+  const { workspace } = parentRoute.useLoaderData();
   const { data: members } = useSuspenseQuery(membersQuery(workspaceId));
   const queryClient = useQueryClient();
   const doRemove  = useServerFn(removeWorkspaceMember);
   const doInvite  = useServerFn(inviteWorkspaceMember);
+  const doResend  = useServerFn(resendWorkspaceInvite);
+
+  const [currentUserEmail, setCurrentUserEmail] = useState<string | null>(null);
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user?.email) setCurrentUserEmail(session.user.email);
+    });
+  }, []);
 
   const [showInvite, setShowInvite] = useState(false);
   const [email,  setEmail]  = useState("");
@@ -221,10 +231,12 @@ function WorkspaceUsersPage() {
           workspaceRole: role,
           contentPermissions: perms,
           loginUrl: `${window.location.origin}/login`,
+          workspaceName: workspace.name,
+          inviterName: currentUserEmail ?? undefined,
         },
       });
       toast.success(`Invite sent to ${email}`, {
-        description: `${WORKSPACE_ROLE_LABELS[role]} · ${perms.includes("all") ? "All content" : perms.join(", ")}`,
+        description: `${workspace.name} · ${WORKSPACE_ROLE_LABELS[role]} · ${perms.includes("all") ? "All content" : perms.join(", ")}`,
       });
       setEmail(""); setName(""); setRole("editor"); setPerms(["all"]);
       setShowInvite(false);
@@ -251,8 +263,26 @@ function WorkspaceUsersPage() {
     }
   }
 
-  const active  = members.filter((m) => m.status === "active");
-  const pending = members.filter((m) => m.status === "pending");
+  async function handleResend(member: WorkspaceMember) {
+    setBusyId(`resend-${member.id}`);
+    try {
+      await doResend({
+        data: {
+          memberId: member.id,
+          loginUrl: `${window.location.origin}/login`,
+          workspaceName: workspace.name,
+          inviterName: currentUserEmail ?? undefined,
+        },
+      });
+      toast.success(`Invite resent to ${member.email}`, {
+        description: "A new temporary password has been generated and emailed.",
+      });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to resend invite");
+    } finally {
+      setBusyId(null);
+    }
+  }
 
   return (
     <div className="min-h-full px-4 py-4 sm:px-8 sm:py-8">
@@ -262,8 +292,7 @@ function WorkspaceUsersPage() {
         <div>
           <h1 className="text-xl font-semibold">Workspace Users</h1>
           <p className="mt-0.5 text-sm text-muted-foreground">
-            {active.length} member{active.length !== 1 ? "s" : ""}
-            {pending.length > 0 && ` · ${pending.length} pending`}
+            {members.length} member{members.length !== 1 ? "s" : ""}
           </p>
         </div>
         <button
@@ -279,7 +308,7 @@ function WorkspaceUsersPage() {
       {/* Invite form */}
       {showInvite && (
         <form onSubmit={handleInvite} className="mb-8 rounded-xl border border-border bg-muted/30 p-5 space-y-5">
-          <h2 className="text-sm font-semibold">Add a team member to this workspace</h2>
+          <h2 className="text-sm font-semibold">Add a team member to {workspace.name}</h2>
 
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-1.5">
@@ -408,6 +437,20 @@ function WorkspaceUsersPage() {
 
                 {/* Actions */}
                 <div className="flex items-center gap-1 shrink-0">
+                  {/* Resend invite */}
+                  <button
+                    type="button"
+                    title="Resend invite email with a new temporary password"
+                    onClick={() => handleResend(member)}
+                    disabled={busyId === `resend-${member.id}`}
+                    className="flex h-7 w-7 items-center justify-center rounded text-muted-foreground hover:text-primary hover:bg-primary/5 transition-colors disabled:opacity-50"
+                  >
+                    {busyId === `resend-${member.id}`
+                      ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      : <RefreshCw className="h-3.5 w-3.5" />}
+                  </button>
+
+                  {/* Edit */}
                   <button
                     type="button"
                     onClick={() => setEditing(editing === member.id ? null : member.id)}
@@ -415,6 +458,8 @@ function WorkspaceUsersPage() {
                   >
                     Edit
                   </button>
+
+                  {/* Remove */}
                   <button
                     type="button"
                     onClick={() => setPendingRemove(member)}
