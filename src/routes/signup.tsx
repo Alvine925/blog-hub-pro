@@ -69,36 +69,7 @@ function SignupPage() {
 
   return (
     <div className="flex min-h-screen bg-white">
-      {/* Left — brand column */}
-      <div className="hidden w-[42%] flex-col justify-between bg-zinc-950 px-12 py-10 lg:flex">
-        <div className="flex items-center gap-2">
-          <Moon className="h-4 w-4 text-white" />
-          <span className="text-sm font-semibold tracking-tight text-white">Lunar CMS</span>
-        </div>
-
-        <div>
-          <h2 className="text-3xl font-bold leading-snug text-white">
-            From idea to<br />published — in minutes.
-          </h2>
-
-          <div className="mt-10 space-y-4">
-            {[
-              ["Website analysis", "We scan your site and build your context automatically."],
-              ["Competitor intelligence", "Understand your landscape before you write a word."],
-              ["Content suggestions", "Topic ideas, categories, and pillars — ready on day one."],
-            ].map(([title, desc]) => (
-              <div key={title}>
-                <p className="text-sm font-semibold text-white">{title}</p>
-                <p className="mt-0.5 text-sm text-zinc-500">{desc}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <p className="text-xs text-zinc-700">© 2025 Lunar CMS</p>
-      </div>
-
-      {/* Right — form column */}
+      {/* Left — form column */}
       <div className="flex flex-1 flex-col items-center justify-center px-8 py-16">
         <div className="w-full max-w-sm">
           {/* Mobile logo */}
@@ -240,6 +211,35 @@ function SignupPage() {
             </Link>
           </p>
         </div>
+      </div>
+
+      {/* Right — brand column */}
+      <div className="hidden w-[42%] flex-col justify-between bg-zinc-950 px-12 py-10 lg:flex">
+        <div className="flex items-center gap-2">
+          <Moon className="h-4 w-4 text-white" />
+          <span className="text-sm font-semibold tracking-tight text-white">Lunar CMS</span>
+        </div>
+
+        <div>
+          <h2 className="text-3xl font-bold leading-snug text-white">
+            From idea to<br />published — in minutes.
+          </h2>
+
+          <div className="mt-10 space-y-4">
+            {[
+              ["Website analysis", "We scan your site and build your context automatically."],
+              ["Competitor intelligence", "Understand your landscape before you write a word."],
+              ["Content suggestions", "Topic ideas, categories, and pillars — ready on day one."],
+            ].map(([title, desc]) => (
+              <div key={title}>
+                <p className="text-sm font-semibold text-white">{title}</p>
+                <p className="mt-0.5 text-sm text-zinc-500">{desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <p className="text-xs text-zinc-700">© 2025 Lunar CMS</p>
       </div>
     </div>
   );

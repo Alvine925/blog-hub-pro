@@ -1,13 +1,46 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Moon, Eye, EyeOff, Loader2 } from "lucide-react";
+import { Moon, Eye, EyeOff, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/login")({
   head: () => ({ meta: [{ title: "Sign In — Lunar CMS" }] }),
   component: LoginPage,
 });
+
+const SLIDES = [
+  {
+    image: "https://images.unsplash.com/photo-1499951360447-b19be8fe80f5?auto=format&fit=crop&w=900&q=80",
+    quote: "We went from idea to live content in under ten minutes.",
+    author: "Sarah K.",
+    role: "Marketing Director, Growthly",
+  },
+  {
+    image: "https://images.unsplash.com/photo-1551434678-e076c223a692?auto=format&fit=crop&w=900&q=80",
+    quote: "Lunar CMS gave our team the flexibility to publish across every channel without touching a single line of code.",
+    author: "Daniel M.",
+    role: "Head of Content, Prismatic",
+  },
+  {
+    image: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=900&q=80",
+    quote: "Our engagement metrics doubled in the first month. The analytics are genuinely insightful.",
+    author: "Priya S.",
+    role: "Growth Lead, Arclight",
+  },
+  {
+    image: "https://images.unsplash.com/photo-1519389950473-47ba0277781c?auto=format&fit=crop&w=900&q=80",
+    quote: "Finally a headless CMS that the whole team — engineers and editors — actually enjoy using.",
+    author: "Tom R.",
+    role: "CTO, Fieldnotes",
+  },
+  {
+    image: "https://images.unsplash.com/photo-1542744094-24638eff58bb?auto=format&fit=crop&w=900&q=80",
+    quote: "The API is clean, the docs are excellent, and it just works. I wish we'd switched sooner.",
+    author: "Amara O.",
+    role: "Lead Developer, Solstice Agency",
+  },
+];
 
 function LoginPage() {
   const navigate = useNavigate();
@@ -17,12 +50,26 @@ function LoginPage() {
   const [loading, setLoading]       = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [githubLoading, setGithubLoading] = useState(false);
+  const [current, setCurrent]       = useState(0);
+  const [animating, setAnimating]   = useState(false);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) navigate({ to: "/" });
     });
   }, [navigate]);
+
+  useEffect(() => {
+    const timer = setInterval(() => goTo((prev) => (prev + 1) % SLIDES.length), 5000);
+    return () => clearInterval(timer);
+  }, []);
+
+  function goTo(indexOrUpdater: number | ((prev: number) => number)) {
+    if (animating) return;
+    setAnimating(true);
+    setCurrent(typeof indexOrUpdater === "function" ? indexOrUpdater : () => indexOrUpdater);
+    setTimeout(() => setAnimating(false), 600);
+  }
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,25 +98,86 @@ function LoginPage() {
     if (error) { toast.error(error.message); setGithubLoading(false); }
   };
 
+  const slide = SLIDES[current];
+
   return (
     <div className="flex min-h-screen bg-white">
-      {/* Left — brand column */}
-      <div className="hidden w-[42%] flex-col justify-between bg-zinc-950 px-12 py-10 lg:flex">
-        <div className="flex items-center gap-2">
+      {/* Left — carousel */}
+      <div className="relative hidden w-[42%] overflow-hidden lg:block">
+        {/* Slides */}
+        {SLIDES.map((s, i) => (
+          <div
+            key={i}
+            className="absolute inset-0 transition-opacity duration-700"
+            style={{ opacity: i === current ? 1 : 0 }}
+          >
+            <img
+              src={s.image}
+              alt=""
+              className="h-full w-full object-cover"
+            />
+          </div>
+        ))}
+
+        {/* Dark overlay */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-black/30" />
+
+        {/* Top logo */}
+        <div className="absolute left-10 top-10 flex items-center gap-2">
           <Moon className="h-4 w-4 text-white" />
           <span className="text-sm font-semibold tracking-tight text-white">Lunar CMS</span>
         </div>
 
-        <div>
-          <blockquote className="text-2xl font-medium leading-snug text-white">
-            "We went from idea to live content in under ten minutes."
-          </blockquote>
-          <p className="mt-5 text-sm text-zinc-500">
-            Sarah K. &mdash; Marketing Director, Growthly
-          </p>
+        {/* Bottom content */}
+        <div className="absolute bottom-10 left-0 right-0 px-10">
+          <div
+            key={current}
+            className="transition-all duration-500"
+            style={{ animation: "fadeSlideUp 0.5s ease forwards" }}
+          >
+            <blockquote className="text-xl font-medium leading-snug text-white">
+              &ldquo;{slide.quote}&rdquo;
+            </blockquote>
+            <div className="mt-4">
+              <p className="text-sm font-semibold text-white">{slide.author}</p>
+              <p className="text-xs text-white/60">{slide.role}</p>
+            </div>
+          </div>
+
+          {/* Controls */}
+          <div className="mt-6 flex items-center gap-4">
+            {/* Dots */}
+            <div className="flex gap-1.5">
+              {SLIDES.map((_, i) => (
+                <button
+                  key={i}
+                  onClick={() => goTo(i)}
+                  className={`h-1 rounded-full transition-all duration-300 ${
+                    i === current ? "w-6 bg-white" : "w-1.5 bg-white/40"
+                  }`}
+                />
+              ))}
+            </div>
+
+            {/* Arrows */}
+            <div className="ml-auto flex gap-2">
+              <button
+                onClick={() => goTo((current - 1 + SLIDES.length) % SLIDES.length)}
+                className="flex h-8 w-8 items-center justify-center rounded-full border border-white/30 text-white/70 transition hover:border-white hover:text-white"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+              <button
+                onClick={() => goTo((current + 1) % SLIDES.length)}
+                className="flex h-8 w-8 items-center justify-center rounded-full border border-white/30 text-white/70 transition hover:border-white hover:text-white"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
         </div>
 
-        <p className="text-xs text-zinc-700">© 2025 Lunar CMS</p>
+        <p className="absolute bottom-3 left-10 text-xs text-white/30">© 2025 Lunar CMS</p>
       </div>
 
       {/* Right — form column */}
@@ -185,6 +293,13 @@ function LoginPage() {
           </p>
         </div>
       </div>
+
+      <style>{`
+        @keyframes fadeSlideUp {
+          from { opacity: 0; transform: translateY(12px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+      `}</style>
     </div>
   );
 }

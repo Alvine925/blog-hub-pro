@@ -365,9 +365,25 @@ ${proxyInstructions}
 
 ---
 
-### 3. Enhanced Single Post API
+### 3. Content Types Supported
 
-Use \`getEnhancedPost(slug)\` which calls \`GET /api/v1/posts/:slug\`.
+All engagement features (likes, comments, views, shares, stats) work identically across four content types. Swap the path prefix to match the content you are building with:
+
+| Content type | Path prefix | Example |
+|---|---|---|
+| Blog posts | \`/v1/blogs/:slug\` | \`GET /v1/blogs/hello-world/likes\` |
+| News items | \`/v1/news/:slug\` | \`POST /v1/news/launch-2026/view\` |
+| Articles | \`/v1/articles/:slug\` | \`GET /v1/articles/getting-started/stats\` |
+| Products | \`/v1/products/:slug\` | \`POST /v1/products/headphones-pro/likes\` |
+
+Engagement proxy paths follow the same pattern — e.g. \`/api/engagement/news/:slug/likes\`.
+Build one generic \`ContentEngagement\` component that accepts a \`contentType\` prop and constructs the correct path.
+
+---
+
+### 4. Enhanced Single Post API
+
+Use \`getEnhancedPost(slug)\` which calls \`GET /api/v1/blogs/:slug\` (or the equivalent for other content types).
 This single API call returns everything needed for a post page:
 
 \`\`\`json

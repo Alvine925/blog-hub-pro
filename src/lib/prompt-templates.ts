@@ -135,17 +135,78 @@ export const ENDPOINT_REFERENCE = `| Method | Endpoint | Query params |
 
 // ── Engagement endpoint reference block ────────────────────────────────────────
 
-export const ENGAGEMENT_ENDPOINT_REFERENCE = `| Method | Endpoint | Purpose |
+export const ENGAGEMENT_ENDPOINT_REFERENCE = `### Blog engagement (/v1/blogs/:slug/…)
+
+| Method | Endpoint | Purpose |
 |--------|----------|---------|
-| GET | /api/v1/posts/:slug | Enhanced post (includes stats, features, branding, share links, related) |
-| POST | /api/v1/posts/:slug/view | Track a page view (fires on load) |
-| GET | /api/v1/posts/:slug/likes | Get like count + whether visitor has liked |
-| POST | /api/v1/posts/:slug/likes | Like the post |
-| DELETE | /api/v1/posts/:slug/likes | Unlike the post |
-| GET | /api/v1/posts/:slug/comments | Load threaded comments |
-| POST | /api/v1/posts/:slug/comments | Submit a comment |
-| POST | /api/v1/posts/:slug/share | Track a share click (channel: facebook/linkedin/x/whatsapp/email) |
-| GET | /api/v1/posts/:slug/stats | Get live stats (views, likes, comments, shares) |`;
+| GET | /v1/blogs/:slug | Full post (includes stats, features, branding, share links, related) |
+| POST | /v1/blogs/:slug/view | Track a page view (fires on mount, deduplicated per 30 min) |
+| GET | /v1/blogs/:slug/likes | Get like count + whether visitor has liked |
+| POST | /v1/blogs/:slug/likes | Like the post (idempotent) |
+| DELETE | /v1/blogs/:slug/likes | Unlike the post |
+| GET | /v1/blogs/:slug/comments | Load threaded, approved comments (page, limit) |
+| POST | /v1/blogs/:slug/comments | Submit a comment (name, email, content, parent_id?) |
+| GET | /v1/blogs/:slug/share | Get social share metadata (title, description, image, url) |
+| POST | /v1/blogs/:slug/share | Track a share click (channel: facebook/linkedin/x/whatsapp/email/copy_link) |
+| GET | /v1/blogs/:slug/stats | Live stats (views, likes, comments, shares) + feature flags + branding |
+
+### News engagement (/v1/news/:slug/…)
+
+| Method | Endpoint | Purpose |
+|--------|----------|---------|
+| GET | /v1/news/:slug/likes | Get like count + visitor liked state |
+| POST | /v1/news/:slug/likes | Like the news item |
+| DELETE | /v1/news/:slug/likes | Unlike the news item |
+| GET | /v1/news/:slug/comments | List approved comments (page, limit) |
+| POST | /v1/news/:slug/comments | Submit a comment |
+| POST | /v1/news/:slug/view | Record a page view |
+| GET | /v1/news/:slug/stats | Aggregated stats + feature flags + branding |
+
+### Article engagement (/v1/articles/:slug/…)
+
+| Method | Endpoint | Purpose |
+|--------|----------|---------|
+| GET | /v1/articles/:slug/likes | Get like count + visitor liked state |
+| POST | /v1/articles/:slug/likes | Like the article |
+| DELETE | /v1/articles/:slug/likes | Unlike the article |
+| GET | /v1/articles/:slug/comments | List approved comments (page, limit) |
+| POST | /v1/articles/:slug/comments | Submit a comment |
+| POST | /v1/articles/:slug/view | Record a page view |
+| GET | /v1/articles/:slug/stats | Aggregated stats + feature flags + branding |
+| GET | /v1/articles/:slug/related | Related articles (limit param, max 20) |
+
+### Product engagement (/v1/products/:slug/…)
+
+| Method | Endpoint | Purpose |
+|--------|----------|---------|
+| GET | /v1/products/:slug/likes | Get like count + visitor liked state |
+| POST | /v1/products/:slug/likes | Like the product |
+| DELETE | /v1/products/:slug/likes | Unlike the product |
+| GET | /v1/products/:slug/comments | List approved comments (page, limit) |
+| POST | /v1/products/:slug/comments | Submit a comment |
+| POST | /v1/products/:slug/view | Record a page view |
+| GET | /v1/products/:slug/stats | Aggregated stats + feature flags + branding |
+| GET | /v1/products/:slug/related | Related products (limit param, max 20) |
+
+### Comment moderation (secret key required, manage:comments permission)
+
+| Method | Endpoint | Purpose |
+|--------|----------|---------|
+| PUT | /v1/comments/:id | Update blog comment status (pending/approved/rejected/spam/trash) |
+| DELETE | /v1/comments/:id | Delete a blog comment |
+| PUT | /v1/comments/:type/:id | Update news/articles/products comment (:type = news/articles/products) |
+| DELETE | /v1/comments/:type/:id | Delete a news/articles/products comment |
+
+### Authentication for engagement calls
+
+All engagement endpoints require:
+\`\`\`
+Authorization: Bearer pk_live_your_api_key_here
+X-Visitor-Id: <uuid stored in localStorage>
+\`\`\`
+
+Write calls (POST likes, POST comments, POST view) additionally require \`write:engagement\` permission on the key.
+Moderation calls require a **secret key** (\`sk_live_…\`) with \`manage:comments\` permission.`;
 
 // ── Per-platform prompt templates ─────────────────────────────────────────────
 
