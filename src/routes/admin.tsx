@@ -655,12 +655,39 @@ function GlobalLayout() {
         </header>
 
         {/* Content */}
-        <main className="flex-1 overflow-auto">
+        <main className="flex-1 overflow-auto pb-16 md:pb-0">
           <Suspense fallback={<ContentSkeleton />}>
             <Outlet />
           </Suspense>
         </main>
       </div>
+
+      {/* ── Mobile bottom nav ── */}
+      <nav className="fixed bottom-0 left-0 right-0 z-20 flex h-16 items-stretch border-t border-border bg-background md:hidden">
+        {[
+          { label: "Dashboard",   to: "/admin/dashboard",  icon: LayoutDashboard },
+          { label: "Workspaces",  to: "/admin/workspaces", icon: FolderOpen      },
+          { label: "Blog Posts",  to: "/admin/blogs",      icon: FileText        },
+          { label: "API Keys",    to: "/admin/api-keys",   icon: Key             },
+          { label: "Settings",    to: "/admin/settings",   icon: Settings        },
+        ].map((item) => {
+          const active = isActive(item.to);
+          return (
+            <Link
+              key={item.label}
+              to={item.to}
+              onClick={() => setSidebarOpen(false)}
+              className={cn(
+                "flex flex-1 flex-col items-center justify-center gap-1 text-center transition-colors",
+                active ? "text-primary" : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              <item.icon className={cn("h-5 w-5", active && "text-primary")} />
+              <span className={cn("text-[10px] leading-none", active && "font-semibold")}>{item.label}</span>
+            </Link>
+          );
+        })}
+      </nav>
 
       {/* ── AI Assistant Drawer ── */}
       {/* Backdrop */}

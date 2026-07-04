@@ -380,10 +380,53 @@ function WorkspaceShell() {
           workspace={workspace}
           onOpenSidebar={() => setSidebarOpen(true)}
         />
-        <main className="flex-1 overflow-y-auto flex flex-col">
+        <main className="flex-1 overflow-y-auto flex flex-col pb-16 md:pb-0">
           <Outlet />
         </main>
       </div>
+
+      {/* ── Mobile bottom nav ── */}
+      <WorkspaceBottomNav workspace={workspace} />
     </div>
+  );
+}
+
+function WorkspaceBottomNav({ workspace }: { workspace: Workspace }) {
+  const { id } = Route.useParams();
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const base = `/admin/workspaces/${id}`;
+
+  const items = [
+    { label: "Dashboard",  to: base,                   icon: LayoutDashboard },
+    { label: "Blog Posts", to: `${base}/blogs`,         icon: FileText        },
+    { label: "Media",      to: `${base}/media`,         icon: ImageIcon       },
+    { label: "Analytics",  to: `${base}/analytics`,     icon: BarChart2       },
+    { label: "Settings",   to: `${base}/settings`,      icon: Settings        },
+  ];
+
+  function isActive(to: string) {
+    if (to === base) return pathname === base || pathname === `${base}/`;
+    return pathname.startsWith(to);
+  }
+
+  return (
+    <nav className="fixed bottom-0 left-0 right-0 z-20 flex h-16 items-stretch border-t border-border bg-white md:hidden">
+      {items.map((item) => {
+        const active = isActive(item.to);
+        return (
+          <Link
+            key={item.label}
+            to={item.to}
+            className={cn(
+              "flex flex-1 flex-col items-center justify-center gap-1 text-center transition-colors",
+              active ? "text-primary" : "text-muted-foreground hover:text-foreground",
+            )}
+          >
+            <item.icon className={cn("h-5 w-5", active && "text-primary")} />
+            <span className={cn("text-[10px] leading-none", active && "font-semibold")}>{item.label}</span>
+          </Link>
+        );
+      })}
+    </nav>
   );
 }
