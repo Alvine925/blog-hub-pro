@@ -102,7 +102,7 @@ function ArticleDetail() {
   const { data: stats }   = useQuery({
     queryKey: ["content-engagement-stats", "articles", articleId],
     queryFn:  () => doGetStats({ data: { workspaceId, contentType: "articles", contentId: articleId } }),
-    staleTime: 60_000,
+    staleTime: 5 * 60_000,
   });
   const queryClient = useQueryClient();
   const navigate    = useNavigate();

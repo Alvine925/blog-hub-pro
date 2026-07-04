@@ -3,8 +3,40 @@ import { queryOptions, useQuery } from "@tanstack/react-query";
 import { Clock, Calendar, User, ArrowLeft, Tag } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { getPostBySlug, getRelatedPosts } from "@/lib/blog.functions";
 import { formatBlogDate, type BlogPost } from "@/lib/blog-types";
+
+function BlogDetailSkeleton() {
+  return (
+    <div className="min-h-screen bg-background">
+      <div className="mx-auto max-w-3xl px-4 py-10 space-y-6">
+        <Skeleton className="h-8 w-28" />
+        <Skeleton className="h-3 w-20" />
+        <Skeleton className="h-10 w-full" />
+        <Skeleton className="h-8 w-3/4" />
+        <div className="flex gap-4">
+          <Skeleton className="h-4 w-24" />
+          <Skeleton className="h-4 w-24" />
+          <Skeleton className="h-4 w-20" />
+        </div>
+      </div>
+      <div className="mx-auto max-w-4xl px-4">
+        <Skeleton className="aspect-video w-full" />
+      </div>
+      <div className="mx-auto max-w-3xl px-4 py-10 space-y-4">
+        {Array.from({ length: 8 }).map((_, i) => (
+          <Skeleton key={i} className={`h-4 ${i % 3 === 2 ? "w-3/4" : "w-full"}`} />
+        ))}
+        <div className="pt-4 space-y-3">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Skeleton key={i} className="h-4 w-full" />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 const postQuery = (slug: string) =>
   queryOptions({
@@ -69,6 +101,8 @@ export const Route = createFileRoute("/blogs/$slug")({
     };
   },
   component: BlogDetail,
+  pendingComponent: BlogDetailSkeleton,
+  pendingMs: 0,
   errorComponent: ({ error }) => (
     <div className="mx-auto max-w-2xl px-4 py-20 text-center">
       <p className="text-destructive">Failed to load: {error.message}</p>

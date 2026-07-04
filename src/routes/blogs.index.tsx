@@ -5,12 +5,53 @@ import { Search, Clock, Calendar, ArrowRight } from "lucide-react";
 
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { listPublishedPosts } from "@/lib/blog.functions";
 import {
   BLOG_CATEGORIES,
   formatBlogDate,
   type BlogPostSummary,
 } from "@/lib/blog-types";
+
+function BlogIndexSkeleton() {
+  return (
+    <div className="min-h-screen bg-background">
+      <div className="mx-auto max-w-4xl px-4">
+        {/* Header */}
+        <header className="pt-20 pb-10 space-y-4">
+          <Skeleton className="h-4 w-20" />
+          <Skeleton className="h-14 w-3/4" />
+          <Skeleton className="h-4 w-1/2" />
+          <Skeleton className="mt-8 h-10 w-80" />
+        </header>
+        {/* Category pills */}
+        <div className="flex gap-5 border-y border-border py-4">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <Skeleton key={i} className="h-4 w-16" />
+          ))}
+        </div>
+        {/* Post rows */}
+        <div className="divide-y divide-border">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="grid grid-cols-1 gap-5 py-8 sm:grid-cols-[220px_1fr]">
+              <Skeleton className="aspect-video w-full sm:aspect-[4/3]" />
+              <div className="flex flex-col justify-center gap-3">
+                <Skeleton className="h-3 w-24" />
+                <Skeleton className="h-7 w-full" />
+                <Skeleton className="h-4 w-4/5" />
+                <Skeleton className="h-4 w-3/5" />
+                <div className="flex gap-4 mt-1">
+                  <Skeleton className="h-3 w-16" />
+                  <Skeleton className="h-3 w-20" />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 interface BlogSearch {
   q?: string;
@@ -56,6 +97,8 @@ export const Route = createFileRoute("/blogs/")({
     links: [{ rel: "canonical", href: "/blogs" }],
   }),
   component: BlogIndex,
+  pendingComponent: BlogIndexSkeleton,
+  pendingMs: 0,
   errorComponent: ({ error }) => (
     <div className="mx-auto max-w-2xl px-4 py-20 text-center">
       <p className="text-destructive">Failed to load posts: {error.message}</p>

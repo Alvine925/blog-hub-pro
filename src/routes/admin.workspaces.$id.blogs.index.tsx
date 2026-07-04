@@ -104,7 +104,7 @@ const engagementQuery = (workspaceId: string) =>
   queryOptions({
     queryKey: ["admin", "blog_engagement_counts", workspaceId],
     queryFn: () => getEngagementCounts({ data: { workspaceId } }),
-    staleTime: 60_000,
+    staleTime: 5 * 60_000,
   });
 
 export const Route = createFileRoute("/admin/workspaces/$id/blogs/")({

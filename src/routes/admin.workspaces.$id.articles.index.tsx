@@ -107,7 +107,7 @@ function WorkspaceArticles() {
     queryKey: ["batch-engagement-stats", "articles", workspaceId, articleIds.join(",")],
     queryFn: () => doGetBatchStats({ data: { workspaceId, contentType: "articles", ids: articleIds } }),
     enabled: articleIds.length > 0,
-    staleTime: 60_000,
+    staleTime: 5 * 60_000,
   });
 
   // Auto-generation removed: content is generated manually via "Generate with AI"

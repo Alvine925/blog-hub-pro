@@ -7,6 +7,7 @@ import {
   Heart, MessageSquare, Share2, CheckCircle, XCircle, AlertCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Skeleton } from "@/components/ui/skeleton";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -190,7 +191,7 @@ const detailQuery = (postId: string) =>
   queryOptions({
     queryKey: ["workspace-blog-detail", postId],
     queryFn: () => getWorkspaceBlogDetail({ data: { postId } }),
-    staleTime: 30_000,
+    staleTime: 5 * 60_000,
   });
 
 function BlogDetailSkeleton() {

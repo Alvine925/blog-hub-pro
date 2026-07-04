@@ -112,7 +112,7 @@ function WorkspaceProducts() {
     queryKey: ["batch-engagement-stats", "products", workspaceId, productIds.join(",")],
     queryFn: () => doGetBatchStats({ data: { workspaceId, contentType: "products", ids: productIds } }),
     enabled: productIds.length > 0,
-    staleTime: 60_000,
+    staleTime: 5 * 60_000,
   });
 
   async function handleDelete() {
