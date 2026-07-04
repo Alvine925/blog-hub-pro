@@ -4,14 +4,18 @@ import {
   LayoutDashboard, Moon, FolderOpen, CreditCard, Settings, ChevronRight,
   LogOut, Bell, BookOpen, HelpCircle, Map, FileText, Users,
   ChevronDown, User, Key, ScrollText, Plug, MessageSquare,
-  Sparkles, X, Menu,
+  Sparkles, X, Menu, Loader2, Eye, EyeOff,
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { AiAssistant } from "@/components/dashboard/AiAssistant";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useServerFn } from "@tanstack/react-start";
+import { markPasswordChanged } from "@/lib/workspace-members.functions";
 
 export const Route = createFileRoute("/admin")({
   head: () => ({
@@ -23,7 +27,7 @@ export const Route = createFileRoute("/admin")({
   component: AdminLayoutGuard,
 });
 
-// ── Full-page skeletons (shown during auth check on first load) ────────────────
+// ── Full-page skeletons ────────────────────────────────────────────────────────
 
 function GlobalSidebarSkeleton() {
   return (
@@ -105,11 +109,9 @@ function DashboardContentSkeleton() {
         <div className="rounded-lg border border-border p-4 space-y-4">
           <Skeleton className="h-5 w-32" />
           <Skeleton className="h-4 w-full" />
-          <Skeleton className="h-4 w-5/6" />
           {[...Array(4)].map((_, i) => (
             <Skeleton key={i} className="h-9 w-full rounded-lg" />
           ))}
-          <Skeleton className="h-24 w-full rounded-lg" />
         </div>
       </div>
     </div>
@@ -153,63 +155,20 @@ function WorkspaceOverviewContentSkeleton() {
           </div>
         ))}
       </div>
-      <div className="space-y-2">
-        <Skeleton className="h-1.5 w-full rounded-full" />
-        <div className="flex items-center gap-5">
-          <Skeleton className="h-3 w-24" />
-          <Skeleton className="h-3 w-24" />
-          <Skeleton className="h-3 w-16" />
-        </div>
-      </div>
       <div className="grid gap-10 lg:grid-cols-3">
         {[...Array(3)].map((_, col) => (
           <div key={col} className="space-y-4">
-            <div className="border-b border-border pb-3">
-              <Skeleton className="h-3 w-24" />
-            </div>
+            <div className="border-b border-border pb-3"><Skeleton className="h-3 w-24" /></div>
             <div className="space-y-5">
               {[...Array(4)].map((_, i) => (
                 <div key={i} className="space-y-1.5">
                   <Skeleton className="h-4 w-full" />
                   <Skeleton className="h-3 w-3/4" />
-                  <div className="flex gap-1.5 pt-1">
-                    <Skeleton className="h-5 w-16 rounded-full" />
-                    <Skeleton className="h-5 w-14 rounded-full" />
-                  </div>
                 </div>
               ))}
             </div>
           </div>
         ))}
-      </div>
-      <div className="grid gap-12 lg:grid-cols-[1fr_260px]">
-        <div className="space-y-3">
-          <div className="flex items-center justify-between border-b border-border pb-3">
-            <Skeleton className="h-3 w-28" />
-            <Skeleton className="h-3 w-14" />
-          </div>
-          {[...Array(6)].map((_, i) => (
-            <div key={i} className="flex items-center gap-3 py-2.5 border-b border-border/60 last:border-0">
-              <Skeleton className="h-3 flex-1" />
-              <Skeleton className="h-4 w-20 rounded-full" />
-              <Skeleton className="h-3 w-16" />
-            </div>
-          ))}
-        </div>
-        <div className="space-y-4">
-          <div className="border-b border-border pb-3">
-            <Skeleton className="h-3 w-16" />
-          </div>
-          {[...Array(5)].map((_, i) => (
-            <div key={i} className="flex items-start gap-3">
-              <Skeleton className="h-5 w-5 rounded-full shrink-0" />
-              <div className="space-y-1.5 flex-1">
-                <Skeleton className="h-3 w-full" />
-                <Skeleton className="h-2.5 w-16" />
-              </div>
-            </div>
-          ))}
-        </div>
       </div>
     </div>
   );
@@ -222,24 +181,12 @@ function GenericContentSkeleton() {
         <Skeleton className="h-6 w-40" />
         <Skeleton className="h-4 w-64" />
       </div>
-      <div className="flex divide-x divide-border border border-border rounded-lg overflow-hidden">
-        {[...Array(3)].map((_, i) => (
-          <div key={i} className="flex-1 px-5 py-4 space-y-2">
-            <Skeleton className="h-7 w-12" />
-            <Skeleton className="h-2.5 w-20" />
-          </div>
-        ))}
-      </div>
       <div className="space-y-3">
-        <div className="border-b border-border pb-3">
-          <Skeleton className="h-3 w-24" />
-        </div>
         {[...Array(6)].map((_, i) => (
           <div key={i} className="flex items-center gap-4 border-b border-border py-3 last:border-0">
             <Skeleton className="h-3 w-3 rounded-full shrink-0" />
             <Skeleton className="h-3.5 flex-1" />
             <Skeleton className="h-3 w-20" />
-            <Skeleton className="h-3 w-16" />
           </div>
         ))}
       </div>
@@ -281,6 +228,108 @@ function FullPageSkeleton({ pathname }: { pathname: string }) {
   );
 }
 
+// ── Password change modal ──────────────────────────────────────────────────────
+function PasswordChangeModal({ userId, onDone }: { userId: string; onDone: () => void }) {
+  const [newPw,     setNewPw]     = useState("");
+  const [confirmPw, setConfirmPw] = useState("");
+  const [showPw,    setShowPw]    = useState(false);
+  const [busy,      setBusy]      = useState(false);
+  const [error,     setError]     = useState("");
+  const doMarkChanged = useServerFn(markPasswordChanged);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setError("");
+    if (newPw.length < 8) { setError("Password must be at least 8 characters."); return; }
+    if (newPw !== confirmPw) { setError("Passwords don't match."); return; }
+
+    setBusy(true);
+    try {
+      const { error: updateErr } = await supabase.auth.updateUser({
+        password: newPw,
+        data: { password_change_required: false },
+      });
+      if (updateErr) throw updateErr;
+      await doMarkChanged({ data: { userId } });
+      toast.success("Password updated — welcome aboard!");
+      onDone();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to update password.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+      <div className="w-full max-w-md rounded-2xl bg-white shadow-2xl overflow-hidden">
+
+        {/* Header */}
+        <div className="px-8 pt-8 pb-6 border-b border-border">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary mb-4">
+            <Moon className="h-5 w-5 text-white" />
+          </div>
+          <h2 className="text-xl font-bold tracking-tight">Set your password</h2>
+          <p className="mt-1.5 text-sm text-muted-foreground leading-relaxed">
+            Welcome to Lunar CMS. Please create a password before continuing — your temporary one will no longer work after this.
+          </p>
+        </div>
+
+        {/* Form */}
+        <form onSubmit={handleSubmit} className="px-8 py-6 space-y-4">
+          <div className="space-y-1.5">
+            <Label htmlFor="new-pw">New password</Label>
+            <div className="relative">
+              <Input
+                id="new-pw"
+                type={showPw ? "text" : "password"}
+                value={newPw}
+                onChange={(e) => setNewPw(e.target.value)}
+                placeholder="At least 8 characters"
+                required
+                autoFocus
+                className="pr-10"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPw((v) => !v)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                tabIndex={-1}
+              >
+                {showPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="confirm-pw">Confirm password</Label>
+            <Input
+              id="confirm-pw"
+              type={showPw ? "text" : "password"}
+              value={confirmPw}
+              onChange={(e) => setConfirmPw(e.target.value)}
+              placeholder="Same as above"
+              required
+            />
+          </div>
+
+          {error && (
+            <p className="text-sm text-destructive rounded-lg bg-destructive/5 border border-destructive/20 px-3 py-2">
+              {error}
+            </p>
+          )}
+
+          <Button type="submit" className="w-full mt-2" disabled={busy}>
+            {busy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Set password &amp; continue
+          </Button>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+// ── Onboarding step routes ─────────────────────────────────────────────────────
 const STEP_ROUTES: Record<string, string> = {
   welcome:     "/onboarding/welcome",
   website:     "/onboarding/website",
@@ -290,14 +339,19 @@ const STEP_ROUTES: Record<string, string> = {
   complete:    "/admin/dashboard",
 };
 
+// ── Admin layout guard ─────────────────────────────────────────────────────────
 function AdminLayoutGuard() {
-  const navigate  = useNavigate();
-  const pathname  = useRouterState({ select: (s) => s.location.pathname });
-  const [checking, setChecking] = useState(true);
+  const navigate = useNavigate();
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const [checking,          setChecking]          = useState(true);
+  const [needsPasswordChange, setNeedsPasswordChange] = useState(false);
+  const [currentUserId,     setCurrentUserId]     = useState<string | null>(null);
 
   useEffect(() => {
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (!session) { navigate({ to: "/login" }); return; }
+
+      // Check onboarding
       try {
         const { data } = await supabase
           .from("user_onboarding" as never)
@@ -311,6 +365,14 @@ function AdminLayoutGuard() {
       } catch {
         // table doesn't exist yet — let them through
       }
+
+      // Check if password change is required
+      const meta = session.user.user_metadata;
+      if (meta?.password_change_required === true) {
+        setCurrentUserId(session.user.id);
+        setNeedsPasswordChange(true);
+      }
+
       setChecking(false);
     });
 
@@ -320,16 +382,21 @@ function AdminLayoutGuard() {
     return () => subscription.unsubscribe();
   }, [navigate]);
 
-  if (checking) {
-    return <FullPageSkeleton pathname={pathname} />;
+  if (checking) return <FullPageSkeleton pathname={pathname} />;
+
+  const passwordModal = needsPasswordChange && currentUserId ? (
+    <PasswordChangeModal userId={currentUserId} onDone={() => setNeedsPasswordChange(false)} />
+  ) : null;
+
+  // Workspace pages render their own shell
+  if (/^\/admin\/workspaces\/[^/]+/.test(pathname)) {
+    return <>{<Outlet />}{passwordModal}</>;
+  }
+  if (pathname.startsWith("/admin/docs") || pathname.startsWith("/admin/api-explorer")) {
+    return <>{<Outlet />}{passwordModal}</>;
   }
 
-  // Workspace pages and docs portal render their own layout
-  if (/^\/admin\/workspaces\/[^/]+/.test(pathname)) return <Outlet />;
-  if (pathname.startsWith("/admin/docs")) return <Outlet />;
-  if (pathname.startsWith("/admin/api-explorer")) return <Outlet />;
-
-  return <GlobalLayout />;
+  return <>{<GlobalLayout />}{passwordModal}</>;
 }
 
 // ── Nav definition ─────────────────────────────────────────────────────────────
@@ -339,45 +406,45 @@ const globalNav: Array<{ group: string; items: NavItem[] }> = [
   {
     group: "",
     items: [
-      { label: "Dashboard",   to: "/admin/dashboard",   icon: LayoutDashboard },
-      { label: "Workspaces",  to: "/admin/workspaces",  icon: FolderOpen      },
+      { label: "Dashboard",  to: "/admin/dashboard",  icon: LayoutDashboard },
+      { label: "Workspaces", to: "/admin/workspaces", icon: FolderOpen      },
     ],
   },
   {
     group: "Content",
     items: [
-      { label: "Blog Posts",  to: "/admin/blogs",        icon: FileText        },
-      { label: "News",        to: "/admin/news",         icon: FileText        },
-      { label: "Articles",    to: "/admin/articles",     icon: BookOpen        },
-      { label: "FAQs",        to: "/admin/faqs",         icon: HelpCircle      },
-      { label: "Products",    to: "/admin/products",     icon: FileText        },
-      { label: "Comments",    to: "/admin/comments",     icon: MessageSquare   },
-      { label: "Templates",   to: "/admin/collections",  icon: Moon            },
-      { label: "Media",       to: "/admin/media",        icon: Moon            },
+      { label: "Blog Posts", to: "/admin/blogs",       icon: FileText      },
+      { label: "News",       to: "/admin/news",        icon: FileText      },
+      { label: "Articles",   to: "/admin/articles",    icon: BookOpen      },
+      { label: "FAQs",       to: "/admin/faqs",        icon: HelpCircle    },
+      { label: "Products",   to: "/admin/products",    icon: FileText      },
+      { label: "Comments",   to: "/admin/comments",    icon: MessageSquare },
+      { label: "Templates",  to: "/admin/collections", icon: Moon          },
+      { label: "Media",      to: "/admin/media",       icon: Moon          },
     ],
   },
   {
     group: "Team",
     items: [
-      { label: "Users",       to: "/admin/users",       icon: Users           },
+      { label: "Users", to: "/admin/users", icon: Users },
     ],
   },
   {
     group: "Account",
     items: [
-      { label: "Billing",     to: "/admin/billing",     icon: CreditCard      },
-      { label: "Settings",    to: "/admin/settings",    icon: Settings        },
+      { label: "Billing",  to: "/admin/billing",  icon: CreditCard },
+      { label: "Settings", to: "/admin/settings", icon: Settings   },
     ],
   },
   {
     group: "Developers",
     items: [
-      { label: "API Keys",              to: "/admin/api-keys",           icon: Key        },
-      { label: "Request Logs",          to: "/admin/api-logs",           icon: ScrollText },
-      { label: "API Explorer",          to: "/admin/api-explorer",       icon: BookOpen   },
-      { label: "Analytics",             to: "/admin/analytics",          icon: Map        },
-      { label: "Integration Center",    to: "/admin/integration-center", icon: Plug       },
-      { label: "Developer Docs",        to: "/admin/docs",               icon: BookOpen   },
+      { label: "API Keys",           to: "/admin/api-keys",           icon: Key        },
+      { label: "Request Logs",       to: "/admin/api-logs",           icon: ScrollText },
+      { label: "API Explorer",       to: "/admin/api-explorer",       icon: BookOpen   },
+      { label: "Analytics",          to: "/admin/analytics",          icon: Map        },
+      { label: "Integration Center", to: "/admin/integration-center", icon: Plug       },
+      { label: "Developer Docs",     to: "/admin/docs",               icon: BookOpen   },
     ],
   },
   {
@@ -388,7 +455,7 @@ const globalNav: Array<{ group: string; items: NavItem[] }> = [
   },
 ];
 
-// ── Profile dropdown ─────────────────────────────────────────────────────────
+// ── Profile dropdown ──────────────────────────────────────────────────────────
 function ProfileMenu({ email }: { email: string }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -408,8 +475,6 @@ function ProfileMenu({ email }: { email: string }) {
     navigate({ to: "/login" });
   }
 
-  const initials = email.slice(0, 2).toUpperCase();
-
   return (
     <div ref={ref} className="relative">
       <button
@@ -417,7 +482,7 @@ function ProfileMenu({ email }: { email: string }) {
         className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm hover:bg-muted transition-colors"
       >
         <span className="flex h-7 w-7 items-center justify-center rounded-full bg-primary text-[11px] font-bold text-white">
-          {initials}
+          {email.slice(0, 2).toUpperCase()}
         </span>
         <span className="hidden text-xs text-muted-foreground sm:block truncate max-w-28">{email}</span>
         <ChevronDown className="h-3.5 w-3.5 text-muted-foreground/60" />
@@ -429,8 +494,8 @@ function ProfileMenu({ email }: { email: string }) {
             <p className="text-xs font-semibold truncate">{email}</p>
           </div>
           {[
-            { label: "Billing",     icon: CreditCard, to: "/admin/billing"  },
-            { label: "Settings",    icon: Settings,   to: "/admin/settings" },
+            { label: "Billing",  icon: CreditCard, to: "/admin/billing"  },
+            { label: "Settings", icon: Settings,   to: "/admin/settings" },
           ].map((item) => (
             <Link
               key={item.label}
@@ -457,48 +522,12 @@ function ProfileMenu({ email }: { email: string }) {
   );
 }
 
-// ── Content skeleton loader ────────────────────────────────────────────────────
-function ContentSkeleton() {
-  return (
-    <div className="mx-auto max-w-5xl space-y-6 px-6 py-8 animate-pulse">
-      {/* Page title */}
-      <div className="space-y-2">
-        <div className="h-5 w-40 rounded-md bg-muted" />
-        <div className="h-3.5 w-72 rounded-md bg-muted/60" />
-      </div>
-      {/* Stats strip */}
-      <div className="flex divide-x divide-border border border-border rounded-lg overflow-hidden">
-        {[1, 2, 3].map((i) => (
-          <div key={i} className="flex-1 px-5 py-4 space-y-2">
-            <div className="h-7 w-12 rounded-md bg-muted" />
-            <div className="h-2.5 w-20 rounded-md bg-muted/60" />
-          </div>
-        ))}
-      </div>
-      {/* Content cards */}
-      <div className="space-y-3">
-        <div className="h-3 w-24 rounded-md bg-muted/60" />
-        <div className="rounded-lg border border-border overflow-hidden divide-y divide-border">
-          {[1, 2, 3, 4, 5].map((i) => (
-            <div key={i} className="flex items-center gap-4 px-4 py-3">
-              <div className="h-3 w-3 rounded-full bg-muted" />
-              <div className="h-3.5 w-36 rounded-md bg-muted" />
-              <div className="ml-auto h-3 w-20 rounded-md bg-muted/60" />
-              <div className="h-3 w-16 rounded-md bg-muted/60" />
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
-
 // ── Global Layout ──────────────────────────────────────────────────────────────
 function GlobalLayout() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const navigate  = useNavigate();
-  const [email,   setEmail]   = useState("");
-  const [aiOpen,  setAiOpen]  = useState(false);
+  const [email,      setEmail]      = useState("");
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -516,12 +545,10 @@ function GlobalLayout() {
     navigate({ to: "/login" });
   }
 
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-
   return (
     <div className="flex h-screen bg-background overflow-x-clip">
 
-      {/* ── Mobile backdrop ── */}
+      {/* Mobile backdrop */}
       {sidebarOpen && (
         <div
           className="fixed inset-0 z-30 bg-black/40 md:hidden"
@@ -529,13 +556,12 @@ function GlobalLayout() {
         />
       )}
 
-      {/* ── Sidebar ── */}
+      {/* Sidebar */}
       <aside className={cn(
         "fixed inset-y-0 left-0 z-40 flex w-64 shrink-0 flex-col border-r border-border bg-background transition-transform duration-200 ease-in-out",
         "md:relative md:w-56 md:translate-x-0",
         sidebarOpen ? "translate-x-0" : "-translate-x-full",
       )}>
-        {/* Logo + mobile close */}
         <div className="flex h-14 items-center gap-2.5 border-b border-border px-4 shrink-0">
           <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary">
             <Moon className="h-4 w-4 text-white" />
@@ -550,7 +576,6 @@ function GlobalLayout() {
           </button>
         </div>
 
-        {/* Nav */}
         <nav className="flex-1 overflow-y-auto py-2">
           {globalNav.map((group) => (
             <div key={group.group || "_"} className={cn("mb-0.5", group.group && "mt-4")}>
@@ -583,159 +608,42 @@ function GlobalLayout() {
           ))}
         </nav>
 
-        {/* Footer */}
-        <div className="shrink-0 border-t border-border py-2">
-          {email && (
-            <div className="mx-3 mb-1 flex items-center gap-2 rounded-lg px-1 py-1.5">
-              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-white shrink-0">
-                {email.slice(0, 2).toUpperCase()}
-              </span>
-              <span className="truncate text-xs text-muted-foreground">{email}</span>
-            </div>
-          )}
+        <div className="shrink-0 border-t border-border p-3">
           <button
-            type="button"
             onClick={handleSignOut}
-            className="flex w-full items-center gap-2.5 border-l-2 border-transparent px-4 py-[5px] text-sm text-muted-foreground hover:text-foreground hover:border-border hover:bg-muted/30 transition-colors"
+            className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-red-50 hover:text-red-600 transition-colors"
           >
-            <LogOut className="h-3.5 w-3.5 shrink-0" />
+            <LogOut className="h-4 w-4 shrink-0" />
             Sign out
           </button>
         </div>
       </aside>
 
-      {/* ── Main ── */}
+      {/* Main area */}
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
-        {/* Top header */}
         <header className="flex h-14 shrink-0 items-center justify-between border-b border-border bg-background px-3 sm:px-6">
-          <div className="flex items-center gap-2 text-sm">
-            {/* Hamburger — mobile only */}
-            <button
-              type="button"
-              onClick={() => setSidebarOpen(true)}
-              className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted md:hidden"
-            >
-              <Menu className="h-4 w-4" />
-            </button>
-            <span className="text-muted-foreground hidden sm:block">
-              {globalNav.flatMap(g => g.items).find(i => isActive(i.to))?.label ?? "Admin"}
-            </span>
+          <button
+            type="button"
+            onClick={() => setSidebarOpen(true)}
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted md:hidden"
+          >
+            <Menu className="h-4 w-4" />
+          </button>
+          <div className="hidden text-sm font-medium text-muted-foreground md:block">
+            Admin
           </div>
-          <div className="flex items-center gap-1 sm:gap-2">
-            {/* AI Assistant button */}
-            <button
-              type="button"
-              onClick={() => setAiOpen((v) => !v)}
-              className={cn(
-                "relative flex items-center gap-1.5 rounded-lg px-2.5 h-8 text-sm font-medium transition-all",
-                aiOpen
-                  ? "bg-violet-100 text-violet-700 shadow-sm"
-                  : "text-muted-foreground hover:bg-muted hover:text-foreground",
-              )}
-              title="Open AI Assistant"
-            >
-              <Sparkles className="h-3.5 w-3.5" />
-              <span className="hidden sm:block text-xs">AI Assistant</span>
-              {/* pulse dot */}
-              <span className="absolute -right-0.5 -top-0.5 flex h-2 w-2">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-violet-400 opacity-60" />
-                <span className="relative inline-flex h-2 w-2 rounded-full bg-violet-500" />
-              </span>
-            </button>
-            {/* Notifications */}
-            <Link
-              to="/admin/notifications"
-              className="relative flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-            >
-              <Bell className="h-4 w-4" />
-            </Link>
-            {/* Profile */}
-            <ProfileMenu email={email} />
+          <div className="flex items-center gap-2">
+            {email && <ProfileMenu email={email} />}
           </div>
         </header>
 
-        {/* Content */}
-        <main className="flex-1 overflow-y-auto overflow-x-hidden overscroll-x-none touch-pan-y pb-16 md:pb-0">
-          <Suspense fallback={<ContentSkeleton />}>
-            <Outlet />
-          </Suspense>
-        </main>
-      </div>
-
-      {/* ── Mobile bottom nav ── */}
-      <nav className="fixed bottom-0 left-0 right-0 z-20 flex h-16 items-stretch border-t border-border bg-background md:hidden">
-        {[
-          { label: "Dashboard",   to: "/admin/dashboard",  icon: LayoutDashboard },
-          { label: "Workspaces",  to: "/admin/workspaces", icon: FolderOpen      },
-          { label: "Blog Posts",  to: "/admin/blogs",      icon: FileText        },
-          { label: "API Keys",    to: "/admin/api-keys",   icon: Key             },
-          { label: "Settings",    to: "/admin/settings",   icon: Settings        },
-        ].map((item) => {
-          const active = isActive(item.to);
-          return (
-            <Link
-              key={item.label}
-              to={item.to}
-              onClick={() => setSidebarOpen(false)}
-              className={cn(
-                "flex flex-1 flex-col items-center justify-center gap-1 text-center transition-colors",
-                active ? "text-primary" : "text-muted-foreground hover:text-foreground",
-              )}
-            >
-              <item.icon className={cn("h-5 w-5", active && "text-primary")} />
-              <span className={cn("text-[10px] leading-none", active && "font-semibold")}>{item.label}</span>
-            </Link>
-          );
-        })}
-      </nav>
-
-      {/* ── AI Assistant Drawer ── */}
-      {/* Backdrop */}
-      {aiOpen && (
-        <div
-          className="fixed inset-0 z-40 bg-black/20 backdrop-blur-[1px]"
-          onClick={() => setAiOpen(false)}
-        />
-      )}
-
-      {/* Panel */}
-      <div
-        className={cn(
-          "fixed right-0 top-0 z-50 flex h-full w-full sm:w-[420px] flex-col border-l border-border bg-background transition-transform duration-300 ease-in-out",
-          aiOpen ? "translate-x-0" : "translate-x-full",
-        )}
-      >
-        {/* Drawer header */}
-        <div className="flex h-14 shrink-0 items-center justify-between border-b border-border px-5">
-          <div className="flex items-center gap-2.5">
-            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-violet-100">
-              <Sparkles className="h-4 w-4 text-violet-600" />
-            </div>
-            <div>
-              <p className="text-sm font-semibold">AI Assistant</p>
-              <p className="text-[10px] text-muted-foreground">Lunar CMS · Beta</p>
-            </div>
+        <main className="flex-1 overflow-y-auto">
+          <div className="mx-auto max-w-5xl px-4 py-6 sm:px-8 sm:py-8">
+            <Suspense fallback={<GenericContentSkeleton />}>
+              <Outlet />
+            </Suspense>
           </div>
-          <button
-            type="button"
-            onClick={() => setAiOpen(false)}
-            className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-          >
-            <X className="h-4 w-4" />
-          </button>
-        </div>
-
-        {/* Chat area */}
-        <div className="flex flex-1 min-h-0 flex-col p-5">
-          <AiAssistant
-            compact
-            onClose={() => setAiOpen(false)}
-            onNavigate={(path) => {
-              navigate({ to: path as "/" });
-              setAiOpen(false);
-            }}
-          />
-        </div>
+        </main>
       </div>
     </div>
   );

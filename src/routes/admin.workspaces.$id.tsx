@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   createFileRoute, Link, Outlet, useRouterState, useNavigate,
 } from "@tanstack/react-router";
@@ -7,12 +7,17 @@ import {
   LayoutDashboard, FileText, Layers, ImageIcon, Key, Webhook,
   BarChart2, Bell, Settings, Code2, Sparkles,
   ChevronLeft, ExternalLink, LogOut, Plus, Search, ChevronRight, Info, Plug, Zap, BookOpen, MessageSquare,
-  HelpCircle, Newspaper, Package, GraduationCap, Menu, X,
+  HelpCircle, Newspaper, Package, GraduationCap, Menu, X, Users, Shield,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Workspace } from "@/lib/workspace.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import {
+  getMyWorkspaceRole,
+  type WorkspaceAccess,
+  type ContentType,
+} from "@/lib/workspace-members.functions";
 
 // ── Server fn ─────────────────────────────────────────────────────────────────
 const getWorkspaceById = createServerFn({ method: "GET" })
@@ -60,56 +65,93 @@ function wsGradient(name: string) {
 type NavItem  = { label: string; to: string; icon: React.ComponentType<{ className?: string }> };
 type NavGroup = { group: string; items: NavItem[] };
 
-function buildNav(id: string): NavGroup[] {
+function canSee(perm: ContentType, access: WorkspaceAccess): boolean {
+  if (access.isFullAccess) return true;
+  const p = access.contentPermissions;
+  return p.includes("all") || p.includes(perm);
+}
+
+function buildNav(id: string, access: WorkspaceAccess): NavGroup[] {
   const base = `/admin/workspaces/${id}`;
-  return [
+  const full = access.isFullAccess;
+
+  const contentItems: NavItem[] = [
+    ...(canSee("blogs",    access) ? [{ label: "Blog Posts",    to: `${base}/blogs`,      icon: FileText      }] : []),
+    ...(canSee("articles", access) ? [{ label: "Articles",      to: `${base}/articles`,   icon: GraduationCap }] : []),
+    ...(canSee("news",     access) ? [{ label: "News",          to: `${base}/news`,        icon: Newspaper     }] : []),
+    ...(canSee("products", access) ? [{ label: "Products",      to: `${base}/products`,   icon: Package       }] : []),
+    ...(canSee("faqs",     access) ? [{ label: "FAQs",          to: `${base}/faqs`,        icon: HelpCircle    }] : []),
+    { label: "Comments",      to: `${base}/comments`,   icon: MessageSquare },
+    { label: "Collections",   to: `${base}/collections`, icon: Layers        },
+    { label: "Media Library", to: `${base}/media`,       icon: ImageIcon     },
+  ];
+
+  const toolItems: NavItem[] = [
+    { label: "AI Assistant",  to: `${base}/ai-assistant`,      icon: Sparkles },
+    ...(full ? [
+      { label: "API Keys",           to: `${base}/api-keys`,          icon: Key     },
+      { label: "Webhooks",           to: `${base}/webhooks`,          icon: Webhook },
+      { label: "Cache Invalidation", to: `${base}/cache-invalidation`, icon: Zap    },
+      { label: "Integration Center", to: `${base}/integration-center`, icon: Plug   },
+    ] : []),
+  ];
+
+  const groups: NavGroup[] = [
     {
       group: "Overview",
       items: [
-        { label: "Dashboard", to: base,          icon: LayoutDashboard },
-        { label: "About",     to: `${base}/about`, icon: Info           },
+        { label: "Dashboard", to: base,            icon: LayoutDashboard },
+        { label: "About",     to: `${base}/about`, icon: Info            },
       ],
     },
-    {
-      group: "Content",
-      items: [
-        { label: "Blog Posts",    to: `${base}/blogs`,        icon: FileText       },
-        { label: "Articles",      to: `${base}/articles`,     icon: GraduationCap  },
-        { label: "News",          to: `${base}/news`,         icon: Newspaper      },
-        { label: "Products",      to: `${base}/products`,     icon: Package        },
-        { label: "FAQs",          to: `${base}/faqs`,         icon: HelpCircle     },
-        { label: "Comments",      to: `${base}/comments`,     icon: MessageSquare  },
-        { label: "Collections",   to: `${base}/collections`,  icon: Layers         },
-        { label: "Media Library", to: `${base}/media`,        icon: ImageIcon      },
-      ],
-    },
-    {
-      group: "Tools",
-      items: [
-        { label: "AI Assistant",  to: `${base}/ai-assistant`, icon: Sparkles   },
-        { label: "API Keys",           to: `${base}/api-keys`,             icon: Key     },
-        { label: "Webhooks",           to: `${base}/webhooks`,             icon: Webhook },
-        { label: "Cache Invalidation", to: `${base}/cache-invalidation`,   icon: Zap     },
-        { label: "Integration Center", to: `${base}/integration-center`,   icon: Plug    },
-      ],
-    },
+    { group: "Content", items: contentItems },
+    { group: "Tools",   items: toolItems    },
     {
       group: "Insights",
       items: [
-        { label: "Analytics",     to: `${base}/analytics`,    icon: BarChart2  },
-        { label: "Notifications", to: `${base}/notifications`, icon: Bell      },
+        { label: "Analytics",     to: `${base}/analytics`,    icon: BarChart2 },
+        { label: "Notifications", to: `${base}/notifications`, icon: Bell     },
       ],
     },
-    {
+    ...(full ? [{
       group: "System",
       items: [
-        { label: "Settings",      to: `${base}/settings`,     icon: Settings   },
+        { label: "Users",    to: `${base}/users`,    icon: Users    },
+        { label: "Settings", to: `${base}/settings`, icon: Settings },
       ],
-    },
+    }] : []),
   ];
+
+  return groups;
 }
 
-// ── Error component (keeps minimal nav) ───────────────────────────────────────
+// ── Workspace access hook ─────────────────────────────────────────────────────
+const DEFAULT_ACCESS: WorkspaceAccess = {
+  platformRole: "superadmin",
+  workspaceRole: "workspace_admin",
+  contentPermissions: ["all"],
+  isFullAccess: true,
+};
+
+function useWorkspaceAccess(workspaceId: string): WorkspaceAccess {
+  const [access, setAccess] = useState<WorkspaceAccess>(DEFAULT_ACCESS);
+
+  useEffect(() => {
+    supabase.auth.getUser().then(async ({ data: { user } }) => {
+      if (!user) return;
+      try {
+        const result = await getMyWorkspaceRole({ data: { workspaceId, userId: user.id } });
+        setAccess(result);
+      } catch {
+        // keep default (full) access on error
+      }
+    });
+  }, [workspaceId]);
+
+  return access;
+}
+
+// ── Error component ───────────────────────────────────────────────────────────
 function WorkspaceError({ error }: { error: Error }) {
   return (
     <div className="flex h-screen items-center justify-center bg-background">
@@ -135,20 +177,21 @@ function WorkspaceError({ error }: { error: Error }) {
 // ── Sidebar ───────────────────────────────────────────────────────────────────
 function WorkspaceSidebar({
   workspace,
+  access,
   sidebarOpen,
   onClose,
 }: {
   workspace: Workspace;
+  access: WorkspaceAccess;
   sidebarOpen: boolean;
   onClose: () => void;
 }) {
   const { id } = Route.useParams();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const navigate  = useNavigate();
-  const groups    = buildNav(id);
+  const groups    = buildNav(id, access);
   const gradient  = wsGradient(workspace.name);
 
-  // Derive workspace icon: scraped logo → Google favicon → gradient initials
   const logoUrl: string | null = workspace.ai_context?.logoUrl ?? null;
   const faviconDomain = (() => {
     try { return workspace.website_url ? new URL(workspace.website_url).hostname : null; }
@@ -195,7 +238,6 @@ function WorkspaceSidebar({
           </button>
         </div>
         <div className="flex items-center gap-3">
-          {/* Logo image (scraped or favicon) – falls back to gradient initials */}
           {(logoUrl || faviconUrl) ? (
             <img
               src={logoUrl ?? faviconUrl!}
@@ -213,7 +255,6 @@ function WorkspaceSidebar({
               }}
             />
           ) : null}
-          {/* Gradient initials fallback (hidden when image loads) */}
           <div
             className={cn(
               "h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br text-sm font-bold text-white",
@@ -228,6 +269,14 @@ function WorkspaceSidebar({
             <p className="font-mono text-[10px] text-muted-foreground truncate">{workspace.slug}</p>
           </div>
         </div>
+
+        {/* Role badge */}
+        {!access.isFullAccess && access.workspaceRole && (
+          <div className="mt-2 flex items-center gap-1 text-[10px] text-amber-600 font-medium">
+            <Shield className="h-3 w-3" />
+            {access.workspaceRole === "editor" ? "Editor" : "Viewer"} access
+          </div>
+        )}
       </div>
 
       {/* ── Navigation ── */}
@@ -286,17 +335,17 @@ function WorkspaceSidebar({
 // ── Top header inside workspace ───────────────────────────────────────────────
 function WorkspaceHeader({
   workspace,
+  access,
   onOpenSidebar,
 }: {
   workspace: Workspace;
+  access: WorkspaceAccess;
   onOpenSidebar: () => void;
 }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const { id } = Route.useParams();
-
-  // Derive page label from current path
   const base = `/admin/workspaces/${id}`;
-  const groups = buildNav(id);
+  const groups = buildNav(id, access);
   const allItems = groups.flatMap((g) => g.items);
   const active = allItems.find((item) => {
     if (item.to === base) return pathname === base || pathname === `${base}/`;
@@ -306,7 +355,6 @@ function WorkspaceHeader({
 
   return (
     <header className="flex h-14 shrink-0 items-center justify-between border-b border-border bg-white px-3 sm:px-6">
-      {/* Left: hamburger + breadcrumb */}
       <div className="flex items-center gap-2">
         <button
           type="button"
@@ -322,31 +370,27 @@ function WorkspaceHeader({
         </div>
       </div>
 
-      {/* Actions */}
       <div className="flex items-center gap-1 sm:gap-2">
-        {/* Search */}
         <button className="flex items-center gap-2 rounded-lg border border-border bg-muted/50 px-3 py-1.5 text-xs text-muted-foreground hover:bg-muted transition-colors">
           <Search className="h-3.5 w-3.5" />
           <span className="hidden sm:inline">Search...</span>
           <kbd className="hidden sm:inline ml-1 rounded bg-white border border-border px-1 font-mono text-[10px]">⌘K</kbd>
         </button>
-
-        {/* Notifications */}
         <Link
           to={`${base}/notifications`}
           className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
         >
           <Bell className="h-4 w-4" />
         </Link>
-
-        {/* Create button */}
-        <Link
-          to="/admin/blogs/new"
-          className="flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-sm font-semibold text-white hover:bg-primary/90 transition-colors"
-        >
-          <Plus className="h-3.5 w-3.5" />
-          <span className="hidden sm:inline">Create</span>
-        </Link>
+        {access.isFullAccess && (
+          <Link
+            to="/admin/blogs/new"
+            className="flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-sm font-semibold text-white hover:bg-primary/90 transition-colors"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">Create</span>
+          </Link>
+        )}
       </div>
     </header>
   );
@@ -355,11 +399,12 @@ function WorkspaceHeader({
 // ── Shell ─────────────────────────────────────────────────────────────────────
 function WorkspaceShell() {
   const { workspace } = Route.useLoaderData();
+  const { id } = Route.useParams();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const access = useWorkspaceAccess(id);
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">
-      {/* Mobile backdrop */}
       {sidebarOpen && (
         <div
           className="fixed inset-0 z-30 bg-black/40 md:hidden"
@@ -367,17 +412,17 @@ function WorkspaceShell() {
         />
       )}
 
-      {/* Left sidebar */}
       <WorkspaceSidebar
         workspace={workspace}
+        access={access}
         sidebarOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
       />
 
-      {/* Right: header + page content */}
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
         <WorkspaceHeader
           workspace={workspace}
+          access={access}
           onOpenSidebar={() => setSidebarOpen(true)}
         />
         <main className="flex-1 overflow-y-auto flex flex-col pb-16 md:pb-0">
@@ -385,23 +430,24 @@ function WorkspaceShell() {
         </main>
       </div>
 
-      {/* ── Mobile bottom nav ── */}
-      <WorkspaceBottomNav workspace={workspace} />
+      <WorkspaceBottomNav workspace={workspace} access={access} />
     </div>
   );
 }
 
-function WorkspaceBottomNav({ workspace }: { workspace: Workspace }) {
+function WorkspaceBottomNav({ workspace, access }: { workspace: Workspace; access: WorkspaceAccess }) {
   const { id } = Route.useParams();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const base = `/admin/workspaces/${id}`;
 
   const items = [
-    { label: "Dashboard",  to: base,                   icon: LayoutDashboard },
-    { label: "Blog Posts", to: `${base}/blogs`,         icon: FileText        },
-    { label: "Media",      to: `${base}/media`,         icon: ImageIcon       },
-    { label: "Analytics",  to: `${base}/analytics`,     icon: BarChart2       },
-    { label: "Settings",   to: `${base}/settings`,      icon: Settings        },
+    { label: "Dashboard",  to: base,               icon: LayoutDashboard },
+    { label: "Blog Posts", to: `${base}/blogs`,     icon: FileText        },
+    { label: "Media",      to: `${base}/media`,     icon: ImageIcon       },
+    { label: "Analytics",  to: `${base}/analytics`, icon: BarChart2       },
+    ...(access.isFullAccess ? [{ label: "Settings", to: `${base}/settings`, icon: Settings }] : [
+      { label: "Notifs", to: `${base}/notifications`, icon: Bell }
+    ]),
   ];
 
   function isActive(to: string) {
