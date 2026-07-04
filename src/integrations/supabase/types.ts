@@ -1177,12 +1177,18 @@ export type Database = {
           og_description: string | null
           og_image: string | null
           og_title: string | null
+          open_graph_type: string | null
           published_at: string | null
           reading_time: number
           robots: string | null
           scheduled_at: string | null
           seo_title: string | null
           slug: string
+          social_description: string | null
+          social_hashtags: Json | null
+          social_image: string | null
+          social_image_alt: string | null
+          social_title: string | null
           status: string
           tags: Json
           title: string
@@ -1208,12 +1214,18 @@ export type Database = {
           og_description?: string | null
           og_image?: string | null
           og_title?: string | null
+          open_graph_type?: string | null
           published_at?: string | null
           reading_time?: number
           robots?: string | null
           scheduled_at?: string | null
           seo_title?: string | null
           slug: string
+          social_description?: string | null
+          social_hashtags?: Json | null
+          social_image?: string | null
+          social_image_alt?: string | null
+          social_title?: string | null
           status?: string
           tags?: Json
           title?: string
@@ -1239,12 +1251,18 @@ export type Database = {
           og_description?: string | null
           og_image?: string | null
           og_title?: string | null
+          open_graph_type?: string | null
           published_at?: string | null
           reading_time?: number
           robots?: string | null
           scheduled_at?: string | null
           seo_title?: string | null
           slug?: string
+          social_description?: string | null
+          social_hashtags?: Json | null
+          social_image?: string | null
+          social_image_alt?: string | null
+          social_title?: string | null
           status?: string
           tags?: Json
           title?: string
