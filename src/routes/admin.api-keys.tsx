@@ -6,7 +6,8 @@ import { toast } from "sonner";
 import {
   Plus, Trash2, Copy, Key, AlertTriangle, Loader2,
   Eye, EyeOff, Shield, Globe, ChevronDown, ChevronUp,
-  Terminal, Lock, Link2, Check,
+  Terminal, Lock, Link2, Check, BarChart3, Clock, Activity,
+  TrendingUp,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -29,7 +30,6 @@ import {
 import { formatBlogDate } from "@/lib/blog-types";
 import { cn } from "@/lib/utils";
 
-// null workspaceId → listApiKeys resolves the default workspace server-side
 const keysQuery = queryOptions({
   queryKey: ["admin", "api_keys", "default"],
   queryFn: () => listApiKeys({ data: { workspaceId: null } }),
@@ -62,9 +62,7 @@ function KeyTypeBadge({ type }: { type: "publishable" | "secret" }) {
 
 function StatusBadge({ status }: { status: ApiKey["status"] }) {
   if (status === "active") {
-    return (
-      <span className="inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500" title="Active" />
-    );
+    return <span className="inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500" title="Active" />;
   }
   return (
     <Badge variant="outline" className="text-[10px] py-0 h-4 text-muted-foreground">
@@ -121,7 +119,6 @@ const CONTENT_ROUTER_URL = SUPABASE_URL
 
 function CopyableUrl({ label, url, note }: { label: string; url: string; note: string }) {
   const [copied, setCopied] = useState(false);
-
   function handleCopy() {
     if (!url) return;
     navigator.clipboard.writeText(url).then(() => {
@@ -129,7 +126,6 @@ function CopyableUrl({ label, url, note }: { label: string; url: string; note: s
       setTimeout(() => setCopied(false), 2000);
     });
   }
-
   return (
     <div className="space-y-1.5">
       <div className="flex items-center gap-2">
@@ -145,18 +141,8 @@ function CopyableUrl({ label, url, note }: { label: string; url: string; note: s
             <span className="text-xs text-muted-foreground italic">Supabase URL not configured</span>
           )}
         </div>
-        <Button
-          size="sm"
-          variant="outline"
-          className="shrink-0 h-9 gap-1.5"
-          onClick={handleCopy}
-          disabled={!url}
-        >
-          {copied ? (
-            <><Check className="h-3.5 w-3.5 text-emerald-600" /> Copied</>
-          ) : (
-            <><Copy className="h-3.5 w-3.5" /> Copy</>
-          )}
+        <Button size="sm" variant="outline" className="shrink-0 h-9 gap-1.5" onClick={handleCopy} disabled={!url}>
+          {copied ? <><Check className="h-3.5 w-3.5 text-emerald-600" /> Copied</> : <><Copy className="h-3.5 w-3.5" /> Copy</>}
         </Button>
       </div>
     </div>
@@ -169,22 +155,12 @@ function ApiBaseUrl() {
       <div className="flex items-center gap-2">
         <Link2 className="h-4 w-4 text-muted-foreground" />
         <h2 className="text-sm font-semibold">Base API URL</h2>
-        <span className="ml-auto rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 uppercase tracking-wide">
-          Live
-        </span>
+        <span className="ml-auto rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 uppercase tracking-wide">Live</span>
       </div>
-
       <p className="text-xs text-muted-foreground">
-        Use this URL as the base for all API requests. Append the resource path after it and pass your API key
-        as a <code className="rounded bg-muted px-1 text-[11px] font-mono">Bearer</code> token.
+        Use this URL as the base for all API requests. Append the resource path after it and pass your API key as a <code className="rounded bg-muted px-1 text-[11px] font-mono">Bearer</code> token.
       </p>
-
-      <CopyableUrl
-        label="Content Router"
-        url={CONTENT_ROUTER_URL}
-        note="— Recommended · full endpoint set"
-      />
-
+      <CopyableUrl label="Content Router" url={CONTENT_ROUTER_URL} note="— Recommended · full endpoint set" />
       <div className="rounded-lg bg-muted/50 p-3 space-y-1.5">
         <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Quick example</p>
         <pre className="overflow-x-auto text-[11px] font-mono text-foreground leading-relaxed whitespace-pre-wrap break-all">{CONTENT_ROUTER_URL
@@ -228,11 +204,7 @@ function GatewayReference() {
           <Terminal className="h-4 w-4 text-muted-foreground" />
           <span className="text-sm font-medium">API Endpoint Reference</span>
         </div>
-        {open ? (
-          <ChevronUp className="h-4 w-4 text-muted-foreground" />
-        ) : (
-          <ChevronDown className="h-4 w-4 text-muted-foreground" />
-        )}
+        {open ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
       </button>
 
       {open && (
@@ -240,15 +212,11 @@ function GatewayReference() {
           <p className="text-sm text-muted-foreground">
             All endpoints are served by the <code className="rounded bg-muted px-1 py-0.5 text-xs">content-router</code> Edge
             Function. Use your API key as a Bearer token — the key automatically resolves your workspace.
-            Callers never need to send workspace or tenant IDs.
           </p>
-
           <div className="space-y-0 divide-y divide-border rounded-lg border border-border overflow-hidden">
             {ENDPOINTS.map((ep) => (
               <div key={ep.path} className="flex items-start gap-3 px-4 py-3 bg-background">
-                <span className="mt-0.5 shrink-0 rounded bg-primary px-1.5 py-0.5 text-[10px] font-bold text-primary-foreground">
-                  {ep.method}
-                </span>
+                <span className="mt-0.5 shrink-0 rounded bg-primary px-1.5 py-0.5 text-[10px] font-bold text-primary-foreground">{ep.method}</span>
                 <div className="min-w-0 flex-1">
                   <code className="break-all text-xs font-mono text-foreground">{ep.path}</code>
                   <p className="mt-0.5 text-xs text-muted-foreground">{ep.desc}</p>
@@ -256,7 +224,6 @@ function GatewayReference() {
               </div>
             ))}
           </div>
-
           <div>
             <p className="mb-2 text-xs font-medium text-muted-foreground uppercase tracking-wide">Example — fetch all posts</p>
             <pre className="overflow-x-auto rounded-lg border border-border bg-slate-950 px-4 py-4 text-xs font-mono text-slate-100 leading-relaxed">{`const response = await fetch(
@@ -269,21 +236,6 @@ const { data, meta, links } = await response.json();
 // meta  = { page, limit, total, totalPages }
 // links = { first, previous, next, last }`}</pre>
           </div>
-
-          <div>
-            <p className="mb-2 text-xs font-medium text-muted-foreground uppercase tracking-wide">Response format</p>
-            <pre className="overflow-x-auto rounded-lg border border-border bg-slate-950 px-4 py-4 text-xs font-mono text-slate-100 leading-relaxed">{`// Success
-{
-  "success": true,
-  "data": [...],
-  "meta": { "page": 1, "limit": 20, "total": 42, "totalPages": 3 },
-  "links": { "first": "...", "previous": null, "next": "...", "last": "..." }
-}
-
-// Error
-{ "success": false, "error": { "code": "INVALID_API_KEY", "message": "..." } }`}</pre>
-          </div>
-
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="rounded-lg border border-border p-4">
               <div className="flex items-center gap-2 mb-2">
@@ -312,9 +264,17 @@ const { data, meta, links } = await response.json();
   );
 }
 
-// ── Create form ───────────────────────────────────────────────────────────────
+// ── Create key dialog ─────────────────────────────────────────────────────────
 
-function CreateKeyForm({ onCreated }: { onCreated: (key: string) => void }) {
+function CreateKeyDialog({
+  open,
+  onOpenChange,
+  onCreated,
+}: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  onCreated: (key: string) => void;
+}) {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [keyType, setKeyType] = useState<"publishable" | "secret">("publishable");
@@ -326,13 +286,10 @@ function CreateKeyForm({ onCreated }: { onCreated: (key: string) => void }) {
     setCreating(true);
     try {
       const result = await doCreate({
-        data: {
-          name: name.trim(),
-          description: description.trim() || undefined,
-          key_type: keyType,
-        },
+        data: { name: name.trim(), description: description.trim() || undefined, key_type: keyType },
       });
-      setName(""); setDescription("");
+      setName(""); setDescription(""); setKeyType("publishable");
+      onOpenChange(false);
       onCreated(result.key);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed to create key");
@@ -342,77 +299,301 @@ function CreateKeyForm({ onCreated }: { onCreated: (key: string) => void }) {
   }
 
   return (
-    <div className="space-y-4 rounded-lg border border-border p-5">
-      <div className="flex items-center gap-2">
-        <Key className="h-4 w-4 text-muted-foreground" />
-        <h2 className="text-sm font-semibold">Generate New Key</h2>
-      </div>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Key className="h-4 w-4" /> Generate New API Key
+          </DialogTitle>
+        </DialogHeader>
 
-      <p className="text-xs text-muted-foreground">
-        Keys are generated server-side using CSPRNG. Only a SHA-256 hash is stored — the raw key is shown once.
-      </p>
+        <div className="space-y-4 py-2">
+          <p className="text-xs text-muted-foreground">
+            Keys are generated server-side using CSPRNG. Only a SHA-256 hash is stored — the raw key is shown once.
+          </p>
 
-      {/* Key type */}
-      <div className="grid grid-cols-2 gap-3">
-        {(["publishable", "secret"] as const).map((type) => (
-          <button
-            key={type}
-            type="button"
-            onClick={() => setKeyType(type)}
-            className={cn(
-              "flex items-start gap-3 rounded-lg border p-3 text-left transition-colors",
-              keyType === type
-                ? "border-primary bg-primary/5"
-                : "border-border hover:border-muted-foreground/30 hover:bg-muted/30",
-            )}
-          >
-            {type === "publishable"
-              ? <Globe className={cn("h-4 w-4 mt-0.5 shrink-0", keyType === type ? "text-primary" : "text-muted-foreground")} />
-              : <Shield className={cn("h-4 w-4 mt-0.5 shrink-0", keyType === type ? "text-primary" : "text-muted-foreground")} />
-            }
+          {/* Key type */}
+          <div className="grid grid-cols-2 gap-3">
+            {(["publishable", "secret"] as const).map((type) => (
+              <button
+                key={type}
+                type="button"
+                onClick={() => setKeyType(type)}
+                className={cn(
+                  "flex items-start gap-3 rounded-lg border p-3 text-left transition-colors",
+                  keyType === type
+                    ? "border-primary bg-primary/5"
+                    : "border-border hover:border-muted-foreground/30 hover:bg-muted/30",
+                )}
+              >
+                {type === "publishable"
+                  ? <Globe className={cn("h-4 w-4 mt-0.5 shrink-0", keyType === type ? "text-primary" : "text-muted-foreground")} />
+                  : <Shield className={cn("h-4 w-4 mt-0.5 shrink-0", keyType === type ? "text-primary" : "text-muted-foreground")} />
+                }
+                <div>
+                  <p className="text-xs font-semibold capitalize">{type}</p>
+                  <p className="text-[10px] text-muted-foreground leading-tight mt-0.5">
+                    {type === "publishable" ? "Read-only · client-safe · pk_live_" : "Full access · server only · sk_live_"}
+                  </p>
+                </div>
+                {keyType === type && <span className="ml-auto h-2 w-2 mt-1 rounded-full bg-primary shrink-0" />}
+              </button>
+            ))}
+          </div>
+
+          <div className="space-y-3">
             <div>
-              <p className="text-xs font-semibold capitalize">{type}</p>
-              <p className="text-[10px] text-muted-foreground leading-tight mt-0.5">
-                {type === "publishable" ? "Read-only • client-safe • pk_live_" : "Full access • server only • sk_live_"}
-              </p>
+              <Label htmlFor="key-name" className="text-xs">Name <span className="text-destructive">*</span></Label>
+              <Input
+                id="key-name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleCreate()}
+                placeholder="e.g. My Website, Marketing App"
+                className="mt-1"
+                autoFocus
+              />
             </div>
-            {keyType === type && (
-              <span className="ml-auto h-2 w-2 mt-1 rounded-full bg-primary shrink-0" />
-            )}
-          </button>
-        ))}
+            <div>
+              <Label htmlFor="key-desc" className="text-xs text-muted-foreground">Description (optional)</Label>
+              <Textarea
+                id="key-desc"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="What is this key used for?"
+                rows={2}
+                className="mt-1 resize-none text-sm"
+              />
+            </div>
+          </div>
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+          <Button onClick={handleCreate} disabled={creating}>
+            {creating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />}
+            Generate Key
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ── Usage Analytics ───────────────────────────────────────────────────────────
+
+function daysAgo(isoDate: string): number {
+  const diff = Date.now() - new Date(isoDate).getTime();
+  return Math.floor(diff / (1000 * 60 * 60 * 24));
+}
+
+function UsageAnalytics({ keys }: { keys: ApiKey[] }) {
+  const active    = keys.filter((k) => k.status === "active" && !k.revoked_at);
+  const revoked   = keys.filter((k) => k.status !== "active" || k.revoked_at);
+  const published = keys.filter((k) => k.key_type === "publishable");
+  const secret    = keys.filter((k) => k.key_type === "secret");
+
+  const usedLast7  = keys.filter((k) => k.last_used_at && daysAgo(k.last_used_at) <= 7);
+  const usedLast30 = keys.filter((k) => k.last_used_at && daysAgo(k.last_used_at) <= 30);
+  const neverUsed  = keys.filter((k) => !k.last_used_at);
+
+  const byScope: Record<string, number> = {};
+  for (const k of keys) {
+    for (const p of k.permissions) {
+      byScope[p] = (byScope[p] ?? 0) + 1;
+    }
+  }
+  const topScopes = Object.entries(byScope)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 6);
+
+  const totalKeys = keys.length || 1;
+
+  return (
+    <div className="space-y-6">
+      {/* Section header */}
+      <div className="flex items-center gap-2 border-b border-border pb-3">
+        <BarChart3 className="h-4 w-4 text-muted-foreground" />
+        <h2 className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Usage Analytics</h2>
       </div>
 
-      {/* Name + description */}
-      <div className="space-y-3">
-        <div>
-          <Label htmlFor="key-name" className="text-xs">Name <span className="text-destructive">*</span></Label>
-          <Input
-            id="key-name"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleCreate()}
-            placeholder="e.g. My Website, Marketing App"
-            className="mt-1"
-          />
+      {keys.length === 0 ? (
+        <div className="flex flex-col items-center gap-3 py-12 text-center rounded-lg border border-dashed border-border">
+          <BarChart3 className="h-8 w-8 text-muted-foreground/40" />
+          <p className="text-sm text-muted-foreground">No API keys yet. Generate your first key to see analytics here.</p>
         </div>
-        <div>
-          <Label htmlFor="key-desc" className="text-xs text-muted-foreground">Description (optional)</Label>
-          <Textarea
-            id="key-desc"
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            placeholder="What is this key used for?"
-            rows={2}
-            className="mt-1 resize-none text-sm"
-          />
-        </div>
-      </div>
+      ) : (
+        <div className="grid gap-4 sm:grid-cols-2">
+          {/* Key type breakdown */}
+          <div className="rounded-lg border border-border p-5 space-y-4">
+            <div className="flex items-center gap-2">
+              <TrendingUp className="h-3.5 w-3.5 text-muted-foreground" />
+              <p className="text-xs font-semibold">Key Type Distribution</p>
+            </div>
 
-      <Button onClick={handleCreate} disabled={creating} className="w-full sm:w-auto">
-        {creating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />}
-        Generate Key
-      </Button>
+            <div className="space-y-3">
+              {/* Publishable */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="flex items-center gap-1.5 text-emerald-700 font-medium">
+                    <Globe className="h-3 w-3" /> Publishable (pk_live_)
+                  </span>
+                  <span className="tabular-nums text-muted-foreground">{published.length}/{keys.length}</span>
+                </div>
+                <div className="h-2 rounded-full bg-muted overflow-hidden">
+                  <div
+                    className="h-full rounded-full bg-emerald-500 transition-all"
+                    style={{ width: `${(published.length / totalKeys) * 100}%` }}
+                  />
+                </div>
+              </div>
+
+              {/* Secret */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="flex items-center gap-1.5 text-amber-700 font-medium">
+                    <Lock className="h-3 w-3" /> Secret (sk_live_)
+                  </span>
+                  <span className="tabular-nums text-muted-foreground">{secret.length}/{keys.length}</span>
+                </div>
+                <div className="h-2 rounded-full bg-muted overflow-hidden">
+                  <div
+                    className="h-full rounded-full bg-amber-500 transition-all"
+                    style={{ width: `${(secret.length / totalKeys) * 100}%` }}
+                  />
+                </div>
+              </div>
+
+              {/* Active vs revoked */}
+              <div className="space-y-1.5 pt-1 border-t border-border">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="flex items-center gap-1.5 font-medium">
+                    <span className="h-2 w-2 rounded-full bg-emerald-500 inline-block" /> Active
+                  </span>
+                  <span className="tabular-nums text-muted-foreground">{active.length}</span>
+                </div>
+                <div className="flex items-center justify-between text-xs">
+                  <span className="flex items-center gap-1.5 font-medium text-muted-foreground">
+                    <span className="h-2 w-2 rounded-full bg-muted-foreground/40 inline-block" /> Revoked
+                  </span>
+                  <span className="tabular-nums text-muted-foreground">{revoked.length}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Activity */}
+          <div className="rounded-lg border border-border p-5 space-y-4">
+            <div className="flex items-center gap-2">
+              <Activity className="h-3.5 w-3.5 text-muted-foreground" />
+              <p className="text-xs font-semibold">Activity Overview</p>
+            </div>
+
+            <div className="space-y-3">
+              <div className="flex items-center justify-between py-2 border-b border-border/60">
+                <div>
+                  <p className="text-sm font-bold tabular-nums text-emerald-600">{usedLast7.length}</p>
+                  <p className="text-[10px] uppercase tracking-wide text-muted-foreground mt-0.5">Used last 7 days</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-sm font-bold tabular-nums text-blue-600">{usedLast30.length}</p>
+                  <p className="text-[10px] uppercase tracking-wide text-muted-foreground mt-0.5">Used last 30 days</p>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-muted-foreground">Never used</span>
+                <span className={cn(
+                  "text-xs font-semibold tabular-nums",
+                  neverUsed.length > 0 ? "text-amber-600" : "text-emerald-600",
+                )}>
+                  {neverUsed.length} key{neverUsed.length !== 1 ? "s" : ""}
+                </span>
+              </div>
+
+              {neverUsed.length > 0 && (
+                <p className="text-[10px] text-muted-foreground leading-relaxed">
+                  {neverUsed.length > 1 ? `${neverUsed.length} keys have` : "1 key has"} never been used. Consider revoking unused keys to reduce your attack surface.
+                </p>
+              )}
+            </div>
+          </div>
+
+          {/* Permission scope breakdown */}
+          {topScopes.length > 0 && (
+            <div className="rounded-lg border border-border p-5 space-y-4 sm:col-span-2">
+              <div className="flex items-center gap-2">
+                <Shield className="h-3.5 w-3.5 text-muted-foreground" />
+                <p className="text-xs font-semibold">Permission Scope Usage</p>
+                <span className="ml-auto text-[10px] text-muted-foreground">across {keys.length} key{keys.length !== 1 ? "s" : ""}</span>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {topScopes.map(([scope, count]) => (
+                  <div key={scope} className="space-y-1.5">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="font-mono text-[10px] text-muted-foreground truncate">{scope}</span>
+                      <span className="text-[10px] text-muted-foreground ml-1 shrink-0">{count}</span>
+                    </div>
+                    <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+                      <div
+                        className={cn(
+                          "h-full rounded-full transition-all",
+                          scope.startsWith("write:") || scope.startsWith("manage:")
+                            ? "bg-violet-500"
+                            : "bg-sky-500",
+                        )}
+                        style={{ width: `${(count / totalKeys) * 100}%` }}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Recent activity list */}
+          <div className="rounded-lg border border-border sm:col-span-2 overflow-hidden">
+            <div className="flex items-center gap-2 px-4 py-3 border-b border-border">
+              <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+              <p className="text-xs font-semibold">Most Recently Used</p>
+            </div>
+            <div className="divide-y divide-border">
+              {keys
+                .filter((k) => k.last_used_at)
+                .sort((a, b) => new Date(b.last_used_at!).getTime() - new Date(a.last_used_at!).getTime())
+                .slice(0, 5)
+                .map((k) => {
+                  const days = daysAgo(k.last_used_at!);
+                  return (
+                    <div key={k.id} className="flex items-center gap-3 px-4 py-2.5">
+                      <StatusBadge status={k.status} />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs font-medium truncate">{k.name}</p>
+                        <p className="text-[10px] text-muted-foreground">
+                          {k.key_prefix}… · <KeyTypeBadge type={k.key_type} />
+                        </p>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <p className={cn(
+                          "text-[10px] font-medium",
+                          days <= 1 ? "text-emerald-600" : days <= 7 ? "text-blue-600" : "text-muted-foreground",
+                        )}>
+                          {days === 0 ? "Today" : days === 1 ? "Yesterday" : `${days}d ago`}
+                        </p>
+                        <p className="text-[10px] text-muted-foreground">{formatBlogDate(k.last_used_at!)}</p>
+                      </div>
+                    </div>
+                  );
+                })}
+              {keys.filter((k) => k.last_used_at).length === 0 && (
+                <div className="px-4 py-6 text-center text-xs text-muted-foreground">
+                  No keys have been used yet — usage activity will appear here.
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -450,51 +631,26 @@ function KeyTable({
         <TableBody>
           {keys.map((key) => (
             <TableRow key={key.id} className={key.status !== "active" ? "opacity-50" : ""}>
-              <TableCell className="pl-4 pr-0">
-                <StatusBadge status={key.status} />
-              </TableCell>
+              <TableCell className="pl-4 pr-0"><StatusBadge status={key.status} /></TableCell>
               <TableCell>
                 <p className="font-medium text-sm">{key.name}</p>
-                {key.description && (
-                  <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{key.description}</p>
-                )}
+                {key.description && <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{key.description}</p>}
               </TableCell>
-              <TableCell>
-                <code className="rounded bg-muted px-1.5 py-0.5 text-xs">{key.key_prefix}…</code>
-              </TableCell>
-              <TableCell>
-                <KeyTypeBadge type={key.key_type} />
-              </TableCell>
-              <TableCell>
-                <PermissionChips permissions={key.permissions} />
-              </TableCell>
-              <TableCell className="text-muted-foreground text-xs whitespace-nowrap">
-                {formatBlogDate(key.created_at)}
-              </TableCell>
+              <TableCell><code className="rounded bg-muted px-1.5 py-0.5 text-xs">{key.key_prefix}…</code></TableCell>
+              <TableCell><KeyTypeBadge type={key.key_type} /></TableCell>
+              <TableCell><PermissionChips permissions={key.permissions} /></TableCell>
+              <TableCell className="text-muted-foreground text-xs whitespace-nowrap">{formatBlogDate(key.created_at)}</TableCell>
               <TableCell className="text-muted-foreground text-xs whitespace-nowrap">
                 {key.last_used_at ? formatBlogDate(key.last_used_at) : "Never"}
               </TableCell>
               <TableCell>
                 <div className="flex items-center justify-end gap-1">
                   {key.status === "active" && (
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="h-7 text-xs"
-                      onClick={() => onRevoke(key)}
-                      disabled={busyId === key.id}
-                    >
-                      <AlertTriangle className="mr-1 h-3 w-3" />
-                      Revoke
+                    <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => onRevoke(key)} disabled={busyId === key.id}>
+                      <AlertTriangle className="mr-1 h-3 w-3" /> Revoke
                     </Button>
                   )}
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    className="h-7 w-7 text-destructive hover:text-destructive"
-                    onClick={() => onDelete(key)}
-                    disabled={busyId === key.id}
-                  >
+                  <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive hover:text-destructive" onClick={() => onDelete(key)} disabled={busyId === key.id}>
                     <Trash2 className="h-3.5 w-3.5" />
                   </Button>
                 </div>
@@ -511,15 +667,19 @@ function KeyTable({
 
 function ApiKeysPage() {
   const { data: keys } = useSuspenseQuery(keysQuery);
-  const queryClient = useQueryClient();
-  const revoke = useServerFn(revokeApiKey);
-  const del = useServerFn(deleteApiKey);
+  const queryClient    = useQueryClient();
+  const revoke         = useServerFn(revokeApiKey);
+  const del            = useServerFn(deleteApiKey);
 
-  const [newKeyDialog, setNewKeyDialog] = useState<{ key: string } | null>(null);
-  const [showKey, setShowKey] = useState(false);
+  const [createOpen,    setCreateOpen]    = useState(false);
+  const [newKeyDialog,  setNewKeyDialog]  = useState<{ key: string } | null>(null);
+  const [showKey,       setShowKey]       = useState(false);
   const [pendingRevoke, setPendingRevoke] = useState<ApiKey | null>(null);
   const [pendingDelete, setPendingDelete] = useState<ApiKey | null>(null);
-  const [busyId, setBusyId] = useState<string | null>(null);
+  const [busyId,        setBusyId]        = useState<string | null>(null);
+
+  const active   = keys.filter((k) => k.status === "active" && !k.revoked_at);
+  const inactive = keys.filter((k) => k.status !== "active" || k.revoked_at);
 
   async function refresh() {
     await queryClient.invalidateQueries({ queryKey: ["admin", "api_keys", "default"] });
@@ -565,31 +725,35 @@ function ApiKeysPage() {
     navigator.clipboard.writeText(key).then(() => toast.success("Key copied to clipboard"));
   }
 
-  const active = keys.filter((k) => k.status === "active" && !k.revoked_at);
-  const inactive = keys.filter((k) => k.status !== "active" || k.revoked_at);
-
   return (
     <div className="mx-auto max-w-5xl space-y-8 px-6 py-8">
       {/* Header */}
-      <div>
-        <h1 className="text-xl font-semibold">API Keys</h1>
-        <p className="mt-0.5 text-sm text-muted-foreground">
-          Generate keys to access your content from any external application. Keys are stored as SHA-256 hashes and never logged in plain text.
-        </p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-xl font-semibold">API Keys</h1>
+          <p className="mt-0.5 text-sm text-muted-foreground">
+            Manage and monitor access keys for the Lunar CMS content API. Keys are stored as SHA-256 hashes and never logged in plain text.
+          </p>
+        </div>
+        <Button onClick={() => setCreateOpen(true)} className="shrink-0 gap-1.5">
+          <Plus className="h-4 w-4" /> New Key
+        </Button>
       </div>
 
       {/* Stats strip */}
       <div className="flex divide-x divide-border border border-border rounded-lg overflow-hidden">
         {[
-          { label: "Active Keys",    value: active.length,   green: active.length > 0  },
-          { label: "Total Generated", value: keys.length,                               },
-          { label: "Revoked",         value: inactive.length, red: inactive.length > 0  },
-        ].map(({ label, value, green, red }) => (
+          { label: "Active Keys",     value: active.length,   green: active.length > 0   },
+          { label: "Total Generated", value: keys.length,                                 },
+          { label: "Revoked",         value: inactive.length, red: inactive.length > 0   },
+          { label: "Never Used",      value: keys.filter((k) => !k.last_used_at).length, amber: keys.filter((k) => !k.last_used_at).length > 0 },
+        ].map(({ label, value, green, red, amber }) => (
           <div key={label} className="flex-1 px-5 py-4">
             <p className={cn(
               "text-2xl font-bold tabular-nums",
               green && "text-emerald-600",
-              red && "text-destructive",
+              red   && "text-destructive",
+              amber && "text-amber-600",
             )}>
               {value}
             </p>
@@ -601,26 +765,25 @@ function ApiKeysPage() {
       {/* Base API URL */}
       <ApiBaseUrl />
 
+      {/* Usage analytics */}
+      <UsageAnalytics keys={keys} />
+
       {/* Gateway reference (collapsible) */}
       <GatewayReference />
-
-      {/* Create form */}
-      <CreateKeyForm onCreated={handleCreated} />
 
       {/* Active keys */}
       <section className="space-y-3">
         <div className="flex items-center gap-2 border-b border-border pb-3">
-          <h2 className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
-            Active Keys
-          </h2>
-          {active.length > 0 && (
-            <Badge variant="secondary" className="h-4 text-[10px] px-1.5">{active.length}</Badge>
-          )}
+          <h2 className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Active Keys</h2>
+          {active.length > 0 && <Badge variant="secondary" className="h-4 text-[10px] px-1.5">{active.length}</Badge>}
         </div>
         {active.length === 0 ? (
           <div className="flex flex-col items-center gap-3 py-12 text-center">
             <Key className="h-8 w-8 text-muted-foreground/40" />
-            <p className="text-sm text-muted-foreground">No active API keys yet. Generate one above.</p>
+            <p className="text-sm text-muted-foreground">No active API keys yet.</p>
+            <Button variant="outline" size="sm" onClick={() => setCreateOpen(true)}>
+              <Plus className="mr-1.5 h-3.5 w-3.5" /> Generate your first key
+            </Button>
           </div>
         ) : (
           <KeyTable keys={active} onRevoke={setPendingRevoke} onDelete={setPendingDelete} busyId={busyId} />
@@ -631,9 +794,7 @@ function ApiKeysPage() {
       {inactive.length > 0 && (
         <section className="space-y-3">
           <div className="flex items-center gap-2 border-b border-border pb-3">
-            <h2 className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
-              Revoked / Expired
-            </h2>
+            <h2 className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Revoked / Expired</h2>
             <Badge variant="outline" className="h-4 text-[10px] px-1.5">{inactive.length}</Badge>
           </div>
           <KeyTable keys={inactive} onRevoke={setPendingRevoke} onDelete={setPendingDelete} busyId={busyId} />
@@ -641,6 +802,9 @@ function ApiKeysPage() {
       )}
 
       {/* ── Dialogs ── */}
+
+      {/* Create key dialog */}
+      <CreateKeyDialog open={createOpen} onOpenChange={setCreateOpen} onCreated={handleCreated} />
 
       {/* New key reveal */}
       <Dialog open={Boolean(newKeyDialog)} onOpenChange={(o) => { if (!o) setNewKeyDialog(null); }}>
@@ -694,10 +858,7 @@ function ApiKeysPage() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleRevoke}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
+            <AlertDialogAction onClick={handleRevoke} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
               Revoke Key
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -715,10 +876,7 @@ function ApiKeysPage() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDelete}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
+            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
               Delete
             </AlertDialogAction>
           </AlertDialogFooter>

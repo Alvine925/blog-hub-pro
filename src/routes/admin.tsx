@@ -1,4 +1,5 @@
 import { createFileRoute, Link, Outlet, useRouterState, useNavigate } from "@tanstack/react-router";
+import { Suspense } from "react";
 import {
   LayoutDashboard, Moon, FolderOpen, CreditCard, Settings, ChevronRight,
   LogOut, Bell, BookOpen, HelpCircle, Map, FileText, Users,
@@ -201,6 +202,42 @@ function ProfileMenu({ email }: { email: string }) {
   );
 }
 
+// ── Content skeleton loader ────────────────────────────────────────────────────
+function ContentSkeleton() {
+  return (
+    <div className="mx-auto max-w-5xl space-y-6 px-6 py-8 animate-pulse">
+      {/* Page title */}
+      <div className="space-y-2">
+        <div className="h-5 w-40 rounded-md bg-muted" />
+        <div className="h-3.5 w-72 rounded-md bg-muted/60" />
+      </div>
+      {/* Stats strip */}
+      <div className="flex divide-x divide-border border border-border rounded-lg overflow-hidden">
+        {[1, 2, 3].map((i) => (
+          <div key={i} className="flex-1 px-5 py-4 space-y-2">
+            <div className="h-7 w-12 rounded-md bg-muted" />
+            <div className="h-2.5 w-20 rounded-md bg-muted/60" />
+          </div>
+        ))}
+      </div>
+      {/* Content cards */}
+      <div className="space-y-3">
+        <div className="h-3 w-24 rounded-md bg-muted/60" />
+        <div className="rounded-lg border border-border overflow-hidden divide-y divide-border">
+          {[1, 2, 3, 4, 5].map((i) => (
+            <div key={i} className="flex items-center gap-4 px-4 py-3">
+              <div className="h-3 w-3 rounded-full bg-muted" />
+              <div className="h-3.5 w-36 rounded-md bg-muted" />
+              <div className="ml-auto h-3 w-20 rounded-md bg-muted/60" />
+              <div className="h-3 w-16 rounded-md bg-muted/60" />
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Global Layout ──────────────────────────────────────────────────────────────
 function GlobalLayout() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
@@ -333,7 +370,9 @@ function GlobalLayout() {
 
         {/* Content */}
         <main className="flex-1 overflow-auto">
-          <Outlet />
+          <Suspense fallback={<ContentSkeleton />}>
+            <Outlet />
+          </Suspense>
         </main>
       </div>
 

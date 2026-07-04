@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
+import { buildAiDocsContext } from "./ai-docs-context";
 
 const messageSchema = z.object({
   role:    z.enum(["user", "assistant"]),
@@ -8,30 +9,32 @@ const messageSchema = z.object({
 
 const askSchema = z.object({
   messages: z.array(messageSchema).min(1).max(50),
-  context:  z.string().max(2000).optional(),
+  context:  z.string().max(8000).optional(),
 });
 
 /**
  * Server function that proxies to the ai-assistant Supabase edge function.
  * Forwards the user's session token so the edge function can verify auth.
+ * Always injects Lunar CMS developer docs as system knowledge context.
  */
 export const askAssistant = createServerFn({ method: "POST" })
   .validator((d: unknown) => askSchema.parse(d))
   .handler(async ({ data }): Promise<{ reply: string }> => {
-    const { getAdminClient } = await import("./supabase.server");
-
-    // Build the edge function URL — Replit secrets are in process.env
     const supabaseUrl = process.env.SUPABASE_URL ?? process.env.VITE_SUPABASE_URL ?? "";
-    // The service-role key is not injected into the app runtime here, so fall
-    // back to the publishable/anon key. The edge function accepts it for
-    // trusted server-to-server calls.
     const serviceKey  =
       process.env.SUPABASE_SERVICE_ROLE_KEY ??
       process.env.SUPABASE_SERVICE_ROLE ??
       process.env.SUPABASE_PUBLISHABLE_KEY ??
       process.env.VITE_SUPABASE_PUBLISHABLE_KEY ??
       "";
-    const edgeFnUrl   = `${supabaseUrl}/functions/v1/ai-assistant`;
+    const edgeFnUrl = `${supabaseUrl}/functions/v1/ai-assistant`;
+
+    // Always inject the full API docs knowledge as server-side context.
+    // Merge with any optional caller-supplied workspace context.
+    const docsContext = buildAiDocsContext();
+    const combinedContext = data.context
+      ? `${docsContext}\n\nWORKSPACE CONTEXT:\n${data.context}`
+      : docsContext;
 
     const res = await fetch(edgeFnUrl, {
       method: "POST",
@@ -39,7 +42,7 @@ export const askAssistant = createServerFn({ method: "POST" })
         "Content-Type":  "application/json",
         Authorization:   `Bearer ${serviceKey}`,
       },
-      body: JSON.stringify({ messages: data.messages, context: data.context }),
+      body: JSON.stringify({ messages: data.messages, context: combinedContext }),
     });
 
     if (!res.ok) {
