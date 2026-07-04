@@ -1,4 +1,43 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { Skeleton } from "@/components/ui/skeleton";
+
+function FaqsListSkeleton() {
+  return (
+    <div className="min-h-full px-8 py-8">
+      <div className="mb-8 flex items-center justify-between">
+        <div className="space-y-1.5">
+          <Skeleton className="h-6 w-12" />
+          <Skeleton className="h-4 w-28" />
+        </div>
+        <div className="flex items-center gap-2">
+          <Skeleton className="h-8 w-36 rounded-md" />
+          <Skeleton className="h-8 w-20 rounded-md" />
+        </div>
+      </div>
+      <div className="flex items-center gap-3 border-b border-border pb-2">
+        <Skeleton className="h-3.5 w-3.5 shrink-0 rounded" />
+        <Skeleton className="h-3 flex-1" />
+        <Skeleton className="h-3 w-24 hidden sm:block" />
+        <Skeleton className="h-3 w-20 hidden md:block" />
+        <Skeleton className="h-3 w-24 hidden lg:block" />
+        <Skeleton className="h-3 w-20" />
+      </div>
+      {[...Array(10)].map((_, i) => (
+        <div key={i} className="flex items-center gap-3 border-b border-border py-3 last:border-0">
+          <Skeleton className="h-3.5 w-3.5 shrink-0 rounded" />
+          <div className="flex-1 min-w-0 space-y-1.5">
+            <Skeleton className="h-4 w-2/3" />
+            <Skeleton className="h-3 w-20" />
+          </div>
+          <Skeleton className="h-4 w-24 shrink-0 rounded-full hidden sm:block" />
+          <Skeleton className="h-4 w-20 shrink-0 rounded-full hidden md:block" />
+          <Skeleton className="h-3 w-24 shrink-0 hidden lg:block" />
+          <Skeleton className="h-7 w-16 shrink-0 rounded-md" />
+        </div>
+      ))}
+    </div>
+  );
+}
 import { queryOptions, useSuspenseQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
@@ -23,6 +62,7 @@ const listQuery = (workspaceId: string) =>
 
 export const Route = createFileRoute("/admin/workspaces/$id/faqs/")({
   loader: ({ context, params }) => context.queryClient.ensureQueryData(listQuery(params.id)),
+  pendingComponent: FaqsListSkeleton,
   component: WorkspaceFaqs,
   errorComponent: ({ error }) => <p className="p-8 text-sm text-red-600">{error.message}</p>,
 });

@@ -1,4 +1,43 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { Skeleton } from "@/components/ui/skeleton";
+
+function BlogsListSkeleton() {
+  return (
+    <div className="min-h-full px-8 py-8">
+      <div className="mb-8 flex items-center justify-between">
+        <div className="space-y-1.5">
+          <Skeleton className="h-6 w-16" />
+          <Skeleton className="h-4 w-28" />
+        </div>
+        <div className="flex items-center gap-2">
+          <Skeleton className="h-8 w-36 rounded-md" />
+          <Skeleton className="h-8 w-24 rounded-md" />
+        </div>
+      </div>
+      <div className="flex items-center gap-3 border-b border-border pb-2">
+        <Skeleton className="h-3 flex-1" />
+        <Skeleton className="h-3 w-20 hidden sm:block" />
+        <Skeleton className="h-3 w-24 hidden md:block" />
+        <Skeleton className="h-3 w-28 hidden lg:block" />
+        <Skeleton className="h-3 w-16 hidden xl:block" />
+        <Skeleton className="h-3 w-20" />
+      </div>
+      {[...Array(10)].map((_, i) => (
+        <div key={i} className="flex items-center gap-3 border-b border-border py-3 last:border-0">
+          <div className="flex-1 min-w-0 space-y-1.5">
+            <Skeleton className="h-4 w-3/4" />
+            <Skeleton className="h-3 w-24" />
+          </div>
+          <Skeleton className="h-3 w-20 shrink-0 hidden sm:block" />
+          <Skeleton className="h-3 w-24 shrink-0 hidden md:block" />
+          <Skeleton className="h-3 w-28 shrink-0 hidden lg:block" />
+          <Skeleton className="h-3 w-12 shrink-0 hidden xl:block" />
+          <Skeleton className="h-7 w-20 shrink-0 rounded-md" />
+        </div>
+      ))}
+    </div>
+  );
+}
 import { createServerFn } from "@tanstack/react-start";
 import { queryOptions, useSuspenseQuery, useQueryClient, useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -73,6 +112,7 @@ export const Route = createFileRoute("/admin/workspaces/$id/blogs/")({
     await context.queryClient.ensureQueryData(listQuery(params.id));
     context.queryClient.prefetchQuery(engagementQuery(params.id)).catch(() => {});
   },
+  pendingComponent: BlogsListSkeleton,
   component: WorkspaceBlogs,
   errorComponent: ({ error }) => <p className="p-8 text-sm text-red-600">{error.message}</p>,
 });
