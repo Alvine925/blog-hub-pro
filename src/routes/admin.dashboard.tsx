@@ -13,6 +13,102 @@ import { formatBlogDate } from "@/lib/blog-types";
 import { getWorkspaceIntelligence } from "@/lib/onboarding.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
+import { Skeleton } from "@/components/ui/skeleton";
+
+// ── Loading skeleton ──────────────────────────────────────────────────────────
+function DashboardSkeleton() {
+  return (
+    <div className="space-y-10 p-8">
+      {/* Header */}
+      <div className="flex items-start justify-between gap-4">
+        <div className="space-y-2">
+          <Skeleton className="h-6 w-32" />
+          <Skeleton className="h-4 w-64" />
+        </div>
+        <Skeleton className="h-8 w-28 rounded-md" />
+      </div>
+
+      {/* Stats bar */}
+      <div className="flex divide-x divide-border border-y border-border">
+        {[120, 80, 96, 88, 110].map((w, i) => (
+          <div key={i} className="flex-1 px-5 py-5 space-y-2">
+            <Skeleton className="h-7 w-10" />
+            <Skeleton className={`h-3 w-${w > 100 ? 20 : 16}`} />
+          </div>
+        ))}
+      </div>
+
+      {/* API strip */}
+      <Skeleton className="h-20 w-full rounded-lg" />
+
+      {/* Content + sidebar grid */}
+      <div className="grid gap-10 lg:grid-cols-[1fr_280px]">
+        {/* Left column */}
+        <div className="space-y-10">
+          {/* Section: Top Posts */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between border-b border-border pb-3">
+              <Skeleton className="h-3 w-28" />
+              <Skeleton className="h-3 w-14" />
+            </div>
+            {[...Array(5)].map((_, i) => (
+              <div key={i} className="flex items-center gap-3 border-b border-border py-3 last:border-0">
+                <Skeleton className="h-3 w-4 shrink-0" />
+                <Skeleton className="h-3 flex-1" />
+                <Skeleton className="h-5 w-16 rounded-full" />
+              </div>
+            ))}
+          </div>
+
+          {/* Section: Recently Updated */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between border-b border-border pb-3">
+              <Skeleton className="h-3 w-36" />
+              <Skeleton className="h-3 w-14" />
+            </div>
+            {[...Array(5)].map((_, i) => (
+              <div key={i} className="flex items-center gap-3 border-b border-border py-3 last:border-0">
+                <Skeleton className="h-2 w-2 rounded-full shrink-0" />
+                <Skeleton className="h-3 flex-1" />
+                <Skeleton className="h-3 w-16" />
+                <Skeleton className="h-3 w-10" />
+              </div>
+            ))}
+          </div>
+
+          {/* Section: News */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between border-b border-border pb-3">
+              <Skeleton className="h-3 w-24" />
+              <Skeleton className="h-3 w-14" />
+            </div>
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="flex items-center gap-3 border-b border-border py-3 last:border-0">
+                <Skeleton className="h-2 w-2 rounded-full shrink-0" />
+                <Skeleton className="h-3 flex-1" />
+                <Skeleton className="h-3 w-12" />
+                <Skeleton className="h-3 w-10" />
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Right sidebar */}
+        <div className="rounded-xl border border-border p-4 space-y-4" style={{ minHeight: "520px" }}>
+          <Skeleton className="h-5 w-32" />
+          <Skeleton className="h-4 w-full" />
+          <Skeleton className="h-4 w-5/6" />
+          <div className="space-y-2 pt-2">
+            {[...Array(4)].map((_, i) => (
+              <Skeleton key={i} className="h-9 w-full rounded-lg" />
+            ))}
+          </div>
+          <Skeleton className="h-32 w-full rounded-lg" />
+        </div>
+      </div>
+    </div>
+  );
+}
 
 // ── All-content overview ──────────────────────────────────────────────────────
 interface ContentItem {
@@ -96,6 +192,7 @@ export const Route = createFileRoute("/admin/dashboard")({
     await publishScheduledPosts().catch(() => {});
     return context.queryClient.ensureQueryData(statsQuery);
   },
+  pendingComponent: DashboardSkeleton,
   component: Dashboard,
   errorComponent: ({ error }) => (
     <p className="text-sm text-destructive">Failed to load stats: {error.message}</p>

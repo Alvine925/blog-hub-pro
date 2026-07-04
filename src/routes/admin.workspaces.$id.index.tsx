@@ -2,6 +2,124 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
 import { useState } from "react";
+import { Skeleton } from "@/components/ui/skeleton";
+
+// ── Loading skeleton ──────────────────────────────────────────────────────────
+function WorkspaceOverviewSkeleton() {
+  return (
+    <div className="min-h-full space-y-12 px-8 py-8">
+      {/* Header */}
+      <div className="flex items-start justify-between gap-4">
+        <div className="space-y-2">
+          <Skeleton className="h-6 w-28" />
+          <Skeleton className="h-4 w-72" />
+        </div>
+        <Skeleton className="h-9 w-28 rounded-lg" />
+      </div>
+
+      {/* Stats row — 7 columns */}
+      <div className="grid grid-cols-4 gap-x-8 gap-y-6 sm:grid-cols-7">
+        {[...Array(7)].map((_, i) => (
+          <div key={i} className="space-y-1.5">
+            <Skeleton className="h-7 w-12" />
+            <Skeleton className="h-3 w-16" />
+          </div>
+        ))}
+      </div>
+
+      {/* Status progress bar */}
+      <div className="space-y-2">
+        <Skeleton className="h-1.5 w-full rounded-full" />
+        <div className="flex items-center gap-5">
+          <Skeleton className="h-3 w-24" />
+          <Skeleton className="h-3 w-24" />
+          <Skeleton className="h-3 w-16" />
+        </div>
+      </div>
+
+      {/* Intelligence grid — 3 columns */}
+      <div className="grid gap-10 lg:grid-cols-3">
+        {[...Array(3)].map((_, col) => (
+          <div key={col} className="space-y-4">
+            <div className="flex items-center justify-between border-b border-border pb-3">
+              <Skeleton className="h-3 w-24" />
+            </div>
+            <div className="space-y-5">
+              {[...Array(4)].map((_, i) => (
+                <div key={i} className="space-y-1.5">
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-3 w-3/4" />
+                  <div className="flex gap-1.5 pt-1">
+                    <Skeleton className="h-5 w-16 rounded-full" />
+                    <Skeleton className="h-5 w-14 rounded-full" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Main grid: left content + right activity */}
+      <div className="grid gap-12 lg:grid-cols-[1fr_260px]">
+        {/* Left */}
+        <div className="space-y-10">
+          {/* Recent Posts */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between border-b border-border pb-3">
+              <Skeleton className="h-3 w-28" />
+              <Skeleton className="h-3 w-14" />
+            </div>
+            {[...Array(6)].map((_, i) => (
+              <div key={i} className="flex items-center gap-3 py-2.5 border-b border-border/60 last:border-0">
+                <Skeleton className="h-3 flex-1" />
+                <Skeleton className="h-4 w-20 rounded-full" />
+                <Skeleton className="h-3 w-16" />
+              </div>
+            ))}
+          </div>
+
+          {/* Quick Actions grid */}
+          <div className="space-y-4">
+            <div className="border-b border-border pb-3">
+              <Skeleton className="h-3 w-28" />
+            </div>
+            <div className="grid gap-0 sm:grid-cols-2 lg:grid-cols-3 divide-y sm:divide-y-0">
+              {[...Array(6)].map((_, i) => (
+                <div key={i} className="flex items-center gap-3 py-3 pr-3">
+                  <Skeleton className="h-7 w-7 rounded-lg shrink-0" />
+                  <div className="space-y-1 flex-1">
+                    <Skeleton className="h-3.5 w-24" />
+                    <Skeleton className="h-3 w-32" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Right: Activity */}
+        <div className="space-y-4">
+          <div className="border-b border-border pb-3">
+            <Skeleton className="h-3 w-16" />
+          </div>
+          <div className="space-y-4">
+            {[...Array(6)].map((_, i) => (
+              <div key={i} className="flex items-start gap-3">
+                <Skeleton className="h-5 w-5 rounded-full shrink-0 mt-0.5" />
+                <div className="space-y-1.5 flex-1">
+                  <Skeleton className="h-3 w-full" />
+                  <Skeleton className="h-3 w-3/4" />
+                  <Skeleton className="h-2.5 w-16" />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 import {
   FileText, Layers, ImageIcon, Sparkles, Key, Clock, Activity,
   Plus, Eye, Send, FilePen, ArrowRight, Zap, TrendingUp,
@@ -149,9 +267,10 @@ const overviewQuery = (id: string) =>
   });
 
 export const Route = createFileRoute("/admin/workspaces/$id/")({
-  loader:         ({ context, params }) => context.queryClient.ensureQueryData(overviewQuery(params.id)),
-  component:      WorkspaceOverview,
-  errorComponent: ({ error }) => <p className="p-8 text-sm text-red-600">{error.message}</p>,
+  loader:           ({ context, params }) => context.queryClient.ensureQueryData(overviewQuery(params.id)),
+  pendingComponent: WorkspaceOverviewSkeleton,
+  component:        WorkspaceOverview,
+  errorComponent:   ({ error }) => <p className="p-8 text-sm text-red-600">{error.message}</p>,
 });
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
