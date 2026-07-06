@@ -51,7 +51,26 @@ function PreparingStep() {
   const [taskIdx, setTaskIdx] = useState(0);
   const [done, setDone]       = useState(false);
   const [error, setError]     = useState("");
+  const [skipping, setSkipping] = useState(false);
   const ran = useRef(false);
+
+  const skipToDashboard = async () => {
+    setSkipping(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user?.id && session?.access_token) {
+        await upsertOnboardingState({
+          data: {
+            userId: session.user.id,
+            accessToken: session.access_token,
+            step: "complete",
+            completed_at: new Date().toISOString(),
+          },
+        });
+      }
+    } catch { /* non-fatal */ }
+    navigate({ to: "/admin/dashboard" });
+  };
 
   useEffect(() => {
     if (ran.current) return;
@@ -277,6 +296,19 @@ function PreparingStep() {
           );
         })}
       </div>
+
+      {!done && (
+        <div className="mt-8">
+          <button
+            onClick={skipToDashboard}
+            disabled={skipping}
+            className="flex items-center gap-1 text-sm text-zinc-400 transition-colors hover:text-zinc-600 disabled:opacity-50"
+          >
+            {skipping && <Loader2 className="h-3 w-3 animate-spin" />}
+            Skip to dashboard
+          </button>
+        </div>
+      )}
     </div>
   );
 }

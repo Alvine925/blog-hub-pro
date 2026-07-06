@@ -83,21 +83,10 @@ function OnboardingLayout() {
           ))}
         </div>
 
-        {/* Right side: skip button (hidden on complete step) or step counter */}
-        <div className="flex items-center gap-3">
-          <span className="hidden text-xs text-zinc-400 sm:inline">
-            {stepIdx + 1} / {STEPS.length}
-          </span>
-
-          {!isComplete && (
-            <button
-              onClick={() => navigate({ to: "/admin/dashboard" })}
-              className="text-xs text-zinc-400 transition-colors hover:text-zinc-700"
-            >
-              Skip setup →
-            </button>
-          )}
-        </div>
+        {/* Step counter */}
+        <span className="text-xs text-zinc-400">
+          {stepIdx + 1} / {STEPS.length}
+        </span>
       </header>
 
       {/* Content */}

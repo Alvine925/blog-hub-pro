@@ -34,7 +34,26 @@ function CollectionsStep() {
   const [selected, setSelected] = useState<Set<CollectionId>>(
     new Set(["blogs", "pages", "media"]),
   );
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading]   = useState(false);
+  const [skipping, setSkipping] = useState(false);
+
+  const skipToDashboard = async () => {
+    setSkipping(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user?.id && session?.access_token) {
+        await upsertOnboardingState({
+          data: {
+            userId: session.user.id,
+            accessToken: session.access_token,
+            step: "complete",
+            completed_at: new Date().toISOString(),
+          },
+        });
+      }
+    } catch { /* non-fatal */ }
+    navigate({ to: "/admin/dashboard" });
+  };
 
   const toggle = (id: CollectionId, required?: boolean) => {
     if (required) return;
@@ -119,7 +138,7 @@ function CollectionsStep() {
         {selected.size} type{selected.size !== 1 ? "s" : ""} selected
       </p>
 
-      <div className="mt-10 flex items-center gap-4">
+      <div className="mt-10 flex flex-wrap items-center gap-3">
         <button
           onClick={() => navigate({ to: "/onboarding/analyzing" })}
           className="text-sm text-zinc-400 hover:text-zinc-700 transition-colors"
@@ -135,6 +154,14 @@ function CollectionsStep() {
             ? <><Loader2 className="h-4 w-4 animate-spin" /> Setting up…</>
             : <>Set up workspace <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" /></>
           }
+        </button>
+        <button
+          onClick={skipToDashboard}
+          disabled={skipping}
+          className="flex items-center gap-1 text-sm text-zinc-400 transition-colors hover:text-zinc-600 disabled:opacity-50"
+        >
+          {skipping && <Loader2 className="h-3 w-3 animate-spin" />}
+          Skip
         </button>
       </div>
     </div>

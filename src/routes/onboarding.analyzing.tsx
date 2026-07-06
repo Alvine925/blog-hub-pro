@@ -29,7 +29,26 @@ function AnalyzingStep() {
   const [intelligence, setIntelligence] = useState<WebsiteIntelligence | null>(null);
   const [errorMsg, setErrorMsg]  = useState("");
   const [savedUrl, setSavedUrl]  = useState(url);
+  const [skipping, setSkipping]  = useState(false);
   const ran = useRef(false);
+
+  const skipToDashboard = async () => {
+    setSkipping(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user?.id && session?.access_token) {
+        await upsertOnboardingState({
+          data: {
+            userId: session.user.id,
+            accessToken: session.access_token,
+            step: "complete",
+            completed_at: new Date().toISOString(),
+          },
+        });
+      }
+    } catch { /* non-fatal */ }
+    navigate({ to: "/admin/dashboard" });
+  };
 
   useEffect(() => {
     if (ran.current) return;
@@ -119,6 +138,17 @@ function AnalyzingStep() {
             );
           })}
         </div>
+
+        <div className="mt-8">
+          <button
+            onClick={skipToDashboard}
+            disabled={skipping}
+            className="flex items-center gap-1 text-sm text-zinc-400 transition-colors hover:text-zinc-600 disabled:opacity-50"
+          >
+            {skipping && <Loader2 className="h-3 w-3 animate-spin" />}
+            Skip to dashboard
+          </button>
+        </div>
       </div>
     );
   }
@@ -137,7 +167,7 @@ function AnalyzingStep() {
           {errorMsg || "Some websites block automated scanners. Try a different URL or skip this step."}
         </p>
 
-        <div className="mt-10 flex items-center gap-4">
+        <div className="mt-10 flex flex-wrap items-center gap-3">
           <button
             onClick={() => navigate({ to: "/onboarding/website" })}
             className="text-sm text-zinc-400 hover:text-zinc-700 transition-colors"
@@ -145,10 +175,12 @@ function AnalyzingStep() {
             ← Try another URL
           </button>
           <button
-            onClick={async () => { const { data: { session } } = await supabase.auth.getSession(); if (session?.user?.id && session?.access_token) await upsertOnboardingState({ data: { userId: session.user.id, accessToken: session.access_token, step: "collections" } }).catch(() => {}); navigate({ to: "/onboarding/collections" }); }}
-            className="group flex items-center gap-2 rounded-lg bg-zinc-900 px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-zinc-700"
+            onClick={skipToDashboard}
+            disabled={skipping}
+            className="flex items-center gap-1 text-sm text-zinc-400 transition-colors hover:text-zinc-600 disabled:opacity-50"
           >
-            Skip <ArrowRight className="h-4 w-4" />
+            {skipping && <Loader2 className="h-3 w-3 animate-spin" />}
+            Skip to dashboard
           </button>
         </div>
       </div>
@@ -244,7 +276,7 @@ function AnalyzingStep() {
         </div>
       )}
 
-      <div className="mt-12 flex items-center gap-4">
+      <div className="mt-12 flex flex-wrap items-center gap-3">
         <button
           onClick={() => navigate({ to: "/onboarding/website" })}
           className="text-sm text-zinc-400 hover:text-zinc-700 transition-colors"
@@ -257,6 +289,14 @@ function AnalyzingStep() {
         >
           Looks good — continue
           <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+        </button>
+        <button
+          onClick={skipToDashboard}
+          disabled={skipping}
+          className="flex items-center gap-1 text-sm text-zinc-400 transition-colors hover:text-zinc-600 disabled:opacity-50"
+        >
+          {skipping && <Loader2 className="h-3 w-3 animate-spin" />}
+          Skip to dashboard
         </button>
       </div>
     </div>

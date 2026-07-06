@@ -31,9 +31,28 @@ const WHAT_WE_SCAN = [
 
 function WebsiteStep() {
   const navigate = useNavigate();
-  const [url, setUrl]       = useState("");
+  const [url, setUrl]         = useState("");
   const [loading, setLoading] = useState(false);
-  const [error, setError]   = useState("");
+  const [error, setError]     = useState("");
+  const [skipping, setSkipping] = useState(false);
+
+  const skipToDashboard = async () => {
+    setSkipping(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user?.id && session?.access_token) {
+        await upsertOnboardingState({
+          data: {
+            userId: session.user.id,
+            accessToken: session.access_token,
+            step: "complete",
+            completed_at: new Date().toISOString(),
+          },
+        });
+      }
+    } catch { /* non-fatal */ }
+    navigate({ to: "/admin/dashboard" });
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -93,7 +112,7 @@ function WebsiteStep() {
           </div>
         )}
 
-        <div className="mt-10 flex items-center gap-4">
+        <div className="mt-10 flex flex-wrap items-center gap-3 sm:gap-4">
           <button
             type="button"
             onClick={() => navigate({ to: "/onboarding/welcome" })}
@@ -111,6 +130,15 @@ function WebsiteStep() {
             ) : (
               <>Analyse website <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" /></>
             )}
+          </button>
+          <button
+            type="button"
+            onClick={skipToDashboard}
+            disabled={skipping}
+            className="flex items-center gap-1 text-sm text-zinc-400 transition-colors hover:text-zinc-600 disabled:opacity-50"
+          >
+            {skipping && <Loader2 className="h-3 w-3 animate-spin" />}
+            Skip
           </button>
         </div>
       </form>
