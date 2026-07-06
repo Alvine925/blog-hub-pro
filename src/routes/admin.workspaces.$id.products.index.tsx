@@ -46,8 +46,9 @@ import { useServerFn } from "@tanstack/react-start";
 import { useState, useMemo } from "react";
 import { toast } from "sonner";
 import {
-  Plus, Pencil, Trash2, Send, Eye, Tag, DollarSign, Package, Heart, MessageSquare, Sparkles,
+  Plus, Pencil, Trash2, Send, Eye, Tag, DollarSign, Package, Heart, MessageSquare, Sparkles, Download,
 } from "lucide-react";
+import { exportToCsv, exportFilename } from "@/lib/export-utils";
 import { GenerateContentDialog } from "@/components/ai/GenerateContentDialog";
 import {
   adminListProducts, deleteProduct, setProductStatus,
@@ -136,6 +137,21 @@ function WorkspaceProducts() {
     } catch (e) { toast.error(e instanceof Error ? e.message : "Failed"); }
   }
 
+  function handleExport() {
+    exportToCsv(exportFilename("products"), products.map((p) => ({
+      Name:      p.name || "Untitled",
+      Status:    p.status,
+      Category:  p.category || "",
+      Brand:     p.brand    || "",
+      Price:     p.price    != null ? p.price : "",
+      Currency:  p.currency || "USD",
+      Slug:      (p as Record<string, unknown>).slug as string ?? "",
+      Views:     batchStats?.[p.id]?.views    ?? p.views ?? 0,
+      Likes:     batchStats?.[p.id]?.likes    ?? 0,
+      Comments:  batchStats?.[p.id]?.comments ?? 0,
+    })));
+  }
+
   return (
     <div className="min-h-full px-4 py-4 sm:px-8 sm:py-8">
       {/* Header */}
@@ -145,6 +161,15 @@ function WorkspaceProducts() {
           <p className="mt-0.5 text-sm text-muted-foreground">{products.length} products total</p>
         </div>
         <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={handleExport}
+            disabled={products.length === 0}
+            className="flex items-center gap-1.5 rounded-md border border-border bg-background px-3 py-1.5 text-sm font-medium hover:bg-muted transition-colors disabled:opacity-40"
+            title="Export to CSV"
+          >
+            <Download className="h-3.5 w-3.5" /> Export
+          </button>
           <button
             type="button"
             onClick={() => setGenerateOpen(true)}

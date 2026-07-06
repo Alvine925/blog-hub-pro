@@ -44,8 +44,9 @@ import { useState, useMemo } from "react";
 import { toast } from "sonner";
 import {
   Plus, Pencil, Trash2, Send, Eye, Clock, BookOpen, Heart, MessageSquare,
-  Sparkles, CheckSquare, Square, Loader2, X,
+  Sparkles, CheckSquare, Square, Loader2, X, Download,
 } from "lucide-react";
+import { exportToCsv, exportFilename } from "@/lib/export-utils";
 import { GenerateContentDialog } from "@/components/ai/GenerateContentDialog";
 import { adminListArticles, deleteArticle, setArticleStatus, type ArticleSummary } from "@/lib/article.functions";
 import { getBatchContentEngagementStats } from "@/lib/engagement.functions";
@@ -160,6 +161,20 @@ function WorkspaceArticles() {
     } catch (e) { toast.error(e instanceof Error ? e.message : "Failed"); }
   }
 
+  function handleExport() {
+    exportToCsv(exportFilename("articles"), articles.map((a) => ({
+      Title:          a.title || "Untitled",
+      Status:         a.status,
+      Type:           TYPE_LABEL[a.article_type] ?? a.article_type,
+      Category:       a.category || "",
+      Slug:           (a as Record<string, unknown>).slug as string ?? "",
+      "Published At": a.published_at ? new Date(a.published_at).toLocaleDateString() : "",
+      Views:          batchStats?.[a.id]?.views    ?? a.views ?? 0,
+      Likes:          batchStats?.[a.id]?.likes    ?? 0,
+      Comments:       batchStats?.[a.id]?.comments ?? 0,
+    })));
+  }
+
   return (
     <div className="min-h-full px-4 py-4 sm:px-8 sm:py-8">
       <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -168,6 +183,9 @@ function WorkspaceArticles() {
           <p className="mt-0.5 text-sm text-muted-foreground">{articles.length} articles total</p>
         </div>
         <div className="flex items-center gap-2">
+          <button type="button" onClick={handleExport} disabled={articles.length === 0} className="flex items-center gap-1.5 rounded-md border border-border bg-background px-3 py-1.5 text-sm font-medium hover:bg-muted transition-colors disabled:opacity-40" title="Export to CSV">
+            <Download className="h-3.5 w-3.5" /> Export
+          </button>
           <button type="button" onClick={() => setGenerateOpen(true)} className="flex items-center gap-1.5 rounded-md border border-primary/30 bg-primary/5 px-3 py-1.5 text-sm font-medium text-primary hover:bg-primary/10 transition-colors">
             <Sparkles className="h-3.5 w-3.5" /> Generate with AI
           </button>

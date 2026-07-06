@@ -44,8 +44,9 @@ import { useState } from "react";
 import { toast } from "sonner";
 import {
   Pencil, Trash2, Send, Sparkles, X, Save, Plus,
-  CheckSquare, Square, Loader2,
+  CheckSquare, Square, Loader2, Download,
 } from "lucide-react";
+import { exportToCsv, exportFilename } from "@/lib/export-utils";
 import { GenerateContentDialog } from "@/components/ai/GenerateContentDialog";
 import { adminListFaqs, upsertFaq, deleteFaq, setFaqStatus, type Faq } from "@/lib/faq.functions";
 import { cn } from "@/lib/utils";
@@ -162,6 +163,15 @@ function WorkspaceFaqs() {
     } catch (e) { toast.error(e instanceof Error ? e.message : "Failed"); }
   }
 
+  function handleExport() {
+    exportToCsv(exportFilename("faqs"), faqs.map((f) => ({
+      Question: f.question,
+      Answer:   f.answer.replace(/<[^>]+>/g, ""),
+      Category: f.category || "",
+      Status:   f.status,
+    })));
+  }
+
   return (
     <div className="min-h-full px-4 py-4 sm:px-8 sm:py-8">
       <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -172,6 +182,9 @@ function WorkspaceFaqs() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <button type="button" onClick={handleExport} disabled={faqs.length === 0} className="flex items-center gap-1.5 rounded-md border border-border bg-background px-3 py-1.5 text-sm font-medium hover:bg-muted transition-colors disabled:opacity-40" title="Export to CSV">
+            <Download className="h-3.5 w-3.5" /> Export
+          </button>
           <button type="button" onClick={() => setGenerateOpen(true)} className="flex items-center gap-1.5 rounded-md border border-primary/30 bg-primary/5 px-3 py-1.5 text-sm font-medium text-primary hover:bg-primary/10 transition-colors">
             <Sparkles className="h-3.5 w-3.5" /> Generate with AI
           </button>

@@ -43,7 +43,8 @@ import { queryOptions, useSuspenseQuery, useQueryClient, useQuery } from "@tanst
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2, Clock, Eye, Send, Heart, MessageSquare, Share2, Sparkles, Loader2 } from "lucide-react";
+import { Plus, Pencil, Trash2, Clock, Eye, Send, Heart, MessageSquare, Share2, Sparkles, Loader2, Download } from "lucide-react";
+import { exportToCsv, exportFilename } from "@/lib/export-utils";
 import { adminListPosts, deletePost, setPostStatus } from "@/lib/blog.functions";
 import { formatBlogDate, type BlogPostSummary } from "@/lib/blog-types";
 import { cn } from "@/lib/utils";
@@ -160,6 +161,21 @@ function WorkspaceBlogs() {
     } catch (e) { toast.error(e instanceof Error ? e.message : "Failed"); }
   }
 
+  function handleExport() {
+    exportToCsv(exportFilename("blogs"), posts.map((p) => ({
+      Title:          p.title || "Untitled",
+      Status:         p.status,
+      Category:       p.category || "",
+      Slug:           p.slug || "",
+      "Updated At":   p.updated_at  ? new Date(p.updated_at).toLocaleDateString()  : "",
+      "Published At": p.published_at ? new Date(p.published_at).toLocaleDateString() : "",
+      Views:          p.views,
+      Likes:          engagement[p.id]?.likes    ?? 0,
+      Comments:       engagement[p.id]?.comments ?? 0,
+      Shares:         engagement[p.id]?.shares   ?? 0,
+    })));
+  }
+
   return (
     <div className="min-h-full px-4 py-4 sm:px-8 sm:py-8">
       {/* Header */}
@@ -169,6 +185,15 @@ function WorkspaceBlogs() {
           <p className="mt-0.5 text-sm text-muted-foreground">{posts.length} posts total</p>
         </div>
         <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={handleExport}
+            disabled={posts.length === 0}
+            className="flex items-center gap-1.5 rounded-md border border-border bg-background px-3 py-1.5 text-sm font-medium hover:bg-muted transition-colors disabled:opacity-40"
+            title="Export to CSV"
+          >
+            <Download className="h-3.5 w-3.5" /> Export
+          </button>
           <button
             type="button"
             onClick={() => setShowGenerate(true)}
