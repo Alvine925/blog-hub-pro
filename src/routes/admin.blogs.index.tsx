@@ -92,8 +92,8 @@ function AdminBlogList() {
                       <div className="h-10 w-14 rounded bg-muted" />
                     )}
                   </TableCell>
-                  <TableCell className="max-w-[180px] sm:max-w-[280px]">
-                    <span className="font-medium line-clamp-2 sm:line-clamp-1">{post.title || "Untitled"}</span>
+                  <TableCell className="min-w-0">
+                    <span className="font-medium line-clamp-1">{post.title || "Untitled"}</span>
                     {post.featured && (
                       <Badge variant="outline" className="ml-2 hidden sm:inline-flex">Featured</Badge>
                     )}
